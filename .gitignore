@@ -1,0 +1,68 @@
+# DT APP files
+.dt-app/
+
+# Compiled output
+/dist
+/build
+/tmp
+
+# Deployment artifact
+/out
+
+# Dependencies
+/node_modules
+
+# IDEs and editors
+/.idea
+*.iml
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.history/
+
+# IDE - VSCode
+/.vscode/*
+!/.vscode/settings.json
+!/.vscode/tasks.json
+!/.vscode/launch.json
+!/.vscode/extensions.json
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build caches
+.cache/
+.parcel-cache/
+.webpack/
+
+# Coverage
+/coverage
+
+# TypeScript
+*.tsbuildinfo
+
+# Certificates & Keys
+*.pem
+*.key
+*.cert
+
+# app-settings plugin local files
+/settings/local-mock-data/secrets.json
+/settings/local-mock-data/persistence/

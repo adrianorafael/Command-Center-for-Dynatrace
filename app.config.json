@@ -1,0 +1,18 @@
+{
+  "$schema": "./.dt-app/app.config.schema.json",
+  "environmentUrl": "https://YOUR-ENVIRONMENT.apps.dynatrace.com/",
+  "app": {
+    "name": "Command Center",
+    "version": "1.1.3",
+    "description": "Centralized problems management view for Dynatrace",
+    "id": "my.command.center",
+    "icon": "ui/assets/icons/headset-v2-128x128.svg",
+    "scopes": [
+      { "name": "storage:logs:read", "comment": "default template" },
+      { "name": "storage:buckets:read", "comment": "default template" },
+      { "name": "storage:events:read", "comment": "DQL access to dt.davis.problems table" },
+      { "name": "state:app-states:read", "comment": "Read persisted ack state" },
+      { "name": "state:app-states:write", "comment": "Persist ack/unack state" }
+    ]
+  }
+}
