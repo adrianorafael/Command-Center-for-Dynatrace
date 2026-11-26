@@ -205,7 +205,16 @@ export const ConsolePage = () => {
             loading={isLoading}
             onFilter={(patch) => setFilters({ status: DEFAULT_STATUS, priority: [], assignee: [], ...patch })}
           />
+          {/* Search first, then FilterBar with the TimeframeSelector as its last pinned item (Strato TimeframeSelector
+              "Where to position" + FilterBar "TimeframeSelector as filter control"). Outside the FilterBar the selector's
+              root has align-self: start and floated 20 px above the labelled fields. */}
           <Flex gap={8} alignItems="flex-end" flexWrap="wrap">
+            <SearchInput
+              value={filters.q}
+              onChange={(v) => setFilters({ q: v })}
+              placeholder="Search title, ID, entity"
+              aria-label="Search incidents"
+            />
             <Flex flexGrow={1} style={{ minWidth: 320 }}>
               <FilterBar
                 onFilterChange={() => undefined}
@@ -217,6 +226,7 @@ export const ConsolePage = () => {
                   service: "pinned-optional",
                   source: "optional",
                   escalation: "optional",
+                  created: "pinned",
                 }}
               >
                 <FilterBar.Item name="status" label="Status">
@@ -302,15 +312,11 @@ export const ConsolePage = () => {
                     </Select.Content>
                   </Select>
                 </FilterBar.Item>
+                <FilterBar.Item name="created" label="Created">
+                  <TimeframeSelector value={timeframe} onChange={setTimeframe} />
+                </FilterBar.Item>
               </FilterBar>
             </Flex>
-            <TimeframeSelector value={timeframe} onChange={setTimeframe} />
-            <SearchInput
-              value={filters.q}
-              onChange={(v) => setFilters({ q: v })}
-              placeholder="Search title, ID, entity"
-              aria-label="Search incidents"
-            />
           </Flex>
           <IncidentTable
             incidents={visible}

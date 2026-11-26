@@ -76,7 +76,7 @@ Detailed guides: [inbound events](docs/guides/inbound-events.md) ·
 | Escalation policies | Ordered steps with delays, targets (schedule, user, whole team), optional forced channels, repeats. Stops on acknowledgement. |
 | Contact methods and personal notification rules | Per user: SMS, voice, WhatsApp, Telegram, Slack, Teams, IFTTT, webhook, with "priority at or above Px → this method after N minutes". |
 | Routing / alert rules | Services plus ordered routing rules (first match wins), with a rule tester. |
-| Maintenance and quiet hours | Davis maintenance windows suppress paging (configurable); per-team quiet hours hold or downgrade low-priority pages. |
+| Maintenance and quiet hours | Davis maintenance windows suppress paging (configurable). Per-team quiet hours (hold or downgrade low-priority pages) are supported by the engine but have no editor in 2.0.0 — set them through configuration import. |
 | Reports (MTTA, MTTR, noisy services, on-call load) | Reports page built from daily rollups. |
 | Outbound integrations | One Dynatrace Workflow with eight sender tasks. Anything not covered by a built-in sender gets a JSON webhook. |
 
@@ -671,7 +671,8 @@ fetch dt.davis.events, from: now() - 72h
 - **Keep the engine workflow private.** Task results contain phone numbers and message texts and are visible in the
   workflow's execution log to anyone who can see the workflow.
 - **Any app user can change any configuration**, and an App State admin can clear all states — export the configuration
-  regularly (Settings → Export and import).
+  regularly (Settings → Export and import). The export file includes contact methods (phone numbers): store it like
+  personal data.
 - **Audit identity** comes from App State modification info (`lastModifiedBy`), not from what the browser claims.
 - **Outbound traffic** is limited by the External requests allowlist; allow only the provider hosts you use.
 - **Inbound tokens:** create ingest tokens with only `events.ingest` (or the equivalent platform permission), store them in
@@ -742,6 +743,7 @@ Not verified, or only partly:
 - **Billing** of workflow executions, app functions and App State operations was not researched.
 - **Microsoft Teams**: only Teams Workflows webhooks are supported (Office 365 connector webhooks were retired by Microsoft).
 - **Two-way replies** (acknowledge by SMS or chat) are not implemented.
+- **Team quiet hours** are evaluated by the engine but have no editor in the UI yet (configuration import only).
 
 ## Relevant File Structure
 

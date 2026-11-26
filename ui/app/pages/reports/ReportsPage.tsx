@@ -90,22 +90,24 @@ export const ReportsPage = () => {
       const rollups: DailyRollup[] = data.rollups.length ? data.rollups : rollupsFromIncidents(data.incidents, from, to);
       const s = summarizeRollups(rollups, fromDay, toDay);
       const days = rollups.filter((r) => r.day >= fromDay && r.day <= toDay).sort((a, b) => a.day.localeCompare(b.day));
+      // Minutes read better than "10M millisecond" on the axis.
       const mtta: Timeseries = {
-        name: "MTTA",
-        unit: "millisecond",
-        datapoints: s.daily.filter((d) => d.mttaMs !== undefined).map((d) => ({ start: dayStart(d.day), end: new Date(dayStart(d.day).getTime() + DAY), value: d.mttaMs ?? 0 })),
+        name: "MTTA (min)",
+        datapoints: s.daily.filter((d) => d.mttaMs !== undefined).map((d) => ({ start: dayStart(d.day), end: new Date(dayStart(d.day).getTime() + DAY), value: Math.round((d.mttaMs ?? 0) / 600) / 100 })),
       };
       const mttr: Timeseries = {
-        name: "MTTR",
-        unit: "millisecond",
-        datapoints: s.daily.filter((d) => d.mttrMs !== undefined).map((d) => ({ start: dayStart(d.day), end: new Date(dayStart(d.day).getTime() + DAY), value: d.mttrMs ?? 0 })),
+        name: "MTTR (min)",
+        datapoints: s.daily.filter((d) => d.mttrMs !== undefined).map((d) => ({ start: dayStart(d.day), end: new Date(dayStart(d.day).getTime() + DAY), value: Math.round((d.mttrMs ?? 0) / 600) / 100 })),
       };
+      // Every day of the range, zero-filled, so bars line up with the calendar.
+      const allDays: string[] = [];
+      for (let t = Date.parse(`${fromDay}T00:00:00Z`); t <= Date.parse(`${toDay}T00:00:00Z`); t += DAY) allDays.push(new Date(t).toISOString().slice(0, 10));
+      const byDay = new Map(days.map((r) => [r.day, r]));
       const byPrioritySeries: { p: Priority; ts: Timeseries }[] = PRIORITIES.map((p) => ({
         p,
         ts: {
           name: p,
-          unit: "count",
-          datapoints: days.map((r) => ({ start: dayStart(r.day), end: new Date(dayStart(r.day).getTime() + DAY), value: r.byPriority[p] ?? 0 })),
+          datapoints: allDays.map((d) => ({ start: dayStart(d), end: new Date(dayStart(d).getTime() + DAY), value: byDay.get(d)?.byPriority[p] ?? 0 })),
         },
       }));
       const teamName = (id: string) => data.teams.find((t) => t.id === id)?.name ?? (id || "No team");
@@ -220,7 +222,7 @@ export const ReportsPage = () => {
         {failed ? <ErrorMessage title="Couldn't build the report" error={failed} /> : null}
         <Grid gridTemplateColumns="repeat(12, minmax(0, 1fr))" gap={16}>
           <Panel span={12} title="Response at a glance" question="Are we fast enough?">
-            <SingleValueGrid data={m?.kpis ?? []} labelAccessor="label" loading={loading}>
+            <SingleValueGrid data={m?.kpis ?? []} labelAccessor="label" loading={loading} style={{ height: 120 }}>
               <SingleValueGrid.Value dataAccessor="value" />
             </SingleValueGrid>
           </Panel>
@@ -244,7 +246,7 @@ export const ReportsPage = () => {
                 labelAccessor="priority"
                 valueAccessor="count"
                 loading={loading}
-                height={260}
+                height={300}
                 colorPalette={PRIORITY_COLOR}
               >
                 <DonutChart.Legend />

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { TitleBar } from "@dynatrace/strato-components/layouts";
+import { Flex, TitleBar } from "@dynatrace/strato-components/layouts";
 import { Breadcrumbs } from "@dynatrace/strato-components/navigation";
 
 export interface Crumb {
@@ -40,7 +40,14 @@ export const PageTitle = ({
     )}
     <TitleBar.Title>{title}</TitleBar.Title>
     {subtitle && <TitleBar.Subtitle>{subtitle}</TitleBar.Subtitle>}
-    {suffix && <TitleBar.Suffix>{suffix}</TitleBar.Suffix>}
-    {action && <TitleBar.Action>{action}</TitleBar.Action>}
+    {(suffix || action) && (
+      <TitleBar.Suffix>
+        {/* TitleBar.Action truncates longer button labels ("New te…"), so the primary action sits in the suffix. */}
+        <Flex alignItems="center" gap={8}>
+          {suffix}
+          {action}
+        </Flex>
+      </TitleBar.Suffix>
+    )}
   </TitleBar>
 );

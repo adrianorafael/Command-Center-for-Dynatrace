@@ -31,6 +31,21 @@ function median(values: number[]): number | undefined {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
+/** Height of the SingleValue area under a tile header; header + gap + value ≈ the 110 px meter tiles. */
+const VALUE_HEIGHT = 84;
+
+/**
+ * Tile title row (icon + label) rendered outside SingleValue: SingleValue sizes a ReactNode `prefixIcon` to 2ch
+ * (≈1.15 em) inside a 1 em-high `overflow: hidden` value row, which clips the icon top and bottom, and its auto-fitted
+ * label size differs from tile to tile. A fixed 16 px icon and `Text` keep every tile title identical.
+ */
+const TileHeader = ({ icon, children }: { icon?: React.ReactElement; children: React.ReactNode }) => (
+  <Flex alignItems="center" gap={4}>
+    {icon}
+    <Text textStyle="base-emphasized">{children}</Text>
+  </Flex>
+);
+
 const Tile = ({
   label,
   onClick,
@@ -42,7 +57,9 @@ const Tile = ({
 }) =>
   onClick ? (
     <Surface as="button" elevation="raised" padding={16} aria-label={label} onClick={onClick} style={{ textAlign: "start" }}>
-      {children}
+      <Flex flexDirection="column" gap={8}>
+        {children}
+      </Flex>
     </Surface>
   ) : (
     <Surface elevation="raised" padding={16} aria-label={label}>
@@ -94,12 +111,14 @@ export const KpiStrip = ({
   return (
     <Grid gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={12}>
       <Tile label="Show triggered incidents" onClick={() => onFilter({ status: ["triggered"] })}>
-        <SingleValue data={k.triggered.length} label="Triggered" prefixIcon={<CriticalIcon />} loading={loading} height={110}>
+        <TileHeader icon={<CriticalIcon size="small" />}>Triggered</TileHeader>
+        <SingleValue data={k.triggered.length} aria-label="Triggered" loading={loading} height={VALUE_HEIGHT}>
           <SingleValue.Sparkline data={k.spark} variant="area" color={Colors.Charts.Status.Critical.Default} />
         </SingleValue>
       </Tile>
       <Tile label="Show acknowledged incidents" onClick={() => onFilter({ status: ["acknowledged"] })}>
-        <SingleValue data={k.acknowledged.length} label="Acknowledged" prefixIcon={<CheckmarkIcon />} loading={loading} height={110}>
+        <TileHeader icon={<CheckmarkIcon size="small" />}>Acknowledged</TileHeader>
+        <SingleValue data={k.acknowledged.length} aria-label="Acknowledged" loading={loading} height={VALUE_HEIGHT}>
           <SingleValue.Trend
             direction={trendDelta > 0 ? "upward" : trendDelta < 0 ? "downward" : "neutral"}
             value={trendDelta}
@@ -108,19 +127,19 @@ export const KpiStrip = ({
         </SingleValue>
       </Tile>
       <Tile label="Show open P1 incidents" onClick={() => onFilter({ status: ["triggered", "acknowledged", "snoozed"], priority: ["P1"] })}>
+        <TileHeader icon={<CriticalIcon size="small" />}>Open P1</TileHeader>
         <SingleValue
           data={k.p1.length}
-          label="Open P1"
-          prefixIcon={<CriticalIcon />}
+          aria-label="Open P1"
           loading={loading}
-          height={110}
+          height={VALUE_HEIGHT}
           applyThresholdBackground
         >
           <SingleValue.ColorRule comparator="greater-than" matchValue={0} color={Colors.Charts.Status.Critical.Default} />
         </SingleValue>
       </Tile>
       <Tile label="MTTA today">
-        <Flex flexDirection="column" gap={8} justifyContent="center" style={{ minHeight: 110 }}>
+        <Flex flexDirection="column" gap={8} style={{ minHeight: 110 }}>
           <MeterBarChart value={mttaValue} min={0} max={ackTargetMs * 2} unit="millisecond" loading={loading}>
             <MeterBarChart.Label>MTTA today</MeterBarChart.Label>
             <MeterBarChart.Value>{k.mtta === undefined ? "–" : formatDuration(k.mtta)}</MeterBarChart.Value>
@@ -132,10 +151,11 @@ export const KpiStrip = ({
         </Flex>
       </Tile>
       <Tile label="Show incidents assigned to me" onClick={() => onFilter({ assignee: ["me"] })}>
-        <SingleValue data={k.mine.length} label="Assigned to me" prefixIcon={<AccountIcon />} loading={loading} height={110} />
+        <TileHeader icon={<AccountIcon size="small" />}>Assigned to me</TileHeader>
+        <SingleValue data={k.mine.length} aria-label="Assigned to me" loading={loading} height={VALUE_HEIGHT} />
       </Tile>
       <Tile label="Open incidents by priority">
-        <Flex flexDirection="column" gap={8} justifyContent="center" style={{ minHeight: 110 }}>
+        <Flex flexDirection="column" gap={8} style={{ minHeight: 110 }}>
           <MultiMeterBarChart loading={loading} max="auto">
             <MultiMeterBarChart.Label>Open by priority</MultiMeterBarChart.Label>
             {PRIORITIES.map((p) => (

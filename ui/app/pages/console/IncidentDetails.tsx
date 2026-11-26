@@ -249,7 +249,7 @@ export const IncidentDetails = ({ incident, onModal }: { incident: Incident; onM
           </Avatar>
         </Flex>
       )}
-      {incident.alert.description && <Paragraph>{incident.alert.description}</Paragraph>}
+      {incident.alert.description && <Markdown>{incident.alert.description}</Markdown>}
       {incident.tags.length > 0 && (
         <ChipGroup>
           {incident.tags.map((t) => (
