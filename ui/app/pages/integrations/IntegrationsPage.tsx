@@ -15,7 +15,7 @@ import type { Timeseries } from "@dynatrace/strato-components/charts";
 import type { ProviderConfig, Settings } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { exportWorkflowDefinition, getEngineStatus, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
-import { CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
+import { Cell, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { Health } from "../../components/StatusIndicator";
 import { ChannelIcon, CHANNEL_LABEL } from "../../components/ChannelIcon";
@@ -78,8 +78,9 @@ const InboundTab = () => {
       header: "Status",
       accessor: "status",
       width: 150,
-      cell: ({ rowData }) =>
-        rowData.status === "receiving" ? (
+      cell: ({ rowData }) => (
+        <Cell>
+        {rowData.status === "receiving" ? (
           <Health status="ideal">Receiving</Health>
         ) : rowData.status === "quiet" ? (
           <Health status="warning">Quiet &gt; 1 h</Health>
@@ -87,7 +88,9 @@ const InboundTab = () => {
           <Health status="neutral">Turned off</Health>
         ) : (
           <Health status="neutral">Never seen</Health>
-        ),
+        )}
+        </Cell>
+      ),
     },
     {
       id: "last",
@@ -96,9 +99,11 @@ const InboundTab = () => {
       sortType: "number",
       width: 140,
       cell: ({ rowData }) => (
-        <Tooltip text={rowData.last ? formatDateTime(rowData.last) : "No event yet"}>
-          <Text>{rowData.last ? formatRelative(rowData.last, now) : "–"}</Text>
-        </Tooltip>
+        <Cell>
+          <Tooltip text={rowData.last ? formatDateTime(rowData.last) : "No event yet"}>
+            <Text>{rowData.last ? formatRelative(rowData.last, now) : "–"}</Text>
+          </Tooltip>
+        </Cell>
       ),
     },
     { id: "spark", header: "Incidents last 24 h", accessor: "spark", columnType: "sparkline", width: 200, config: { variant: "bar" } },

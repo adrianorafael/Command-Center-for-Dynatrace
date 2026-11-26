@@ -140,7 +140,8 @@ export const TeamDetailPage = () => {
     {
       id: "role",
       header: () => (
-        <Flex alignItems="center" gap={4}>
+        // Custom headers don't get the default header inset; match plain headers (12 px).
+        <Flex alignItems="center" gap={4} style={{ paddingLeft: 12 }}>
           <Text>Role</Text>
           <InformationOverlay>
             <InformationOverlay.Trigger />
@@ -166,7 +167,7 @@ export const TeamDetailPage = () => {
       width: 320,
       cell: ({ rowData }) =>
         rowData.methods ? (
-          <Flex alignItems="center" gap={8} style={{ minWidth: 0 }} paddingX={8}>
+          <Flex alignItems="center" gap={8} style={{ minWidth: 0, paddingRight: 12 }}>
             <Flex style={{ minWidth: 0 }} flexGrow={1}>
               <CellText>{rowData.methods}</CellText>
             </Flex>
@@ -175,13 +176,15 @@ export const TeamDetailPage = () => {
             </InlineButton>
           </Flex>
         ) : (
-          <Flex alignItems="center" gap={8} paddingX={8}>
+          <Cell>
+          <Flex alignItems="center" gap={8}>
             <WarningIcon style={{ color: Colors.Icon.Warning.Default }} />
             <Text>{rowData.role === "observer" ? "No contact method" : "No contact method: can't be paged"}</Text>
             <InlineButton onClick={() => setContactUid(rowData.uid)} aria-label={`Add a contact method for ${rowData.name}`}>
               Add
             </InlineButton>
           </Flex>
+          </Cell>
         ),
     },
     { id: "oncall", header: "On call now", accessor: (r) => (r.onCall ? "Yes" : "No"), width: 110 },

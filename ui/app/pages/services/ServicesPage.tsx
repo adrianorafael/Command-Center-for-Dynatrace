@@ -12,7 +12,7 @@ import type { Timeseries } from "@dynatrace/strato-components/charts";
 import { PRIORITIES, SCHEMA_VERSION, type Alert, type Priority, type RoutingRule, type Service } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { evaluateCondition, newId, routeAlert, ruleMatches } from "../../hooks/domain";
-import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink } from "../../components/tableKit";
+import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink, Cell } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { PriorityChip } from "../../components/PriorityChip";
@@ -87,11 +87,13 @@ const ServicesTab = ({ onNew }: { onNew: () => void }) => {
       width: 220,
       cell: ({ rowData }) =>
         rowData.openTotal ? (
-          <Flex gap={4} flexWrap="wrap">
-            {PRIORITIES.filter((p) => rowData.open[p]).map((p) => (
-              <PriorityChip key={p} priority={p} size="condensed" count={rowData.open[p]} />
-            ))}
-          </Flex>
+          <Cell>
+            <Flex gap={4} flexWrap="wrap">
+              {PRIORITIES.filter((p) => rowData.open[p]).map((p) => (
+                <PriorityChip key={p} priority={p} size="condensed" count={rowData.open[p]} />
+              ))}
+            </Flex>
+          </Cell>
         ) : (
           <CellEmpty>None</CellEmpty>
         ),
@@ -194,7 +196,7 @@ export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
   };
   const columns: DataTableColumnDef<RuleRow>[] = [
     { id: "pos", header: "#", accessor: "pos", width: 48 },
-    { id: "name", header: "Name", accessor: "name", width: 200, cell: ({ rowData }) => <Text textStyle="base-emphasized">{rowData.name}</Text> },
+    { id: "name", header: "Name", accessor: "name", width: 200, cell: ({ rowData }) => <Cell><Text textStyle="base-emphasized">{rowData.name}</Text></Cell> },
     {
       id: "conditions",
       header: "Conditions",
@@ -209,7 +211,7 @@ export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
       header: "Enabled",
       accessor: (r) => (r.enabled ? "Yes" : "No"),
       width: 90,
-      cell: ({ rowData }) => (rowData.enabled ? <Health status="ideal">On</Health> : <Health status="neutral">Off</Health>),
+      cell: ({ rowData }) => <Cell>{rowData.enabled ? <Health status="ideal">On</Health> : <Health status="neutral">Off</Health>}</Cell>,
     },
     { id: "matched", header: "Matched 24 h", accessor: "matched24", width: 120 },
   ];

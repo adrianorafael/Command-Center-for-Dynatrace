@@ -8,7 +8,7 @@ import { PlusIcon } from "@dynatrace/strato-icons";
 import type { EscalationPolicy } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { newId } from "../../hooks/domain";
-import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink } from "../../components/tableKit";
+import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink, Cell } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ConfirmModal } from "../../components/ConfirmModal";
@@ -86,7 +86,7 @@ export const PoliciesPage = () => {
       sortType: "number",
       width: 140,
       cell: ({ rowData }) =>
-        rowData.lastTriggered ? <Text>{formatRelative(rowData.lastTriggered, now)}</Text> : <CellEmpty>Never</CellEmpty>,
+        rowData.lastTriggered ? <Cell><Text>{formatRelative(rowData.lastTriggered, now)}</Text></Cell> : <CellEmpty>Never</CellEmpty>,
     },
   ];
   return (

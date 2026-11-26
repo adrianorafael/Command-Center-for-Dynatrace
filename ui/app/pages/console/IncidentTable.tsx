@@ -23,6 +23,7 @@ import {
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { EscalationPolicy, Incident, NotificationRecord } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
+import { Cell } from "../../components/tableKit";
 import { PriorityChip } from "../../components/PriorityChip";
 import { StatusIndicator } from "../../components/StatusIndicator";
 import { AgeText } from "../../components/AgeText";
@@ -270,6 +271,19 @@ const IncidentPreview = ({
   );
 };
 
+/**
+ * Custom cells don't get the default cell inset; DataTable.DefaultCell restores it so every column keeps
+ * the same distance from its dividers as plain text cells (measured: content x == header text x).
+ */
+function withCellInset(cols: DataTableColumnDef<IncidentRow>[]): DataTableColumnDef<IncidentRow>[] {
+  return cols.map((col) => {
+    const render = col.cell;
+    if (typeof render !== "function") return col;
+    const padded: typeof render = (ctx) => <Cell>{render(ctx)}</Cell>;
+    return { ...col, cell: padded } as DataTableColumnDef<IncidentRow>;
+  });
+}
+
 export const IncidentTable = ({
   incidents,
   loading,
@@ -315,7 +329,7 @@ export const IncidentTable = ({
   }, [incidents, data, now, userName]);
 
   const columns = useMemo<DataTableColumnDef<IncidentRow>[]>(
-    () => [
+    () => withCellInset([
       {
         id: "priority",
         header: "Priority",
@@ -328,7 +342,7 @@ export const IncidentTable = ({
         id: "status",
         header: "Status",
         accessor: "status",
-        width: 140,
+        width: 128,
         cell: ({ rowData }) => (
           <Flex flexDirection="column" gap={0}>
             <StatusIndicator status={rowData.status} />
@@ -361,7 +375,7 @@ export const IncidentTable = ({
         id: "age",
         header: "Age",
         accessor: "ageMs",
-        width: 96,
+        width: 90,
         sortType: "number",
         cell: ({ rowData }) => (
           <AgeText
@@ -390,7 +404,7 @@ export const IncidentTable = ({
         id: "assignee",
         header: "Assignee",
         accessor: "assigneeName",
-        width: 140,
+        width: 130,
         cell: ({ rowData }) => <AssigneeView assignee={rowData.assignee} />,
       },
       {
@@ -398,7 +412,7 @@ export const IncidentTable = ({
         header: "Escalation",
         accessor: (r) => (r.escalation.exhausted ? 99 : r.escalation.lastStepIndex),
         sortType: "number",
-        width: 130,
+        width: 120,
         cell: ({ rowData }) => (
           <div style={{ width: "100%", paddingRight: 12, boxSizing: "border-box" }}>
             <EscalationCell incident={rowData} policy={data?.policies.find((p) => p.id === rowData.policyId)} />
@@ -417,16 +431,16 @@ export const IncidentTable = ({
           const failed = n.status === "failed" || n.status === "timeout";
           return (
             <Tooltip text={`${CHANNEL_LABEL[n.channel]} to ${n.to.name ?? userName(n.to.uid)} · ${failed ? "failed" : n.status}`}>
-              <Flex alignItems="center" gap={4} style={{ minWidth: 0 }}>
+              <Flex alignItems="center" gap={4} style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
                 {failed ? <CriticalFailedIcon style={{ color: Colors.Icon.Critical.Default, flexShrink: 0 }} /> : <ChannelIcon channel={n.channel} />}
-                <Text style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{formatRelative(n.reportedAt ?? n.plannedAt, now)}</Text>
+                <Text style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: "1 1 auto" }}>{formatRelative(n.reportedAt ?? n.plannedAt, now)}</Text>
               </Flex>
             </Tooltip>
           );
         },
       },
       { id: "createdAt", header: "Created", accessor: (r) => new Date(r.createdAt), columnType: "datetime", width: 170 },
-    ],
+    ]),
     [data, now, tz, ackTargetMs, userName],
   );
 

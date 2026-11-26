@@ -17,6 +17,20 @@ import type {
 } from "../../ui/app/domain/contracts";
 import type { Repository } from "../../ui/app/data/repository";
 import { createStore, mergeSettings } from "../../ui/app/data/store";
+import { KEY } from "../../ui/app/data/repository";
+import { isValidKey } from "../../ui/app/domain/keys";
+
+/** Section-wise merge: a partial `{ engine: { enabled: false } }` keeps every other engine field. */
+export function deepMerge<T>(base: T, patch: unknown): T {
+  if (patch === undefined) return base;
+  if (Array.isArray(patch) || typeof patch !== "object" || patch === null) return patch as T;
+  if (typeof base !== "object" || base === null || Array.isArray(base)) return patch as T;
+  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+  for (const [k, v] of Object.entries(patch as Record<string, unknown>)) {
+    out[k] = deepMerge((base as Record<string, unknown>)[k], v);
+  }
+  return out as T;
+}
 import {
   validatePolicy,
   validateRules,
@@ -93,7 +107,18 @@ export async function runConfig(req: ConfigRequest, repo: Repository): Promise<C
   const collect = (entity: string, errs: ValidationError[]): void => {
     for (const e of errs) errors.push({ entity, path: e.path, message: e.message });
   };
-  const settings = b.settings ? mergeSettings({ ...(await store.getSettings()), ...b.settings }) : undefined;
+  const settings = b.settings ? mergeSettings(deepMerge(await store.getSettings(), b.settings)) : undefined;
+  // Every key is checked before anything is written, so an invalid id cannot leave a half-applied import.
+  const keys: [string, string][] = [
+    ...(b.teams ?? []).map((t) => [`team:${t.id}`, KEY.team(t.id)] as [string, string]),
+    ...(b.schedules ?? []).map((x) => [`schedule:${x.id}`, KEY.schedule(x.id)] as [string, string]),
+    ...(b.policies ?? []).map((x) => [`policy:${x.id}`, KEY.policy(x.id)] as [string, string]),
+    ...(b.services ?? []).map((x) => [`service:${x.id}`, KEY.service(x.id)] as [string, string]),
+    ...(b.contacts ?? []).map((c) => [`contact:${c.uid}`, KEY.contact(c.uid)] as [string, string]),
+  ];
+  for (const [entity, key] of keys) {
+    if (!isValidKey(key)) errors.push({ entity, path: "id", message: "Id must use lower-case letters, digits, '.', '_' or '-'" });
+  }
   if (settings) collect("settings", validateSettings(settings, ctx));
   for (const t of b.teams ?? []) collect(`team:${t.id}`, validateTeam(t, ctx));
   for (const s of b.schedules ?? []) collect(`schedule:${s.id}`, validateSchedule(s, ctx));

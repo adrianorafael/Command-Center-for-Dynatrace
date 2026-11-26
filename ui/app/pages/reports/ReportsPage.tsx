@@ -19,7 +19,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import { PRIORITIES, type DailyRollup, type Priority } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { onCallHoursByUser, rollupsFromIncidents, summarizeRollups } from "../../hooks/domain";
-import { CellPerson, LIST_TABLE_VARIANT } from "../../components/tableKit";
+import { CellPerson, LIST_TABLE_VARIANT, Cell } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { ErrorMessage, SimpleEmpty } from "../../components/QueryState";
 import { PRIORITY_COLOR } from "../../components/PriorityChip";
@@ -202,7 +202,7 @@ export const ReportsPage = () => {
       accessor: (r) => r.avgAckMs ?? -1,
       sortType: "number",
       width: "1fr",
-      cell: ({ rowData }) => <Text>{rowData.avgAckMs !== undefined ? formatDuration(rowData.avgAckMs) : "–"}</Text>,
+      cell: ({ rowData }) => <Cell><Text>{rowData.avgAckMs !== undefined ? formatDuration(rowData.avgAckMs) : "–"}</Text></Cell>,
     },
   ];
 

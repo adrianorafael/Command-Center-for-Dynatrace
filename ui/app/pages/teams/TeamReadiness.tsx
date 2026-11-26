@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex, Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Text } from "@dynatrace/strato-components/typography";
@@ -91,7 +91,21 @@ export function teamReadiness(team: Team, data: AppData, userName: (uid: string)
 export const TeamReadiness = ({ items, onFix }: { items: ReadinessItem[]; onFix: (key: ReadinessFix) => void }) => {
   const done = items.filter((i) => i.done).length;
   const ready = done === items.length;
+  const [expanded, setExpanded] = useState(false);
   return (
+    ready && !expanded ? (
+      <Surface padding={12}>
+        <Flex alignItems="center" gap={8} justifyContent="space-between" flexWrap="wrap">
+          <Flex alignItems="center" gap={8}>
+            <SuccessIcon style={{ color: Colors.Icon.Success.Default }} />
+            <Text>Ready to page: all {items.length} setup steps are done.</Text>
+          </Flex>
+          <Button size="condensed" variant="default" onClick={() => setExpanded(true)}>
+            Show steps
+          </Button>
+        </Flex>
+      </Surface>
+    ) : (
     <Surface padding={16}>
       <Flex flexDirection="column" gap={12}>
         <Flex alignItems="center" gap={8} justifyContent="space-between" flexWrap="wrap">
@@ -141,5 +155,6 @@ export const TeamReadiness = ({ items, onFix }: { items: ReadinessItem[]; onFix:
         </Flex>
       </Flex>
     </Surface>
+    )
   );
 };

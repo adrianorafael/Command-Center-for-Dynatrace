@@ -64,10 +64,11 @@ export const OnCallCard = ({ schedule, onAddOverride }: { schedule: Schedule; on
     return { layer: l, oc: o };
   });
   return (
-    <Surface padding={16}>
-      <Flex flexDirection="column" gap={12}>
-        <Flex alignItems="center" gap={8} flexWrap="wrap">
-          <Heading level={3}>{team?.name ?? schedule.name}</Heading>
+    <Surface padding={16} style={{ height: "100%", boxSizing: "border-box" }}>
+      <Flex flexDirection="column" gap={12} style={{ height: "100%" }}>
+        {/* Title on its own line and chips on the next, so every card starts its content at the same height. */}
+        <Heading level={4}>{team?.name ?? schedule.name}</Heading>
+        <Flex alignItems="center" gap={8} flexWrap="wrap" style={{ marginTop: -4 }}>
           <Chip size="condensed">
             <Chip.Prefix>
               <CalendarIcon />
@@ -118,9 +119,11 @@ export const OnCallCard = ({ schedule, onAddOverride }: { schedule: Schedule; on
             Next: {userName(next.uid)} from {formatDayTime(next.from, tz)} {zoneAbbr(next.from, tz)}
           </Text>
         )}
-        <Link as={RouterLink} to={`/on-call/schedules/${schedule.id}`}>
-          View schedule
-        </Link>
+        <Flex style={{ marginTop: "auto" }}>
+          <Link as={RouterLink} to={`/on-call/schedules/${schedule.id}`}>
+            View schedule
+          </Link>
+        </Flex>
       </Flex>
     </Surface>
   );

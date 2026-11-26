@@ -11,7 +11,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import { PRIORITIES, SCHEMA_VERSION, type Priority, type Team } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { newId, onCallAt, validateTeam } from "../../hooks/domain";
-import { CellEmpty, CellPeople, CellText, LIST_TABLE_VARIANT, CellLink } from "../../components/tableKit";
+import { CellEmpty, CellPeople, CellText, LIST_TABLE_VARIANT, CellLink, Cell } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { PriorityChip } from "../../components/PriorityChip";
@@ -196,11 +196,13 @@ export const TeamsPage = () => {
       minWidth: 200,
       cell: ({ rowData }) =>
         rowData.openTotal ? (
-          <Flex gap={4} flexWrap="wrap">
-            {PRIORITIES.filter((p) => rowData.open[p]).map((p) => (
-              <PriorityChip key={p} priority={p} size="condensed" count={rowData.open[p]} />
-            ))}
-          </Flex>
+          <Cell>
+            <Flex gap={4} flexWrap="wrap">
+              {PRIORITIES.filter((p) => rowData.open[p]).map((p) => (
+                <PriorityChip key={p} priority={p} size="condensed" count={rowData.open[p]} />
+              ))}
+            </Flex>
+          </Cell>
         ) : (
           <CellEmpty>None</CellEmpty>
         ),

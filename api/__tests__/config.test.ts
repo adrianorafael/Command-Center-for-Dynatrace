@@ -58,3 +58,26 @@ describe("config function", () => {
     expect(await createStore(repo).listTeams()).toEqual([]);
   });
 });
+
+describe("config import hardening", () => {
+  it("merges settings per section instead of resetting siblings", async () => {
+    const repo = new MemoryRepository();
+    const store = createStore(repo);
+    const before = await store.getSettings();
+    await store.saveSettings({ ...before, engine: { ...before.engine, maxAttempts: 5 } });
+    const res = await runConfig({ op: "import", bundle: { settings: { engine: { enabled: false } } as never } }, repo);
+    expect(res.ok).toBe(true);
+    const after = await store.getSettings();
+    expect(after.engine.enabled).toBe(false);
+    expect(after.engine.maxAttempts).toBe(5);
+    expect(after.engine.workflowId).toBe(before.engine.workflowId);
+  });
+
+  it("rejects an invalid id before writing anything", async () => {
+    const repo = new MemoryRepository();
+    const badContact = { ...contact, uid: "Bad UID!" };
+    const res = await runConfig({ op: "import", bundle: { teams: [team], contacts: [badContact] } }, repo);
+    expect(res.ok).toBe(false);
+    expect(await createStore(repo).listTeams()).toEqual([]);
+  });
+});
