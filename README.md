@@ -100,6 +100,13 @@ Screenshots on the [project page](https://adrianorafael.github.io/Command-Center
   (can be turned off in Settings → General).
 - A banner warns when the paging engine heartbeat is older than 3 minutes, has an error, or has never run.
 
+### Notifications (header bell)
+
+- Pop-ups appear in the bottom-right corner: new triggered P1/P2 incidents (on any screen), confirmations of your own actions (with Undo), errors, and paging-engine health (no engine run for 3 minutes).
+- The bell in the header lists the last notifications with an unread count; selecting one opens the incident or page it refers to.
+- **Silence** turns pop-ups off: notifications are then only counted on the bell. **Show pop-ups for…** chooses which categories may pop up.
+- Preferences are per browser.
+
 ### Incident detail (`/incidents/:id`)
 Opens beside the console table. Tabs: **Timeline** (every state change, note and notification), **Escalation** (which
 step fired, who is next and when), **Notifications** (the delivery ledger: planned, sent, failed, timed out, with the

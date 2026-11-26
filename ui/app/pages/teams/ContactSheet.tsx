@@ -6,7 +6,7 @@ import { Sheet, Tooltip } from "@dynatrace/strato-components/overlays";
 import { FormField, Label, NumberInputV2 as NumberInput, Select, TextInput } from "@dynatrace/strato-components/forms";
 import { MessageContainer } from "@dynatrace/strato-components/content";
 import { Heading, Text } from "@dynatrace/strato-components/typography";
-import { showToast } from "@dynatrace/strato-components/notifications";
+import { notify } from "../../hooks/notifications";
 import { PlayIcon, PlusIcon, XmarkIcon } from "@dynatrace/strato-icons";
 import { CHANNELS, PRIORITIES, SCHEMA_VERSION, type Channel, type ContactMethod, type Priority, type UserContact } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
@@ -54,8 +54,8 @@ export const ContactSheet = ({ uid, show, onClose }: { uid?: string; show: boole
     if (!p || !data) return;
     setTesting(m.id);
     runEngineNow(data.settings, "test", { providerId: p.id, channel: m.channel, address: m.address })
-      .then(() => showToast({ type: "success", title: "Test notification requested", message: `${CHANNEL_LABEL[m.channel]} via ${p.name}`, lifespan: 5000 }))
-      .catch((e) => showToast({ type: "critical", title: "Couldn't send the test notification", message: errorMessage(e), lifespan: "infinite" }))
+      .then(() => notify({ category: "action", type: "success", title: "Test notification requested", message: `${CHANNEL_LABEL[m.channel]} via ${p.name}`, lifespan: 5000 }))
+      .catch((e) => notify({ category: "error", type: "critical", title: "Couldn't send the test notification", message: errorMessage(e), lifespan: "infinite" }))
       .finally(() => setTesting(undefined));
   };
 

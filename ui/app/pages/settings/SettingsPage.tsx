@@ -7,7 +7,7 @@ import { MessageContainer } from "@dynatrace/strato-components/content";
 import { FormField, Label, NumberInputV2 as NumberInput, Select, Switch, TextInput, ToggleButtonGroup } from "@dynatrace/strato-components/forms";
 import { SimpleTable } from "@dynatrace/strato-components/tables";
 import { Heading, Link, Paragraph, Text, Code } from "@dynatrace/strato-components/typography";
-import { showToast } from "@dynatrace/strato-components/notifications";
+import { notify } from "../../hooks/notifications";
 import { DownloadIcon, UploadIcon, DeleteIcon } from "@dynatrace/strato-icons";
 import { PRIORITIES, SCHEMA_VERSION, type Priority, type Settings } from "../../domain/contracts";
 import { importConfig, type ConfigExport, type ImportResult } from "../../data/configImport";
@@ -112,7 +112,7 @@ export const SettingsPage = () => {
   const errors = validateSettings(draft, { teams: data.teams, policies: data.policies });
   const save = () => {
     if (errors.length) {
-      showToast({ type: "critical", title: "Fix the settings first", message: errors.map((e) => `${e.path}: ${e.message}`).join("; "), lifespan: 8000 });
+      notify({ category: "error", type: "critical", title: "Fix the settings first", message: errors.map((e) => `${e.path}: ${e.message}`).join("; "), lifespan: 8000 });
       return;
     }
     setBusy(true);
@@ -152,7 +152,7 @@ export const SettingsPage = () => {
         if (doc.kind !== "command-center-config" || !doc.settings || !Array.isArray(doc.teams)) throw new Error("This file isn't a Command Center configuration export.");
         setImportDoc(doc as ConfigExport);
       })
-      .catch((e) => showToast({ type: "critical", title: "Couldn't read the file", message: errorMessage(e), lifespan: "infinite" }));
+      .catch((e) => notify({ category: "error", type: "critical", title: "Couldn't read the file", message: errorMessage(e), lifespan: "infinite" }));
   };
   const runImport = async () => {
     const doc = importDoc;
@@ -475,10 +475,10 @@ export const SettingsPage = () => {
             .delete(LEGACY_KEY)
             .then(() => {
               setLegacy("absent");
-              showToast({ type: "success", title: "Legacy data deleted", lifespan: 4000 });
+              notify({ category: "action", type: "success", title: "Legacy data deleted", lifespan: 4000 });
             })
             .catch((e) => {
-              showToast({ type: "critical", title: "Couldn't delete the legacy data", message: errorMessage(e), lifespan: "infinite" });
+              notify({ category: "error", type: "critical", title: "Couldn't delete the legacy data", message: errorMessage(e), lifespan: "infinite" });
             })
         }
       >

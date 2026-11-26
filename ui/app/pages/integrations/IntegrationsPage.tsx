@@ -9,7 +9,7 @@ import { MessageContainer, ProgressCircle } from "@dynatrace/strato-components/c
 import { DataTable, SimpleTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { FormField, Label, Switch, TextInput } from "@dynatrace/strato-components/forms";
 import { Modal, Sheet, Tooltip } from "@dynatrace/strato-components/overlays";
-import { showToast } from "@dynatrace/strato-components/notifications";
+import { notify } from "../../hooks/notifications";
 import { DownloadIcon, KeyIcon, PlayIcon, RefreshIcon, FlowIcon } from "@dynatrace/strato-icons";
 import type { Timeseries } from "@dynatrace/strato-components/charts";
 import type { ProviderConfig, Settings } from "../../domain/contracts";
@@ -271,11 +271,11 @@ const TestModal = ({ provider, onClose }: { provider?: ProviderConfig; onClose: 
       .then((exec) => {
         const text = exec ? `Workflow execution ${exec} started. Check the result in the Workflows app.` : "Test requested.";
         setResult({ ok: true, text });
-        showToast({ type: "success", title: "Test notification requested", message: provider.name, lifespan: 5000 });
+        notify({ category: "action", type: "success", title: "Test notification requested", message: provider.name, lifespan: 5000 });
       })
       .catch((e) => {
         setResult({ ok: false, text: errorMessage(e) });
-        showToast({ type: "critical", title: "Couldn't send the test notification", message: errorMessage(e), lifespan: "infinite" });
+        notify({ category: "error", type: "critical", title: "Couldn't send the test notification", message: errorMessage(e), lifespan: "infinite" });
       })
       .finally(() => setBusy(false));
   };
@@ -424,7 +424,7 @@ const WorkflowsTab = () => {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      showToast({ type: "critical", title: "Couldn't build the workflow definition", message: errorMessage(e), lifespan: "infinite" });
+      notify({ category: "error", type: "critical", title: "Couldn't build the workflow definition", message: errorMessage(e), lifespan: "infinite" });
     }
   };
 
@@ -432,8 +432,8 @@ const WorkflowsTab = () => {
     if (!settings) return;
     setRunning(true);
     runEngineNow(settings, "manual")
-      .then(() => showToast({ type: "success", title: "Engine run started", lifespan: 4000 }))
-      .catch((e) => showToast({ type: "critical", title: "Couldn't start the engine", message: errorMessage(e), lifespan: "infinite" }))
+      .then(() => notify({ category: "action", type: "success", title: "Engine run started", lifespan: 4000 }))
+      .catch((e) => notify({ category: "error", type: "critical", title: "Couldn't start the engine", message: errorMessage(e), lifespan: "infinite" }))
       .finally(() => {
         setRunning(false);
         load();

@@ -11,15 +11,17 @@ import type { ConsoleFilters } from "./filters";
 
 const HOUR = 3_600_000;
 
-function hourlyCreated(incidents: Incident[], now: number): Timeseries {
+/** Count of timestamps per hour over the last 24 h (one Timeseries for a tile sparkline). */
+function hourly(name: string, times: (number | undefined)[], now: number): Timeseries {
   const start = Math.floor(now / HOUR) * HOUR - 23 * HOUR;
   const buckets = Array.from({ length: 24 }, (_, i) => ({ start: start + i * HOUR, value: 0 }));
-  incidents.forEach((i) => {
-    const idx = Math.floor((i.createdAt - start) / HOUR);
+  times.forEach((t) => {
+    if (t === undefined) return;
+    const idx = Math.floor((t - start) / HOUR);
     if (idx >= 0 && idx < 24) buckets[idx].value++;
   });
   return {
-    name: "Incidents created",
+    name,
     datapoints: buckets.map((b) => ({ start: new Date(b.start), end: new Date(b.start + HOUR), value: b.value })),
   };
 }
@@ -33,7 +35,8 @@ function median(values: number[]): number | undefined {
 
 /** Height of the SingleValue area under a tile header; header + gap + value ≈ the 110 px meter tiles. */
 /** Every tile: header (20 px icon + label), one value at the same type size, a fixed-height footer. */
-const FOOTER_HEIGHT = 56;
+const FOOTER_HEIGHT = 64;
+const SPARK_HEIGHT = 36;
 
 const TileValue = ({ children, loading, critical }: { children: React.ReactNode; loading?: boolean; critical?: boolean }) => (
   <Heading level={2} as="h3" style={{ margin: 0, color: critical ? Colors.Text.Critical.Default : undefined, lineHeight: 1.2 }}>
@@ -117,7 +120,15 @@ export const KpiStrip = ({
       Priority,
       number
     >;
-    return { open, triggered, acknowledged, p1, mine, mtta, ackLastHour, ackPrevHour, byPriority, spark: hourlyCreated(incidents, now) };
+    return { open, triggered, acknowledged, p1, mine, mtta, ackLastHour, ackPrevHour, byPriority, spark: hourly("Incidents created", incidents.map((i) => i.createdAt), now),
+      ackSpark: hourly("Acknowledged", incidents.map((i) => i.acknowledgedAt), now),
+      p1Spark: hourly("P1 created", incidents.filter((i) => i.priority === "P1").map((i) => i.createdAt), now),
+      mineSpark: hourly(
+        "Assigned to me",
+        incidents.filter((i) => i.assignee?.type === "user" && i.assignee.id === me).map((i) => i.createdAt),
+        now,
+      ),
+    };
   }, [incidents, now, me]);
 
   const trendDelta = k.ackLastHour - k.ackPrevHour;
@@ -129,25 +140,30 @@ export const KpiStrip = ({
         <TileHeader icon={<CriticalIcon />}>Triggered</TileHeader>
         <TileValue loading={loading} critical={k.triggered.length > 0}>{k.triggered.length}</TileValue>
         <TileFooter>
-          <Sparkline data={k.spark} variant="area" color={Colors.Charts.Status.Critical.Default} height={40} width="100%" />
+          <Flex flexDirection="column" gap={4} style={{ width: "100%" }}>
+            <Sparkline data={k.spark} variant="area" color={Colors.Charts.Status.Critical.Default} height={SPARK_HEIGHT} width="100%" />
+            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>Created per hour, last 24 h</Text>
+          </Flex>
         </TileFooter>
       </Tile>
       <Tile label="Show acknowledged incidents" onClick={() => onFilter({ status: ["acknowledged"] })}>
         <TileHeader icon={<CheckmarkIcon />}>Acknowledged</TileHeader>
         <TileValue loading={loading}>{k.acknowledged.length}</TileValue>
         <TileFooter>
-          <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
-            {trendDelta > 0 ? `+${trendDelta}` : trendDelta} acks vs. previous hour
-          </Text>
+          <Flex flexDirection="column" gap={4} style={{ width: "100%" }}>
+            <Sparkline data={k.ackSpark} variant="area" color={Colors.Charts.Status.Warning.Default} height={SPARK_HEIGHT} width="100%" />
+            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>{trendDelta > 0 ? `+${trendDelta}` : trendDelta} acks vs. previous hour</Text>
+          </Flex>
         </TileFooter>
       </Tile>
       <Tile label="Show open P1 incidents" onClick={() => onFilter({ status: ["triggered", "acknowledged", "snoozed"], priority: ["P1"] })}>
         <TileHeader icon={<CriticalIcon />}>Open P1</TileHeader>
         <TileValue loading={loading} critical={k.p1.length > 0}>{k.p1.length}</TileValue>
         <TileFooter>
-          <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
-            {k.p1.length === 0 ? "No open P1" : `${k.p1.filter((i) => i.status === "triggered").length} not acknowledged`}
-          </Text>
+          <Flex flexDirection="column" gap={4} style={{ width: "100%" }}>
+            <Sparkline data={k.p1Spark} variant="area" color={Colors.Charts.Status.Critical.Default} height={SPARK_HEIGHT} width="100%" />
+            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>{k.p1.length === 0 ? "No open P1" : `${k.p1.filter((i) => i.status === "triggered").length} not acknowledged`}</Text>
+          </Flex>
         </TileFooter>
       </Tile>
       <Tile label="MTTA today">
@@ -170,9 +186,10 @@ export const KpiStrip = ({
         <TileHeader icon={<AccountIcon />}>Assigned to me</TileHeader>
         <TileValue loading={loading}>{k.mine.length}</TileValue>
         <TileFooter>
-          <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
-            {k.mine.length === 0 ? "Nothing assigned to you" : "Open incidents assigned to you"}
-          </Text>
+          <Flex flexDirection="column" gap={4} style={{ width: "100%" }}>
+            <Sparkline data={k.mineSpark} variant="area" color={Colors.Charts.Categorical.Color01.Default} height={SPARK_HEIGHT} width="100%" />
+            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>{k.mine.length === 0 ? "Nothing assigned to you" : "Open incidents assigned to you"}</Text>
+          </Flex>
         </TileFooter>
       </Tile>
       <Tile label="Open incidents by priority">

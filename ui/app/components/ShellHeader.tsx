@@ -5,10 +5,98 @@ import { Button } from "@dynatrace/strato-components/buttons";
 import { Tooltip } from "@dynatrace/strato-components/overlays";
 import { Menu } from "@dynatrace/strato-components/navigation";
 import { Avatar } from "@dynatrace/strato-components/content";
-import { NotificationActiveIcon, SettingIcon, WarningIcon } from "@dynatrace/strato-icons";
+import {
+  CallIcon,
+  CheckmarkIcon,
+  CriticalIcon,
+  InformationIcon,
+  NotificationActiveIcon,
+  NotificationIcon,
+  NotificationOffIcon,
+  SettingIcon,
+  SuccessIcon,
+  WarningIcon,
+} from "@dynatrace/strato-icons";
+import Colors from "@dynatrace/strato-design-tokens/colors";
 import { useAppData } from "../hooks/AppDataContext";
 import { isRuntimeMissing, onCallAt } from "../hooks/domain";
-import { formatDayTime, initials, zoneAbbr } from "./format";
+import { formatDayTime, formatRelative, initials, zoneAbbr } from "./format";
+import {
+  CATEGORY_LABEL,
+  clearNotifications,
+  markAllRead,
+  setNotificationPrefs,
+  useNotifications,
+  type AppNotification,
+  type NotificationCategory,
+} from "../hooks/notifications";
+
+const TYPE_ICON: Record<AppNotification["type"], React.ReactElement> = {
+  critical: <CriticalIcon style={{ color: Colors.Icon.Critical.Default }} />,
+  warning: <WarningIcon style={{ color: Colors.Icon.Warning.Default }} />,
+  success: <SuccessIcon style={{ color: Colors.Icon.Success.Default }} />,
+  info: <InformationIcon style={{ color: Colors.Icon.Primary.Default }} />,
+};
+
+/**
+ * Header bell: unread count, recent notifications, pop-ups on/off (silenced = count only)
+ * and which categories may pop up.
+ */
+const NotificationBell = () => {
+  const { items, prefs, unread } = useNotifications();
+  const navigate = useNavigate();
+  const now = Date.now();
+  const icon = !prefs.popups ? <NotificationOffIcon /> : unread > 0 ? <NotificationActiveIcon /> : <NotificationIcon />;
+  const label = unread > 0 ? `${unread} unread notification${unread === 1 ? "" : "s"}` : "Notifications";
+  return (
+    <Menu onOpenChange={(open: boolean) => { if (!open) markAllRead(); }}>
+      <Menu.Trigger>
+        <AppHeader.ActionButton aria-label={label}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            {icon}
+            {unread > 0 ? String(unread > 99 ? "99+" : unread) : null}
+          </span>
+        </AppHeader.ActionButton>
+      </Menu.Trigger>
+      <Menu.Content>
+        <Menu.Group>
+          <Menu.Label>{items.length === 0 ? "No notifications yet" : "Recent notifications"}</Menu.Label>
+          {items.slice(0, 10).map((n) => (
+            <Menu.Item key={n.id} onSelect={() => n.link && navigate(n.link)}>
+              <Menu.Prefix>{TYPE_ICON[n.type]}</Menu.Prefix>
+              {n.read ? n.title : `● ${n.title}`}
+              <Menu.Suffix>
+                <span style={{ whiteSpace: "nowrap" }}>{formatRelative(n.at, now)}</span>
+              </Menu.Suffix>
+            </Menu.Item>
+          ))}
+        </Menu.Group>
+        <Menu.Group>
+          <Menu.Label>Settings</Menu.Label>
+          <Menu.Item onSelect={() => setNotificationPrefs({ ...prefs, popups: !prefs.popups })}>
+            <Menu.Prefix>{prefs.popups ? <NotificationIcon /> : <NotificationOffIcon />}</Menu.Prefix>
+            {prefs.popups ? "Pop-ups on (click to silence)" : "Silenced: only counting (click to show pop-ups)"}
+          </Menu.Item>
+          <Menu.Sub>
+            <Menu.SubTrigger>Show pop-ups for…</Menu.SubTrigger>
+            <Menu.SubContent>
+              {(Object.keys(CATEGORY_LABEL) as NotificationCategory[]).map((c) => (
+                <Menu.Item
+                  key={c}
+                  onSelect={() => setNotificationPrefs({ ...prefs, categories: { ...prefs.categories, [c]: !prefs.categories[c] } })}
+                >
+                  <Menu.Prefix>{prefs.categories[c] ? <CheckmarkIcon /> : <span style={{ display: "inline-block", width: 20 }} />}</Menu.Prefix>
+                  {CATEGORY_LABEL[c]}
+                </Menu.Item>
+              ))}
+            </Menu.SubContent>
+          </Menu.Sub>
+          {items.length > 0 && <Menu.Item onSelect={clearNotifications}>Clear all</Menu.Item>}
+        </Menu.Group>
+      </Menu.Content>
+    </Menu>
+  );
+};
 
 interface OnCallEntry {
   scheduleId: string;
@@ -67,7 +155,12 @@ const OnCallNowAction = () => {
   return (
     <Menu>
       <Menu.Trigger>
-        <AppHeader.ActionButton prefixIcon={<NotificationActiveIcon />}>{label}</AppHeader.ActionButton>
+        <AppHeader.ActionButton>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <CallIcon />
+            {label}
+          </span>
+        </AppHeader.ActionButton>
       </Menu.Trigger>
       <Menu.Content>
         {[...byTeam.entries()].map(([team, list]) => (
@@ -127,6 +220,7 @@ export const ShellHeader = () => {
         </AppHeader.NavigationItem>
       </AppHeader.Navigation>
       <AppHeader.ActionItems>
+        <NotificationBell />
         <OnCallNowAction />
       </AppHeader.ActionItems>
       <AppHeader.Menus>

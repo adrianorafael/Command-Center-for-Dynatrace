@@ -6,7 +6,6 @@ import { ProgressCircle } from "@dynatrace/strato-components/content";
 import { FilterBar, TimeframeSelector } from "@dynatrace/strato-components/filters";
 import { SearchInput, Select } from "@dynatrace/strato-components/forms";
 import { Text } from "@dynatrace/strato-components/typography";
-import { showToast } from "@dynatrace/strato-components/notifications";
 import { RefreshAutoIcon, RefreshIcon } from "@dynatrace/strato-icons";
 import type { Timeframe } from "@dynatrace/strato-components/core";
 import { PRIORITIES } from "../../domain/contracts";
@@ -83,18 +82,6 @@ export const ConsolePage = () => {
   const all = useMemo(() => data?.incidents ?? [], [data]);
   const visible = useMemo(() => applyFilters(all, filters, currentUser.uid, createdAfter), [all, filters, currentUser.uid, createdAfter]);
   const active = activeId ? all.find((i) => i.id === activeId) : undefined;
-
-  // "N new incidents" announcement without moving focus (DESIGN §1.5).
-  const known = useRef<Set<string> | null>(null);
-  useEffect(() => {
-    if (!data) return;
-    const ids = new Set(data.incidents.map((i) => i.id));
-    if (known.current) {
-      const fresh = [...ids].filter((x) => !known.current?.has(x)).length;
-      if (fresh > 0) showToast({ type: "info", role: "status", title: `${fresh} new ${fresh === 1 ? "incident" : "incidents"}` });
-    }
-    known.current = ids;
-  }, [data]);
 
   // Keyboard shortcuts (DESIGN §13), off while typing and switchable in Settings (WCAG 2.1.4).
   useEffect(() => {

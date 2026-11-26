@@ -4,7 +4,7 @@
  * updates (the same effectiveIncident reducer the engine uses).
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { showToast } from "@dynatrace/strato-components/notifications";
+import { notify } from "./notifications";
 import { Button } from "@dynatrace/strato-components/buttons";
 import type {
   DailyRollup,
@@ -109,6 +109,9 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
   const [paused, setPaused] = useState(false);
   const [users, setUsers] = useState<Map<string, DirectoryUser>>(() => new Map([[currentUser.uid, currentUser]]));
   const inflight = useRef<Promise<void> | null>(null);
+  /** Incident ids seen in the previous load (null before the first load): drives "new incident" notifications. */
+  const seenIncidents = useRef<Set<string> | null>(null);
+  const engineStaleNotified = useRef(false);
 
   const load = useCallback(async () => {
     if (inflight.current) return inflight.current;
@@ -146,6 +149,37 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
           rollups: [...rollups].sort((a, b) => a.day.localeCompare(b.day)),
           heartbeat,
         });
+        // New urgent incidents (P1/P2, triggered) and paging-engine health go to the notification center.
+        const ids = new Set(rawIncidents.map((i) => i.id));
+        if (seenIncidents.current) {
+          const fresh = rawIncidents.filter(
+            (i) => !seenIncidents.current?.has(i.id) && i.status === "triggered" && (i.priority === "P1" || i.priority === "P2"),
+          );
+          fresh.slice(0, 3).forEach((i) =>
+            notify({
+              category: "incident",
+              type: i.priority === "P1" ? "critical" : "warning",
+              title: `${i.priority} · ${i.alert.title}`,
+              message: `#${i.alert.displayId ?? i.id}`,
+              link: `/incidents/${i.id}`,
+              lifespan: 8_000,
+            }),
+          );
+          if (fresh.length > 3) notify({ category: "incident", type: "warning", title: `${fresh.length - 3} more new P1/P2 incidents`, link: "/" });
+        }
+        seenIncidents.current = ids;
+        const stale = !!heartbeat && Date.now() - heartbeat.lastTickAt > 3 * 60_000;
+        if (stale && !engineStaleNotified.current) {
+          notify({
+            category: "engine",
+            type: "warning",
+            title: "Paging engine is not running",
+            message: "No engine run in the last 3 minutes: escalations and notifications are paused.",
+            link: "/integrations",
+            lifespan: 10_000,
+          });
+        }
+        engineStaleNotified.current = stale;
         // Confirmed local actions are now part of the stored pending list.
         setLocal((l) => l.filter((x) => !(x.confirmed && x.action.at <= started)));
         setError(undefined);
@@ -274,7 +308,8 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
                 : undefined;
           const undo =
             payload.type === "ack" ? ({ type: "unack" } as const) : payload.type === "resolve" ? ({ type: "reopen" } as const) : undefined;
-          showToast({
+          notify({
+            category: "action",
             type: "success",
             title: incidentIds.length > 1 ? title.replace("Incident", `${incidentIds.length} incidents`) : title,
             message,
@@ -290,7 +325,8 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
         setLocal((l) => l.filter((x) => !actions.includes(x.action)));
         const [, verb] = ACTION_VERB[payload.type] ?? ["", "update"];
         const inc = data?.incidents.find((i) => i.id === incidentIds[0]);
-        showToast({
+        notify({
+          category: "error",
           type: "critical",
           title: `Couldn't ${verb} ${incidentIds.length > 1 ? `${incidentIds.length} incidents` : `#${inc?.alert.displayId ?? incidentIds[0]}`}`,
           message: errorMessage(e),
@@ -309,10 +345,10 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
     async (fn, successTitle) => {
       try {
         await fn(store);
-        if (successTitle) showToast({ type: "success", title: successTitle, lifespan: 4_000 });
+        if (successTitle) notify({ category: "action", type: "success", title: successTitle, lifespan: 4_000 });
         await load();
       } catch (e) {
-        showToast({ type: "critical", title: "Couldn't save your changes", message: errorMessage(e), lifespan: "infinite" });
+        notify({ category: "error", type: "critical", title: "Couldn't save your changes", message: errorMessage(e), lifespan: "infinite" });
         throw e;
       }
     },
