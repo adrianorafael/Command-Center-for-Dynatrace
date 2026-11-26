@@ -23,7 +23,7 @@ export const AgeText = ({
   return (
     <Tooltip text={formatDateTime(since, timeZone)}>
       <Flex alignItems="center" gap={4} style={overdue ? { color: Colors.Text.Critical.Default } : undefined}>
-        {overdue && <ClockIcon aria-label="Over the acknowledge target" />}
+        {overdue && <ClockIcon size="small" aria-label="Over the acknowledge target" />}
         <Text>{formatDuration(age)}</Text>
       </Flex>
     </Tooltip>

@@ -9,6 +9,7 @@ import { Text } from "@dynatrace/strato-components/typography";
 import { showToast } from "@dynatrace/strato-components/notifications";
 import { RefreshAutoIcon, RefreshIcon } from "@dynatrace/strato-icons";
 import type { Timeframe } from "@dynatrace/strato-components/core";
+import Colors from "@dynatrace/strato-design-tokens/colors";
 import { PRIORITIES } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { readPrefs } from "../../hooks/prefs";
@@ -171,29 +172,6 @@ export const ConsolePage = () => {
           <PageTitle
             title="Console"
             subtitle="Incidents from Davis problems and ingested events, newest first"
-            suffix={
-              <Flex alignItems="center" gap={8}>
-                {showSpinner && <ProgressCircle size="small" aria-label="Refreshing" />}
-                {lastUpdated && <Text textStyle="small">Updated {formatTime(lastUpdated, tz, true)}</Text>}
-                <Select
-                  value={refreshSec}
-                  onChange={(v) => setRefreshSec(Number(v ?? 0))}
-                  aria-label="Auto-refresh"
-                >
-                  <Select.Prefix>
-                    <RefreshAutoIcon />
-                  </Select.Prefix>
-                  <Select.Content>
-                    {REFRESH_OPTIONS.map((o) => (
-                      <Select.Option key={o.value} value={o.value}>
-                        {o.label}
-                      </Select.Option>
-                    ))}
-                  </Select.Content>
-                </Select>
-                <IconButton label="Refresh now" icon={<RefreshIcon />} onClick={() => void refresh()} />
-              </Flex>
-            }
           />
           <EngineHealthBanner />
           {error ? <ErrorMessage title="Couldn't load incidents. Check your connection and select Retry." error={error} onRetry={() => void refresh()} /> : null}
@@ -205,9 +183,11 @@ export const ConsolePage = () => {
             loading={isLoading}
             onFilter={(patch) => setFilters({ status: DEFAULT_STATUS, priority: [], assignee: [], ...patch })}
           />
-          {/* Search first, then FilterBar with the TimeframeSelector as its last pinned item (Strato TimeframeSelector
-              "Where to position" + FilterBar "TimeframeSelector as filter control"). Outside the FilterBar the selector's
-              root has align-self: start and floated 20 px above the labelled fields. */}
+          {/* Filter row (Strato filtering standard + TimeframeSelector "Where to position"/"When to refresh"):
+              search, category filters, then the TimeframeSelector at the end with the refresh controls and
+              "last updated" grouped next to it, right above the table they affect. The right group is its own
+              Flex: the TimeframeSelector root carries align-self: start, which in the labelled filter row floated
+              it 20 px above the fields. */}
           <Flex gap={8} alignItems="flex-end" flexWrap="wrap">
             <SearchInput
               value={filters.q}
@@ -223,11 +203,9 @@ export const ConsolePage = () => {
                   priority: "pinned",
                   team: "pinned",
                   assignee: "pinned",
-                  // FilterBar renders pinned items before pinned-optional ones; service is pinned so the timeframe stays last.
-                  service: "pinned",
+                  service: "pinned-optional",
                   source: "optional",
                   escalation: "optional",
-                  created: "pinned",
                 }}
               >
                 <FilterBar.Item name="status" label="Status">
@@ -313,10 +291,31 @@ export const ConsolePage = () => {
                     </Select.Content>
                   </Select>
                 </FilterBar.Item>
-                <FilterBar.Item name="created" label="Created">
-                  <TimeframeSelector value={timeframe} onChange={setTimeframe} />
-                </FilterBar.Item>
               </FilterBar>
+            </Flex>
+            <Flex alignItems="center" gap={8} flexWrap="wrap" justifyContent="flex-end" style={{ marginInlineStart: "auto" }}>
+              <TimeframeSelector value={timeframe} onChange={setTimeframe}>
+                <TimeframeSelector.Trigger placeholder="Created: any time" aria-label="Created timeframe" />
+              </TimeframeSelector>
+              {showSpinner && <ProgressCircle size="small" aria-label="Refreshing" />}
+              {lastUpdated && (
+                <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued, whiteSpace: "nowrap" }}>
+                  Updated {formatTime(lastUpdated, tz, true)}
+                </Text>
+              )}
+              <Select value={refreshSec} onChange={(v) => setRefreshSec(Number(v ?? 0))} aria-label="Auto-refresh">
+                <Select.Prefix>
+                  <RefreshAutoIcon />
+                </Select.Prefix>
+                <Select.Content>
+                  {REFRESH_OPTIONS.map((o) => (
+                    <Select.Option key={o.value} value={o.value}>
+                      {o.label}
+                    </Select.Option>
+                  ))}
+                </Select.Content>
+              </Select>
+              <IconButton label="Refresh now" icon={<RefreshIcon />} onClick={() => void refresh()} />
             </Flex>
           </Flex>
           <IncidentTable
