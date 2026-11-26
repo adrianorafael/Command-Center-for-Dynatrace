@@ -334,7 +334,7 @@ export const IncidentTable = ({
         id: "priority",
         header: "Priority",
         accessor: "rank",
-        width: 84,
+        width: 100,
         sortType: "number",
         cell: ({ rowData }) => (
           <Cell>
