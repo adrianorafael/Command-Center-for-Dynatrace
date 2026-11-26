@@ -63,6 +63,8 @@ export interface AppDataContextValue {
   currentUser: DirectoryUser;
   users: Map<string, DirectoryUser>;
   userName: (uid: string | undefined) => string;
+  /** Cache users found through the directory (picker results) for display. */
+  rememberUsers: (list: DirectoryUser[]) => void;
   /** Append one operator action per incident; optimistic; returns the appended actions. */
   act: (incidentIds: string[], payload: ActionPayload, opts?: { silent?: boolean }) => Promise<IncidentAction[]>;
   /** Run a config write, refresh, toast. Throws after showing the failure toast. */
@@ -241,6 +243,15 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
     [users],
   );
 
+  const rememberUsers = useCallback((list: DirectoryUser[]) => {
+    if (!list.length) return;
+    setUsers((prev) => {
+      const next = new Map(prev);
+      list.forEach((u) => next.set(u.uid, u));
+      return next;
+    });
+  }, []);
+
   const act = useCallback<AppDataContextValue["act"]>(
     async (incidentIds, payload, opts) => {
       const at = Date.now();
@@ -324,6 +335,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
     currentUser,
     users,
     userName,
+    rememberUsers,
     act,
     mutate,
   };

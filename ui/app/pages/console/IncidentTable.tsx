@@ -12,7 +12,7 @@ import {
   CheckmarkIcon,
   CopyIcon,
   CriticalFailedIcon,
-  DavisAIIcon,
+  AiIcon,
   DescriptionIcon,
   DotMenuIcon,
   EditIcon,
@@ -110,7 +110,7 @@ const MoreActions = ({
         {davis && (
           <Menu.Item onSelect={() => window.open(davis, "_blank", "noopener,noreferrer")}>
             <Menu.Prefix>
-              <DavisAIIcon />
+              <AiIcon />
             </Menu.Prefix>
             Open Davis problem
           </Menu.Item>
@@ -379,7 +379,7 @@ export const IncidentTable = ({
         width: 140,
         cell: ({ rowData }) => (
           <Flex alignItems="center" gap={4}>
-            {rowData.alert.source === "davis-problem" ? <DavisAIIcon /> : <EventIcon />}
+            {rowData.alert.source === "davis-problem" ? <AiIcon /> : <EventIcon />}
             <Text>{SOURCE_LABEL[rowData.alert.source] ?? rowData.alert.source}</Text>
           </Flex>
         ),

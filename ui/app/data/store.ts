@@ -38,7 +38,7 @@ export function emptyRules(): RoutingRules {
 export function mergeSettings(stored: Partial<Settings> | undefined): Settings {
   const d = defaultSettings();
   if (!stored) return d;
-  return {
+  const merged: Settings = {
     ...d,
     ...stored,
     sources: {
@@ -52,6 +52,8 @@ export function mergeSettings(stored: Partial<Settings> | undefined): Settings {
     ui: { ...d.ui, ...stored.ui },
     providers: stored.providers ?? d.providers,
   };
+  if (!merged.engine.workflowId) merged.engine.workflowId = d.engine.workflowId;
+  return merged;
 }
 
 function values<T>(rows: Stored<T>[]): T[] {

@@ -148,7 +148,7 @@ export function createWorkflowInstaller(appId: string, client: AutomationClientL
 
     async getStatus(settings) {
       const id = settings.engine.workflowId;
-      let wf;
+      let wf: Awaited<ReturnType<AutomationClientLike["getWorkflow"]>>;
       try {
         wf = await client.getWorkflow({ id });
       } catch (e) {

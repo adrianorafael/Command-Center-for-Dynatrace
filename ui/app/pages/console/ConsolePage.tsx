@@ -304,7 +304,7 @@ export const ConsolePage = () => {
                 </FilterBar.Item>
               </FilterBar>
             </Flex>
-            <TimeframeSelector value={timeframe} onChange={setTimeframe} clearable />
+            <TimeframeSelector value={timeframe} onChange={setTimeframe} />
             <SearchInput
               value={filters.q}
               onChange={(v) => setFilters({ q: v })}

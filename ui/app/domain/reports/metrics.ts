@@ -85,7 +85,7 @@ export function applyRollupDelta(existing: DailyRollup | undefined, delta: Rollu
 }
 
 /** Mutating recorders used by the engine. */
-export const record = {
+export const rollupRecord = {
   created(d: RollupDelta, inc: Incident): void {
     d.created++;
     const bp = d.byPriority;
@@ -180,12 +180,12 @@ export function rollupsFromIncidents(incidents: Incident[], from: number, to: nu
     return d;
   };
   for (const inc of incidents) {
-    if (inc.createdAt >= from && inc.createdAt < to) record.created(get(inc.createdAt), inc);
+    if (inc.createdAt >= from && inc.createdAt < to) rollupRecord.created(get(inc.createdAt), inc);
     if (inc.acknowledgedAt !== undefined && inc.acknowledgedAt >= from && inc.acknowledgedAt < to) {
-      record.acknowledged(get(inc.acknowledgedAt), inc);
+      rollupRecord.acknowledged(get(inc.acknowledgedAt), inc);
     }
     if (inc.status === "resolved" && inc.resolvedAt !== undefined && inc.resolvedAt >= from && inc.resolvedAt < to) {
-      record.resolved(get(inc.resolvedAt), inc);
+      rollupRecord.resolved(get(inc.resolvedAt), inc);
     }
   }
   return Array.from(byDay.values()).map((d) => applyRollupDelta(undefined, d));

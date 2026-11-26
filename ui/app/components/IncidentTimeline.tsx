@@ -10,7 +10,7 @@ import {
   CheckmarkIcon,
   ConditionsIcon,
   CriticalFailedIcon,
-  DavisAIIcon,
+  AiIcon,
   DescriptionIcon,
   EditIcon,
   EventIcon,
@@ -77,7 +77,7 @@ function icon(t: TimelineEntry): React.ReactNode {
     case "suppressed":
       return <MuteIcon style={neutral} />;
     default:
-      if (t.type.startsWith("davis") || t.by === "source") return <DavisAIIcon style={neutral} />;
+      if (t.type.startsWith("davis") || t.by === "source") return <AiIcon style={neutral} />;
       if (t.type.startsWith("escalation")) return <StepIcon style={{ color: Colors.Icon.Primary.Default }} />;
       return <TimelineEventIcon style={neutral} />;
   }

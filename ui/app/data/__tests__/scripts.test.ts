@@ -56,7 +56,7 @@ const credentials = {
 
 const providers: ProviderConfig[] = [
   provider("twilio", "sms", "twilio", { from: "+15550000001" }),
-  provider("ifttt", "ifttt", "ifttt", { event: "cc_page" }),
+  provider("ifttt", "ifttt", "ifttt", { eventName: "cc_page" }),
   provider("slack", "slack", "slack-webhook"),
   provider("teams", "teams", "teams-webhook"),
   provider("telegram", "telegram", "telegram-bot"),

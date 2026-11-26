@@ -47,7 +47,7 @@ Create one entry per provider (Credential Vault → Add credential), with:
 | Provider kind | Credential type | Contents |
 | --- | --- | --- |
 | `twilio` (SMS, voice, WhatsApp) | Username and password | username = Account SID (or API Key SID + set `accountSid` in provider params), password = Auth Token (or API Key secret) |
-| `ifttt` | Token | your IFTTT Webhooks key; set `event` in provider params |
+| `ifttt` | Token | your IFTTT Webhooks key; set `eventName` in provider params |
 | `slack-webhook` | Token | the full incoming-webhook URL (`https://hooks.slack.com/services/…`) |
 | `teams-webhook` | Token | the full Teams **Workflows** webhook URL ("When a Teams webhook request is received"). Office 365 connector webhooks were retired by Microsoft in May 2026. |
 | `telegram-bot` | Token | the bot token; contact address = chat id |

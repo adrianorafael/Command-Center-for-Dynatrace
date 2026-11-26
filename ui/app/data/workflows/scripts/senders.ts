@@ -25,7 +25,7 @@
  *  - twilio:        USERNAME_PASSWORD — user = Account SID or API Key SID, password = Auth Token / API secret;
  *                   params.accountSid (needed when user is an API Key SID), params.from, params.messagingServiceSid,
  *                   params.voice, params.language
- *  - ifttt:         TOKEN = Webhooks key; params.event
+ *  - ifttt:         TOKEN = Webhooks key; params.eventName (alias: params.event)
  *  - slack-webhook: TOKEN = full incoming-webhook URL
  *  - teams-webhook: TOKEN = full Teams Workflows webhook URL
  *  - telegram-bot:  TOKEN = bot token; to.address = chat id
@@ -126,8 +126,9 @@ export const SEND_IFTTT = senderScript(
   "IFTTT webhook",
   `
 async function send(n, provider, cred) {
-  var event = (provider.params && provider.params.event) || "";
-  if (!/^[A-Za-z0-9_-]{1,100}$/.test(event)) throw new Error("IFTTT provider needs params.event ([A-Za-z0-9_-])");
+  var p = provider.params || {};
+  var event = p.eventName || p.event || "";
+  if (!/^[A-Za-z0-9_-]{1,100}$/.test(event)) throw new Error("IFTTT provider needs params.eventName ([A-Za-z0-9_-])");
   if (!cred.token) throw new Error("IFTTT credential needs a token (Webhooks key)");
   var url = "https://maker.ifttt.com/trigger/" + event + "/with/key/" + encodeURIComponent(cred.token);
   var res = await post(url, {

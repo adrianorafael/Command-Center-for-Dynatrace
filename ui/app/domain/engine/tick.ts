@@ -51,7 +51,7 @@ import {
 import { incidentIdFromActionKey, utcDay, utcDayCompact } from "../keys";
 import { planIncidentNotifications, processLedger, toRequest, type CandidateRequest, type PlanContext } from "../notifications/plan";
 import { priorityRank } from "../priority";
-import { emptyDelta, record, type RollupDelta } from "../reports/metrics";
+import { emptyDelta, rollupRecord, type RollupDelta } from "../reports/metrics";
 import { routeAlert } from "../routing/match";
 import { pagingState } from "../suppression";
 import { HOUR_MS } from "../time/tz";
@@ -166,17 +166,17 @@ export function tick(input: TickInput): TickOutput {
       const inc = createIncident(alert, routeAlert(alert, routingCtx), now);
       set(inc);
       counts.incidentsCreated++;
-      record.created(delta, inc);
+      rollupRecord.created(delta, inc);
       if (inc.status === "resolved") {
         counts.incidentsResolved++;
-        record.resolved(delta, inc);
+        rollupRecord.resolved(delta, inc);
       }
       continue;
     }
     const { incident, change } = applyAlertUpdate(existing, alert, now);
     if (change === "resolved") {
       counts.incidentsResolved++;
-      record.resolved(delta, incident);
+      rollupRecord.resolved(delta, incident);
     }
     const snapshotChanged = !sameJson(existing.alert, alert);
     if (change || snapshotChanged || now - existing.lastSeenAt >= LAST_SEEN_REFRESH_MS) set(incident);
@@ -204,10 +204,10 @@ export function tick(input: TickInput): TickOutput {
     counts.actionsFolded += r.applied;
     if (r.applied > 0) {
       const after = r.incident;
-      if (before.status !== "acknowledged" && after.status === "acknowledged") record.acknowledged(delta, after);
+      if (before.status !== "acknowledged" && after.status === "acknowledged") rollupRecord.acknowledged(delta, after);
       if (before.status !== "resolved" && after.status === "resolved") {
         counts.incidentsResolved++;
-        record.resolved(delta, after);
+        rollupRecord.resolved(delta, after);
       }
       set(after);
     }
@@ -353,7 +353,7 @@ export function tick(input: TickInput): TickOutput {
     if (c.retry) counts.notificationsRetried++;
     else {
       counts.notificationsPlanned++;
-      record.page(delta, c.record.to.uid);
+      rollupRecord.page(delta, c.record.to.uid);
     }
     const l = plannedByIncident.get(c.record.incidentId);
     if (l) l.push(c.record);

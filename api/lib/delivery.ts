@@ -1,0 +1,95 @@
+/**
+ * delivery-report: apply the workflow's DeliveryResult[] to the ledger, incident timelines and
+ * the daily rollup through the pure domain `applyDeliveryResults`.
+ * Tolerant by design: unknown keys (e.g. reason 'test' requests, expired records) are counted,
+ * never thrown.
+ */
+
+import type { DeliveryResult, Incident, NotificationRecord } from "../../ui/app/domain/contracts";
+import { KEY, type Repository } from "../../ui/app/data/repository";
+import { describeError } from "../../ui/app/data/grail";
+import { applyDeliveryResults } from "../../ui/app/domain/engine/delivery";
+import { isValidKey } from "../../ui/app/domain/keys";
+import { NOTIFICATION_TTL_MS, addRollup, forEachLimited } from "./engine";
+
+export interface DeliveryReportRequest {
+  results: DeliveryResult[];
+}
+
+export interface DeliveryReportResponse {
+  ok: boolean;
+  applied: number;
+  unknown: number;
+  errors: string[];
+}
+
+export const MAX_RESULTS = 1000;
+
+function isResult(v: unknown): v is DeliveryResult {
+  if (typeof v !== "object" || v === null) return false;
+  const r = v as Record<string, unknown>;
+  return (
+    typeof r["key"] === "string" &&
+    (r["status"] === "sent" || r["status"] === "failed") &&
+    typeof r["at"] === "number" &&
+    Number.isFinite(r["at"])
+  );
+}
+
+export async function runDeliveryReport(
+  payload: unknown,
+  deps: { repo: Repository; now?: () => number },
+): Promise<DeliveryReportResponse> {
+  const now = (deps.now ?? Date.now)();
+  const raw = (payload as { results?: unknown } | null)?.results;
+  if (!Array.isArray(raw)) return { ok: false, applied: 0, unknown: 0, errors: ["payload.results must be an array"] };
+  const results = raw.filter(isResult).slice(0, MAX_RESULTS);
+  const errors: string[] = [];
+  if (results.length < raw.length) errors.push(`${raw.length - results.length} malformed or excess result(s) ignored`);
+
+  const ledger: NotificationRecord[] = [];
+  const keys = [...new Set(results.map((r) => r.key))].filter((k) => isValidKey(KEY.notification(k)));
+  await forEachLimited(
+    keys,
+    8,
+    async (k) => {
+      const rec = await deps.repo.get<NotificationRecord>(KEY.notification(k));
+      if (rec) ledger.push(rec.value);
+    },
+    (k, e) => errors.push(`read notification ${k}: ${describeError(e)}`),
+  );
+
+  const incidents: Incident[] = [];
+  await forEachLimited(
+    [...new Set(ledger.map((r) => r.incidentId))],
+    8,
+    async (id) => {
+      const inc = await deps.repo.get<Incident>(KEY.incident(id));
+      if (inc) incidents.push(inc.value);
+    },
+    (id, e) => errors.push(`read incident ${id}: ${describeError(e)}`),
+  );
+
+  const out = applyDeliveryResults({ now, results, ledger, incidents });
+
+  await forEachLimited(
+    out.notificationsToWrite,
+    8,
+    (r) => deps.repo.put(KEY.notification(r.key), r, NOTIFICATION_TTL_MS),
+    (r, e) => errors.push(`write notification ${r.key}: ${describeError(e)}`),
+  );
+  await forEachLimited(
+    out.incidentsToWrite,
+    8,
+    (inc) => deps.repo.put(KEY.incident(inc.id), inc),
+    (inc, e) => errors.push(`write incident ${inc.id}: ${describeError(e)}`),
+  );
+  await addRollup(deps.repo, out.rollupDelta).catch((e: unknown) => errors.push(`rollup: ${describeError(e)}`));
+
+  return {
+    ok: errors.length === 0,
+    applied: out.notificationsToWrite.length,
+    unknown: out.unknownKeys.length,
+    errors,
+  };
+}

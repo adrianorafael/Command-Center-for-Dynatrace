@@ -88,8 +88,8 @@ export function buildEngineTasks(appId: string): Tasks {
   return tasks;
 }
 
-/** Body shared by create and update (WorkflowUpdate has no `id`). */
-function baseBody(opts: DefinitionOptions): WorkflowUpdate {
+/** Body shared by create and update (no `id`: WorkflowUpdate has none; a WorkflowCreate without id is a valid WorkflowUpdate). */
+function baseBody(opts: DefinitionOptions): WorkflowCreate {
   return {
     title: ENGINE_WORKFLOW_TITLE,
     description:

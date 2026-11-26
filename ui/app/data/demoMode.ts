@@ -12,7 +12,7 @@
 import { getAppId, getEnvironmentId } from "@dynatrace-sdk/app-environment";
 import { AppStateRepository } from "./appStateRepository";
 import { createIamDirectory, createStaticDirectory, type Directory } from "./directory";
-import { demoSeed, demoUsers } from "./domainPort";
+import { demoSeed, demoUsers } from "./demoPort";
 import { MemoryRepository } from "./memoryRepository";
 import type { Repository } from "./repository";
 import { createStore } from "./store";

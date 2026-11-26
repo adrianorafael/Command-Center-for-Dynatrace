@@ -6,7 +6,7 @@ import { errorMessage } from "../../components/format";
 
 /** Incident commands shared by row actions, bulk actions, the details panel and shortcuts. */
 export function useIncidentCommands() {
-  const { act, demo } = useAppData();
+  const { act, demo, data } = useAppData();
 
   const ack = useCallback((ids: string[]) => act(ids, { type: "ack" }).then(() => undefined, () => undefined), [act]);
   const resolve = useCallback((ids: string[]) => act(ids, { type: "resolve" }).then(() => undefined, () => undefined), [act]);
@@ -25,7 +25,7 @@ export function useIncidentCommands() {
       }
       if (demo) return;
       try {
-        await runEngineNow("manual");
+        if (data) await runEngineNow(data.settings, "manual");
       } catch (e) {
         showToast({
           type: "warning",
@@ -35,7 +35,7 @@ export function useIncidentCommands() {
         });
       }
     },
-    [act, demo],
+    [act, demo, data],
   );
   return { ack, resolve, reopen, snoozeFor, escalate };
 }

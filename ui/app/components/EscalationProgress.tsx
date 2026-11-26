@@ -8,17 +8,7 @@ import type { EscalationPolicy, EscalationTarget, Incident } from "../domain/con
 import { CHANNEL_LABEL } from "./ChannelIcon";
 import { formatDuration, formatTime, initials } from "./format";
 import { useAppData } from "../hooks/AppDataContext";
-
-/** Offset (ms after escalation start) at which each step fires in one cycle. */
-export function stepOffsets(policy: EscalationPolicy): number[] {
-  let acc = 0;
-  return policy.steps.map((s) => (acc += s.delayMinutes * 60_000));
-}
-
-export function cycleLength(policy: EscalationPolicy): number {
-  const offs = stepOffsets(policy);
-  return offs.length ? offs[offs.length - 1] : 0;
-}
+import { stepOffsetsMs } from "../hooks/domain";
 
 /** Compact cell: "Step 2 of 4" + progress bar; exhausted in critical. */
 export const EscalationCell = ({ incident, policy }: { incident: Incident; policy?: EscalationPolicy }) => {
@@ -79,7 +69,7 @@ export const EscalationSteps = ({
 }) => {
   if (!policy) return <Text>No escalation policy applies to this incident.</Text>;
   const e = incident.escalation;
-  const offs = stepOffsets(policy);
+  const offs = stepOffsetsMs(policy);
   const paused = incident.status !== "triggered";
   const total = policy.steps.length;
   const current = e.lastStepIndex;

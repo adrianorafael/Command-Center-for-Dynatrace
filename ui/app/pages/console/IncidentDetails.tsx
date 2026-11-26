@@ -11,7 +11,7 @@ import {
   ArrowUpIcon,
   CheckmarkIcon,
   CopyIcon,
-  DavisAIIcon,
+  AiIcon,
   DescriptionIcon,
   DotMenuIcon,
   HostsIcon,
@@ -228,7 +228,7 @@ export const IncidentDetails = ({ incident, onModal }: { incident: Incident; onM
       </Flex>
       {davis && (
         <Flex alignItems="center" gap={4}>
-          <DavisAIIcon />
+          <AiIcon />
           <ExternalLink href={davis}>Open in Problems app</ExternalLink>
         </Flex>
       )}

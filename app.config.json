@@ -4,19 +4,42 @@
   "app": {
     "name": "Command Center",
     "version": "2.0.0",
-    "description": "NOC event console with on-call teams, schedules and escalation policies, paging through Dynatrace Workflows",
+    "description": "NOC event console with on-call teams and escalation via Workflows",
     "id": "my.command.center",
     "icon": "ui/assets/icons/headset-v2-128x128.svg",
     "scopes": [
-      { "name": "storage:buckets:read", "comment": "Required for any Grail read" },
-      { "name": "storage:events:read", "comment": "Read dt.davis.problems, dt.davis.events and events" },
-      { "name": "state:app-states:read", "comment": "Read configuration, incidents and the notification ledger" },
-      { "name": "state:app-states:write", "comment": "Persist configuration, incidents and operator actions" },
-      { "name": "state:app-states:delete", "comment": "Remove folded actions and deleted configuration" },
-      { "name": "iam:users:read", "comment": "Pick on-call team members from tenant users" },
-      { "name": "automation:workflows:read", "comment": "Show escalation workflow status" },
-      { "name": "automation:workflows:write", "comment": "Install and update the escalation workflow" },
-      { "name": "automation:workflows:run", "comment": "Escalate now and send test notifications through the workflow" }
+      {
+        "name": "storage:buckets:read",
+        "comment": "Required for any Grail read"
+      },
+      {
+        "name": "storage:events:read",
+        "comment": "Read dt.davis.problems, dt.davis.events and events"
+      },
+      {
+        "name": "state:app-states:read",
+        "comment": "Read configuration, incidents and the notification ledger"
+      },
+      {
+        "name": "state:app-states:write",
+        "comment": "Persist configuration, incidents and operator actions"
+      },
+      {
+        "name": "state:app-states:delete",
+        "comment": "Remove folded actions and deleted configuration"
+      },
+      {
+        "name": "iam:users:read",
+        "comment": "Pick on-call team members from tenant users"
+      },
+      {
+        "name": "automation:workflows:read",
+        "comment": "Show escalation workflow status"
+      },
+      {
+        "name": "automation:workflows:run",
+        "comment": "Escalate now and send test notifications through the workflow"
+      }
     ]
   }
 }

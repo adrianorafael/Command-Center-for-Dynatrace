@@ -192,15 +192,15 @@ export function formatZoned(ts: number, timeZone: string): string {
  */
 export function inWeeklyWindow(
   ts: number,
-  window: { days: number[]; from: string; to: string },
+  win: { days: number[]; from: string; to: string },
   timeZone: string,
 ): boolean {
-  const from = parseHHmm(window.from);
-  const to = parseHHmm(window.to);
+  const from = parseHHmm(win.from);
+  const to = parseHHmm(win.to);
   if (from === undefined || to === undefined) return false;
   const p = zonedParts(ts, timeZone);
   const m = p.hour * 60 + p.minute;
-  const days = window.days;
+  const days = win.days;
   if (from === to) return days.includes(p.weekday);
   if (from < to) return days.includes(p.weekday) && m >= from && m < to;
   const prev = (p.weekday + 6) % 7;

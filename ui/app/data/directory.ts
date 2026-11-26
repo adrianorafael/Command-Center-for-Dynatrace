@@ -2,8 +2,9 @@
  * Tenant user directory (IAM) — team members are IAM users, never free-text contacts.
  *
  * Verified against node_modules/@dynatrace-sdk/client-iam/types/index.d.ts:
- *  - usersAndGroupsClient.getActiveUsersForOrganizationalLevel({ levelType: "account"|"environment",
- *    levelId, partialString? (min 3, max 320), uuid?: string[] (max 25), pageSize? (≤1000) })
+ *  - usersAndGroupsClient → getActiveUsersForOrganizationalLevel with
+ *    levelType ("account" | "environment"), levelId, partialString? (min 3, max 320),
+ *    uuid?: string[] (max 25), pageSize? (≤1000)
  *    → RestUserPublicListResponse { results?: RestUserPublic[], nextPageKey?, totalCount? }   (l.230)
  *  - RestUserPublic { uid, email, name?, surname?, description? }                              (l.116)
  *  - "Providing value for at least one of the parameters: 'partialString' or 'uuid' is required."
