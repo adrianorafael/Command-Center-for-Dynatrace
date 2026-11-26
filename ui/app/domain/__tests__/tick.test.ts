@@ -225,6 +225,52 @@ describe("engine tick", () => {
   });
 });
 
+describe("engine tick — long-running behaviour", () => {
+  it("never replays old firings when the ledger expired (ntf TTL) or providers change", () => {
+    const i0 = input({ alerts: [alert({ sourceId: "P-1" })] });
+    let st = delivered({ ...i0, ...persist(i0, tick(i0)) });
+    for (const m of [10, 30, 60]) st = delivered({ ...st, ...persist(st, tick({ ...st, now: T0 + m * MIN })), now: T0 + m * MIN });
+    const later = tick({ ...st, ledger: [], now: T0 + 15 * 24 * H });
+    expect(allRequests(later)).toHaveLength(0);
+  });
+  it("repeat passes page again under new ordinals; exhaustion is written once", () => {
+    // policy: steps at 0 and 10 min, repeat 1, gap 10 → ordinals 0,1,2,3 at 0,10,20,30; exhausted at 40
+    const i0 = input({ alerts: [alert({ sourceId: "P-1" })] });
+    let st = delivered({ ...i0, ...persist(i0, tick(i0)) });
+    const steps: number[] = [];
+    let exhausted = 0;
+    for (const m of [10, 20, 30, 40, 50]) {
+      const o = tick({ ...st, now: T0 + m * MIN });
+      steps.push(...allRequests(o).map((r) => r.step));
+      exhausted += o.incidentsToWrite.flatMap((i) => i.timeline).filter((e) => e.type === "escalation_exhausted" && e.at === T0 + m * MIN).length;
+      st = delivered({ ...st, ...persist(st, o) });
+    }
+    expect(steps).toEqual([1, 2, 3]);
+    expect(exhausted).toBe(1);
+    const inc = st.incidents[0]!;
+    expect(inc.escalation).toMatchObject({ exhausted: true, repeatsDone: 1, lastStepIndex: 1 });
+    expect(new Set(st.ledger.map((r) => r.key)).size).toBe(4);
+  });
+  it("does not archive (and re-create) an incident the query still returns as CLOSED", () => {
+    const i0 = input({ alerts: [alert({ sourceId: "P-1" })] });
+    let st = { ...i0, ...persist(i0, tick(i0)) };
+    const r1 = act({ incidentId: "dp-p-1", at: T0 + MIN, type: "resolve" });
+    st = { ...st, ...persist({ ...st, pendingActions: [r1] }, tick({ ...st, now: T0 + 2 * MIN, pendingActions: [r1] })) };
+    const closed = alert({ sourceId: "P-1", sourceStatus: "CLOSED", endedAt: T0 + 23 * H });
+    const o1 = tick({ ...st, now: T0 + 23 * H + MIN, alerts: [closed] });
+    st = { ...st, ...persist(st, o1) };
+    const o2 = tick({ ...st, now: T0 + 25 * H, alerts: [closed] });
+    expect(o2.archives).toHaveLength(0);
+    expect(o2.counts.incidentsCreated).toBe(0);
+    const o3 = tick({ ...st, now: T0 + 26 * H, alerts: [] });
+    expect(o3.archives.map((a) => a.incident.id)).toEqual(["dp-p-1"]);
+  });
+  it("incidents created already closed do not count for MTTR", () => {
+    const o = tick(input({ alerts: [alert({ sourceId: "P-c", sourceStatus: "CLOSED", endedAt: T0 - H })] }));
+    expect(o.rollupDelta).toMatchObject({ created: 1, resolved: 1, ttrCount: 0, ttrSumMs: 0 });
+  });
+});
+
 describe("delivery report", () => {
   it("marks sent, writes timeline, is idempotent, never downgrades sent", () => {
     const i0 = input({ alerts: [alert({ sourceId: "P-1" })] });

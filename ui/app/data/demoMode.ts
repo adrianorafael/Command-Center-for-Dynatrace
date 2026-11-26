@@ -105,7 +105,7 @@ export function getDirectory(): Directory {
 }
 
 export function getInstaller(): EngineInstaller {
-  if (!installer) installer = isDemo() ? createDemoInstaller() : createWorkflowInstaller(currentAppId());
+  if (!installer) installer = isDemo() ? createDemoInstaller(currentAppId()) : createWorkflowInstaller(currentAppId());
   return installer;
 }
 

@@ -2,8 +2,12 @@
  * On-call resolution for a Schedule at an instant.
  *
  * Semantics (documented for the UI):
- * - Shifts of a layer are anchored at `startsAt`: the anchor is the latest `handoffTime`
- *   (schedule zone) at or before `startsAt`; shift 0 belongs to `participants[0]`.
+ * - Shifts of a layer are anchored at `startsAt`: the anchor is the first `handoffTime`
+ *   (schedule zone) at or after `startsAt`. Shift 0 belongs to `participants[0]` and also
+ *   covers the lead-in from `startsAt` to the anchor (so "starts Monday 00:00, weekly,
+ *   handoff 09:00" hands off every Monday 09:00 and the first shift is longer). For
+ *   hour-based custom rotations the boundaries are handoff ± k × length, so the lead-in is
+ *   shorter than one shift.
  *   Coverage starts at `startsAt` (nobody before it).
  * - `daily` = 1 local day, `weekly` = 7 local days, `custom` = `lengthHours` (multiples of 24
  *   are local days; others are elapsed hours). Day-based shifts always hand off at the local
@@ -75,8 +79,8 @@ function anchorOf(layer: RotationLayer, tz: string): Anchor {
   const handoffMin = parseHHmm(layer.handoffTime) ?? 0;
   let date = civilDate(layer.startsAt, tz);
   let start = zonedToUtc(date, handoffMin, tz);
-  if (start > layer.startsAt) {
-    date = addDays(date, -1);
+  if (start < layer.startsAt) {
+    date = addDays(date, 1);
     start = zonedToUtc(date, handoffMin, tz);
   }
   return { date, handoffMin, start };
@@ -113,9 +117,19 @@ export function layerShiftAt(layer: RotationLayer, timeZone: string, ts: number)
       end = zonedToUtc(addDays(anchor.date, (index + 1) * len.days), anchor.handoffMin, tz);
     }
   } else {
-    index = Math.floor((ts - anchor.start) / len.ms);
-    start = anchor.start + index * len.ms;
+    // Hour-based: boundaries are handoff-on-the-start-day ± k × length; first one ≥ startsAt.
+    const base = zonedToUtc(civilDate(layer.startsAt, tz), anchor.handoffMin, tz);
+    const first = base + Math.ceil((layer.startsAt - base) / len.ms) * len.ms;
+    index = Math.floor((ts - first) / len.ms);
+    start = first + index * len.ms;
     end = start + len.ms;
+    if (index < 0) end = first + len.ms;
+  }
+  if (index < 0) {
+    // Lead-in between startsAt and the first handoff: part of shift 0.
+    if (len.kind === "days") end = zonedToUtc(addDays(anchor.date, len.days), anchor.handoffMin, tz);
+    index = 0;
+    start = layer.startsAt;
   }
   const uid = layer.participants[mod(index, layer.participants.length)];
   if (uid === undefined) return undefined;

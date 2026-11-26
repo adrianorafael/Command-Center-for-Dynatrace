@@ -5,22 +5,40 @@
 | `command-center-engine.workflow.json` | The **Command Center · Engine** workflow — the paging engine. Generated from `ui/app/data/workflows/definition.ts` by `node scripts/gen-workflow-templates.mjs`; a unit test fails if it drifts. Do not edit by hand. |
 | `command-center-alert-simulator.workflow.json` | **For trial/test tenants only.** Posts 1–2 synthetic alerts (titles `[SIM] …`, properties `cc.service`, `cc.priority`, `cc.tags`, `cc.source=alert-simulator`) to the Events API v2 every 7 minutes, so the console has something to show. Never import it into a production tenant. |
 
-## Preferred: install from the app
+## Installing
 
-Command Center → **Integrations** → *Install / update engine workflow* creates or updates the workflow with a fixed
-id (`settings.engine.workflowId`), restores it from the trash if it was deleted, and keeps it in sync with the
-providers configured in Settings. Use the JSON file only if the app cannot write workflows (missing
-`automation:workflows:write`) or you want to review the definition first.
+Custom apps cannot hold `automation:workflows:write` ("Only apps that are provided by Dynatrace can use the
+'automation:workflows:write' scope" — observed on deploy), so Command Center cannot create the workflow itself. It can
+read its status and run it (`automation:workflows:read` / `:run`). Two ways to install:
 
-## Importing the JSON manually
+**A. Download + import (any user allowed to create workflows)**
+Command Center → **Integrations** → *Download engine workflow* generates the JSON for your app id and settings
+(`settings.engine.workflowId` as id). Then open the **Workflows** app → **Upload** and select the file. If the import
+assigns a new id, Command Center finds the workflow by its title (`Command Center · Engine`) and offers to store that id.
+The checked-in `command-center-engine.workflow.json` is the same definition with placeholders.
 
-1. Replace the placeholders:
-   - `my.command.center` → your app id if you changed it (it appears in the `tick` and `report` scripts:
-     `/apps/<appId>/api/engine-tick`, `/apps/<appId>/api/delivery-report`).
-   - `CREDENTIALS_VAULT-YOUR-…` in `input.providers` are informational only; the send tasks read the provider list
-     (including the vault entry ids) from the engine's tick result, i.e. from Command Center → Settings → Providers.
-2. Workflows → **Upload** (import) the JSON file.
-3. Keep the workflow **private**: task results contain phone numbers and message text.
+**B. Admin CLI**
+
+```bash
+DT_ENVIRONMENT=https://YOUR-ENVIRONMENT.apps.dynatrace.com \
+DT_PLATFORM_TOKEN=YOUR-PLATFORM-TOKEN \
+node scripts/install-workflow.mjs --app-id my.command.center [--actor <service-user-uid>] [--dry-run]
+```
+
+The platform token needs `automation:workflows:read` and `automation:workflows:write`. The script is idempotent:
+existing workflow → update; in the trash → restore + update; otherwise create with the fixed id. Re-run it after
+upgrading Command Center (the description carries a `[command-center-engine vN]` marker; the app flags outdated
+definitions). `--dry-run` prints the JSON without calling the API.
+
+Placeholders in the checked-in JSON:
+- `my.command.center` → your app id if you changed it (it appears in the `tick` and `report` scripts:
+  `/apps/<appId>/api/engine-tick`, `/apps/<appId>/api/delivery-report`).
+- `CREDENTIALS_VAULT-YOUR-…` in `input.providers` are informational only; the send tasks read the provider list
+  (including the vault entry ids) from the engine's tick result, i.e. from Command Center → Settings → Providers.
+
+Keep the workflow **private** (`isPrivate: true`, the default): task results contain phone numbers and message text.
+Note that a private workflow is only visible to its owner, so other users' *Escalate now* / *Test* buttons cannot run
+it (the minute schedule still pages everyone); share it, or accept that on-demand runs are owner-only.
 
 ## Workflow actor
 

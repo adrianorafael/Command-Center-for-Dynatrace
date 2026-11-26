@@ -74,6 +74,11 @@ function post(url, init) {
   return fetch(url, init);
 }
 
+// Links are only rendered as buttons when absolute (the engine may not know the environment URL).
+function isAbsolute(url) {
+  return typeof url === "string" && url.indexOf("https://") === 0;
+}
+
 function forUser(n) {
   return (n.to && (n.to.name || n.to.address)) || "";
 }

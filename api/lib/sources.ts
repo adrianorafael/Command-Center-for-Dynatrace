@@ -24,6 +24,8 @@ export interface SourceRecords {
 }
 
 const EVENT_IDS = "dt.davis.event_ids";
+/** Event properties that must not change a problem's identity or status. */
+const NOT_INHERITED = new Set(["cc.action", "cc.dedup_key"]);
 
 function stringArray(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
@@ -33,6 +35,7 @@ function stringArray(v: unknown): string[] {
  * Copy the `cc.*` custom properties of a problem's Davis events onto the problem record
  * (problem records do not carry them — observed on a trial tenant), so routing rules can match
  * `fields.cc.service` etc. Fields already on the problem win; for several events the first wins.
+ * cc.action / cc.dedup_key are never copied (they would resolve or re-key the problem).
  */
 export function enrichProblems(problems: GrailRecord[], eventProps: GrailRecord[]): GrailRecord[] {
   const byId = new Map<string, GrailRecord>();
@@ -46,7 +49,8 @@ export function enrichProblems(problems: GrailRecord[], eventProps: GrailRecord[
       const e = byId.get(id);
       if (!e) continue;
       for (const [k, v] of Object.entries(e)) {
-        if (k.startsWith("cc.") && out[k] === undefined && v !== null && v !== undefined) out[k] = v;
+        if (!k.startsWith("cc.") || NOT_INHERITED.has(k)) continue;
+        if (out[k] === undefined && v !== null && v !== undefined) out[k] = v;
       }
     }
     return out;
@@ -78,10 +82,14 @@ export async function fetchSources(
 
   // Q4: custom properties of the events behind each problem (for routing).
   const ids = safeEventIds(problems.flatMap((p) => stringArray(p[EVENT_IDS]))).slice(0, 5 * Q4_CHUNK);
-  const props: GrailRecord[] = [];
-  for (const part of chunk(ids, Q4_CHUNK)) {
-    props.push(...(await run("Q4 event properties", buildProblemEventPropsQuery(part, src.davisProblems.lookbackHours))));
-  }
+  // Chunks run in parallel so the whole fetch stays within ~2 × timeoutMs (function limit 120 s).
+  const props = (
+    await Promise.all(
+      chunk(ids, Q4_CHUNK).map((part) =>
+        run("Q4 event properties", buildProblemEventPropsQuery(part, src.davisProblems.lookbackHours)),
+      ),
+    )
+  ).flat();
 
   out.problems = props.length ? enrichProblems(problems, props) : problems;
   out.davisEvents = davisEvents;

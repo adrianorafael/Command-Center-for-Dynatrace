@@ -6,7 +6,7 @@
     "version": "2.0.0",
     "description": "NOC event console with on-call teams and escalation via Workflows",
     "id": "my.command.center",
-    "icon": "ui/assets/icons/headset-v2-128x128.svg",
+    "icon": "ui/assets/icons/command-center-icon.svg",
     "scopes": [
       {
         "name": "storage:buckets:read",

@@ -36,6 +36,14 @@ import { atLeastAsUrgent } from "../priority";
 import { MINUTE_MS } from "../time/tz";
 import { incidentUrl, renderMessage } from "./templates";
 
+/**
+ * Already-fired firings are re-planned (for rule delays and the cap) only within this window.
+ * Older ones are never re-sent, so an expired ledger entry (ntf TTL 14 d), a provider enabled
+ * later or a new team member cannot replay old steps. Newly due firings are always planned,
+ * even after a long engine outage.
+ */
+export const PLAN_CATCHUP_MS = 60 * MINUTE_MS;
+
 export interface PlanContext {
   now: number;
   settings: Settings;
@@ -189,6 +197,7 @@ export function planIncidentNotifications(
       for (const ch of choices) {
         const dueAt = f.dueAt + ch.delayMs;
         if (dueAt > ctx.now) continue;
+        if (!report && dueAt < ctx.now - PLAN_CATCHUP_MS) continue;
         const provider = providerFor(ctx.settings, ch.channel);
         if (!provider) {
           if (report) {

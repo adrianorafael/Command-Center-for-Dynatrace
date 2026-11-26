@@ -50,16 +50,27 @@ describe("schedule resolve", () => {
     const s = layerShiftAt({ ...l, handoffTime: "08:00" }, "America/Sao_Paulo", Date.UTC(2026, 10, 1, 12));
     expect(s!.end - s!.start).toBe(24 * H);
   });
-  it("startsAt before the handoff: first shift is clipped, rotation continues at handoff", () => {
+  it("startsAt before the handoff: lead-in belongs to shift 0, handoffs keep the weekday", () => {
     const tz = "America/Sao_Paulo";
-    const startsAt = Date.UTC(2026, 0, 5, 3); // Mon 00:00 local
+    const startsAt = Date.UTC(2026, 0, 5, 3); // Mon 5 Jan 00:00 local
     const l = layer({ startsAt });
     expect(layerShiftAt(l, tz, startsAt - 1)).toBeUndefined();
     const s = layerShiftAt(l, tz, startsAt);
     expect(s?.uid).toBe("a");
     expect(s?.start).toBe(startsAt);
-    expect(s?.end).toBe(Date.UTC(2026, 0, 5, 12)); // 09:00 local
-    expect(layerShiftAt(l, tz, Date.UTC(2026, 0, 5, 12))?.uid).toBe("b");
+    expect(s?.end).toBe(Date.UTC(2026, 0, 6, 12)); // Tue 09:00 local
+    expect(layerShiftAt(l, tz, Date.UTC(2026, 0, 5, 12))?.uid).toBe("a");
+    expect(layerShiftAt(l, tz, Date.UTC(2026, 0, 6, 12))?.uid).toBe("b");
+    const w = layer({ startsAt, rotation: { type: "weekly" } });
+    const s0 = layerShiftAt(w, tz, startsAt + 3600_000);
+    expect(s0?.end).toBe(Date.UTC(2026, 0, 12, 12)); // next Monday 09:00
+    const s1 = layerShiftAt(w, tz, Date.UTC(2026, 0, 12, 12));
+    expect(s1?.uid).toBe("b");
+    expect(new Date(s1!.end - 3 * 3600_000).getUTCDay()).toBe(1); // handoffs stay on Mondays
+    const startsLate = Date.UTC(2026, 0, 5, 15); // Mon 12:00 local, after the handoff
+    const c = layerShiftAt(layer({ startsAt: startsLate, rotation: { type: "custom", lengthHours: 12 } }), tz, startsLate);
+    // 12h boundaries at 09:00/21:00 local: first boundary ≥ 12:00 is 21:00 → lead-in + one shift
+    expect(c).toMatchObject({ uid: "a", start: startsLate, end: Date.UTC(2026, 0, 6, 12) }); // Tue 09:00 local
   });
   it("custom 12h rotation", () => {
     const tz = "UTC";

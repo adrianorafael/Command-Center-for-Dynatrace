@@ -155,7 +155,7 @@ async function send(n, provider, cred) {
       text: text.slice(0, 3000),
       blocks: [
         { type: "section", text: { type: "mrkdwn", text: ("*" + n.subject + "*\\n" + text).slice(0, 3000) } },
-        { type: "context", elements: [{ type: "mrkdwn", text: ("<" + n.incidentUrl + "|Open in Command Center> · " + n.priority).slice(0, 300) }] },
+        { type: "context", elements: [{ type: "mrkdwn", text: (isAbsolute(n.incidentUrl) ? "<" + n.incidentUrl + "|Open in Command Center> · " : "") + n.priority }] },
       ],
     }),
   });
@@ -180,8 +180,8 @@ async function send(n, provider, cred) {
       { type: "TextBlock", text: n.subject.slice(0, 300), weight: "Bolder", size: "Medium", wrap: true },
       { type: "TextBlock", text: ((who ? who + ": " : "") + n.text).slice(0, 4000), wrap: true },
     ],
-    actions: [{ type: "Action.OpenUrl", title: "Open in Command Center", url: n.incidentUrl }],
   };
+  if (isAbsolute(n.incidentUrl)) card.actions = [{ type: "Action.OpenUrl", title: "Open in Command Center", url: n.incidentUrl }];
   var res = await post(url, {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ type: "message", attachments: [{ contentType: "application/vnd.microsoft.card.adaptive", contentUrl: null, content: card }] }),

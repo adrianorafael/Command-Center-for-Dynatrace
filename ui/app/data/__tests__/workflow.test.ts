@@ -8,7 +8,13 @@ import {
   buildEngineWorkflowCreate,
   buildEngineWorkflowUpdate,
 } from "../workflows/definition";
-import { createDemoInstaller, createWorkflowInstaller, parseDefinitionVersion, type AutomationClientLike } from "../workflows/installer";
+import {
+  InstallNotPermittedError,
+  createDemoInstaller,
+  createWorkflowInstaller,
+  parseDefinitionVersion,
+  type AutomationClientLike,
+} from "../workflows/installer";
 import { SENDER_TASKS } from "../workflows/scripts/senders";
 
 const WF_ID = "00000000-0000-4000-8000-000000000001";
@@ -96,40 +102,24 @@ function client(over: Partial<AutomationClientLike> = {}): AutomationClientLike 
   const notFound = () => Promise.reject(Object.assign(new Error("nf"), { response: { status: 404 } }));
   return {
     getWorkflow: vi.fn(notFound),
-    updateWorkflow: vi.fn().mockResolvedValue({}),
-    createWorkflow: vi.fn().mockResolvedValue({}),
-    getTrashedWorkflows: vi.fn().mockResolvedValue({ results: [] }),
-    restoreTrashedWorkflow: vi.fn().mockResolvedValue({}),
+    getWorkflows: vi.fn().mockResolvedValue({ results: [] }),
     runWorkflow: vi.fn().mockResolvedValue({ id: "exec-1" }),
     getExecutions: vi.fn().mockResolvedValue({ results: [] }),
     ...over,
   };
 }
 
-describe("installer", () => {
-  it("updates an existing workflow", async () => {
-    const c = client({ getWorkflow: vi.fn().mockResolvedValue({ id: WF_ID }) });
-    expect(await createWorkflowInstaller("my.command.center", c).install(settings)).toBe("updated");
-    expect(c.updateWorkflow).toHaveBeenCalledWith(expect.objectContaining({ id: WF_ID }));
-    expect(c.createWorkflow).not.toHaveBeenCalled();
+describe("installer (read + run only)", () => {
+  it("cannot install: custom apps have no automation:workflows:write", async () => {
+    await expect(createWorkflowInstaller("my.command.center", client()).install(settings)).rejects.toBeInstanceOf(InstallNotPermittedError);
   });
 
-  it("restores a trashed workflow, then updates it", async () => {
-    const c = client({ getTrashedWorkflows: vi.fn().mockResolvedValue({ results: [{ id: WF_ID }] }) });
-    expect(await createWorkflowInstaller("my.command.center", c).install(settings)).toBe("restored");
-    expect(c.restoreTrashedWorkflow).toHaveBeenCalledWith({ id: WF_ID, body: { isDeployed: true } });
-    expect(c.updateWorkflow).toHaveBeenCalled();
-  });
-
-  it("creates the workflow with the fixed id when it does not exist", async () => {
-    const c = client();
-    expect(await createWorkflowInstaller("my.command.center", c).install(settings)).toBe("created");
-    expect(c.createWorkflow).toHaveBeenCalledWith({ body: expect.objectContaining({ id: WF_ID }) });
-  });
-
-  it("propagates errors other than not-found", async () => {
-    const c = client({ getWorkflow: vi.fn().mockRejectedValue(Object.assign(new Error("forbidden"), { response: { status: 403 } })) });
-    await expect(createWorkflowInstaller("my.command.center", c).install(settings)).rejects.toThrow("forbidden");
+  it("exports the definition for this app id as importable JSON", () => {
+    const e = createWorkflowInstaller("my.custom.app", client()).exportDefinition(settings);
+    expect(e.fileName).toMatch(/\.json$/);
+    const wf = JSON.parse(e.json) as { id: string; tasks: { tick: { input: { script: string } } } };
+    expect(wf.id).toBe(WF_ID);
+    expect(wf.tasks.tick.input.script).toContain('"my.custom.app"');
   });
 
   it("reports status with definition version and last execution", async () => {
@@ -143,9 +133,34 @@ describe("installer", () => {
       }),
     });
     const s = await createWorkflowInstaller("my.command.center", c).getStatus(settings);
-    expect(s).toMatchObject({ installed: true, definitionVersion: 0, outdated: true, workflowVersion: 7 });
+    expect(s).toMatchObject({ installed: true, workflowId: WF_ID, definitionVersion: 0, outdated: true, workflowVersion: 7 });
+    expect(s.foundByTitle).toBeUndefined();
     expect(s.lastExecution).toEqual({ id: "e1", state: "SUCCESS", startedAt: 1000, endedAt: undefined, triggerType: "Schedule" });
     expect(await createWorkflowInstaller("my.command.center", client()).getStatus(settings)).toMatchObject({ installed: false });
+  });
+
+  it("finds a workflow imported under another id by its title", async () => {
+    const other = "00000000-0000-4000-8000-0000000000ff";
+    const getWorkflow = vi.fn(({ id }: { id: string }) =>
+      id === other
+        ? Promise.resolve({ id: other, title: "Command Center · Engine", description: `[command-center-engine v${ENGINE_DEFINITION_VERSION}]` })
+        : Promise.reject(Object.assign(new Error("nf"), { response: { status: 404 } })),
+    );
+    const c = client({
+      getWorkflow,
+      getWorkflows: vi.fn().mockResolvedValue({ results: [{ id: "x", title: "Something else" }, { id: other, title: "Command Center · Engine" }] }),
+      runWorkflow: vi.fn(({ id }: { id: string }) =>
+        id === other ? Promise.resolve({ id: "exec-2" }) : Promise.reject(Object.assign(new Error("nf"), { response: { status: 404 } })),
+      ),
+    });
+    const inst = createWorkflowInstaller("my.command.center", c);
+    expect(await inst.getStatus(settings)).toMatchObject({ installed: true, workflowId: other, foundByTitle: true, outdated: false });
+    expect(await inst.runEngineNow(settings, { reason: "manual" })).toBe("exec-2");
+  });
+
+  it("propagates errors other than not-found", async () => {
+    const c = client({ getWorkflow: vi.fn().mockRejectedValue(Object.assign(new Error("forbidden"), { response: { status: 403 } })) });
+    await expect(createWorkflowInstaller("my.command.center", c).getStatus(settings)).rejects.toThrow("forbidden");
   });
 
   it("runs the engine with params and a unique qualifier", async () => {
@@ -159,9 +174,8 @@ describe("installer", () => {
     expect(parseDefinitionVersion("a [command-center-engine v12] b")).toBe(12);
     expect(parseDefinitionVersion(undefined)).toBeUndefined();
     const demo = createDemoInstaller();
-    expect((await demo.getStatus(settings)).installed).toBe(false);
-    expect(await demo.install(settings)).toBe("created");
-    expect((await demo.getStatus(settings)).demo).toBe(true);
+    expect(await demo.getStatus(settings)).toMatchObject({ installed: true, demo: true });
+    expect(await demo.runEngineNow(settings, { reason: "manual" })).toBeUndefined();
   });
 });
 

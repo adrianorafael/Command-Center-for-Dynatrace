@@ -1,8 +1,9 @@
+import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex, Surface } from "@dynatrace/strato-components/layouts";
 import { Sheet, Tooltip } from "@dynatrace/strato-components/overlays";
-import { FormField, Hint, Label, NumberInput, Select, TextInput } from "@dynatrace/strato-components/forms";
+import { FormField, Label, NumberInputV2 as NumberInput, Select, TextInput } from "@dynatrace/strato-components/forms";
 import { MessageContainer } from "@dynatrace/strato-components/content";
 import { Heading, Text } from "@dynatrace/strato-components/typography";
 import { showToast } from "@dynatrace/strato-components/notifications";
@@ -126,7 +127,7 @@ export const ContactSheet = ({ uid, show, onClose }: { uid?: string; show: boole
                 <FormField required>
                   <Label>Address</Label>
                   <TextInput value={m.address} onChange={(v) => setMethod(i, { ...m, address: v.trim() })} />
-                  <Hint>{ADDRESS_HINT[m.channel]}</Hint>
+                  <FieldHint>{ADDRESS_HINT[m.channel]}</FieldHint>
                 </FormField>
                 <FormField>
                   <Label>Label</Label>

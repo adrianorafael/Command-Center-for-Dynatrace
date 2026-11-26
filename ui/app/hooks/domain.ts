@@ -5,7 +5,8 @@
  */
 import type { Channel, DirectoryUser, EngineTickRequest, Settings } from "../domain/contracts";
 import type { Store } from "../data/repository";
-import { DEMO_ACTOR, getDirectory, getInstaller, getStore, isDemo, isRuntimeMissing, setDemoPreference } from "../data/demoMode";
+import { buildEngineWorkflowCreate } from "../data/workflows/definition";
+import { currentAppId, DEMO_ACTOR, getDirectory, getInstaller, getStore, isDemo, isRuntimeMissing, setDemoPreference } from "../data/demoMode";
 import { getCurrentUserDetails } from "@dynatrace-sdk/app-environment";
 
 // ─── A: pure domain ───────────────────────────────────────────────────────────
@@ -90,3 +91,13 @@ export function newId(prefix: string): string {
   const p = prefix.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "x";
   return `${p}-${s}`;
 }
+
+/**
+ * Engine workflow definition as importable JSON (third-party apps can't hold
+ * automation:workflows:write, so admins upload it in the Workflows app).
+ */
+export function buildWorkflowJson(settings: Settings): string {
+  const def = buildEngineWorkflowCreate({ appId: currentAppId(), settings });
+  return JSON.stringify(def, null, 2);
+}
+export { currentAppId };

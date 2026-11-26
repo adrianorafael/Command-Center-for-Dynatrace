@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { AppStateRepository, validUntilTime, type StateClientLike } from "../appStateRepository";
+import { AppStateRepository, relativeValidUntil, validUntilTime, type StateClientLike } from "../appStateRepository";
 import { MemoryRepository, TTL_MAX_MS, TTL_MIN_MS, clampTtlMs } from "../memoryRepository";
 
 describe("MemoryRepository", () => {
@@ -126,6 +126,20 @@ describe("AppStateRepository", () => {
     const repo = new AppStateRepository(client);
     expect(await repo.get("problem-ack-states")).toBeUndefined();
     warn.mockRestore();
+  });
+
+  it("falls back to the relative validUntilTime form on a 400", async () => {
+    const { client, store } = fakeStateClient();
+    const set = client.setAppState as ReturnType<typeof vi.fn>;
+    const original = set.getMockImplementation() as (c: unknown) => Promise<void>;
+    set.mockImplementation((c: { key: string; body: { value: string; validUntilTime?: string | null } }) =>
+      c.body.validUntilTime && !c.body.validUntilTime.startsWith("now+")
+        ? Promise.reject(Object.assign(new Error("bad request"), { response: { status: 400 } }))
+        : original(c),
+    );
+    await new AppStateRepository(client).put("lock.engine", { holder: "a" }, 90_000);
+    expect(store.get("lock.engine")?.validUntilTime).toBe("now+2m");
+    expect(relativeValidUntil(7 * 24 * 3600_000)).toBe("now+10080m");
   });
 
   it("validUntilTime clamps to 1 min … 90 d", () => {

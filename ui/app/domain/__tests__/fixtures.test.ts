@@ -47,6 +47,16 @@ describe("demo fixtures", () => {
     for (const n of d.notifications) expect(isValidKey(KEY.notification(n.key))).toBe(true);
     for (const a of d.actions) expect(isValidKey(a.key)).toBe(true);
   });
+  it("builds at many instants (incl. DST dates) with valid keys", () => {
+    const starts = [Date.UTC(2026, 2, 28, 23), Date.UTC(2026, 9, 24, 12), Date.UTC(2026, 10, 1, 5), Date.UTC(2027, 0, 1, 0)];
+    for (const s0 of starts) {
+      for (let h = 0; h < 48; h += 7) {
+        const dd = buildDemoData(s0 + h * 3_600_000);
+        expect(dd.incidents.length).toBeGreaterThan(15);
+        for (const n of dd.notifications) expect(isValidKey(KEY.notification(n.key))).toBe(true);
+      }
+    }
+  });
   it("a tick over the demo state at the same instant plans nothing new", () => {
     const out = tick({ now: NOW, settings: d.settings, teams: d.teams, schedules: d.schedules, policies: d.policies, services: d.services, rules: d.rules, contacts: d.contacts, incidents: d.incidents, pendingActions: [], ledger: d.notifications, alerts: [] });
     expect(Object.values(out.batches).flat()).toHaveLength(0);

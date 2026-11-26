@@ -11,7 +11,7 @@
  *  6. escalation + notification planning for triggered, non-suppressed incidents
  *  7. ledger timeouts → retries (attempt + 1) or final failure timeline entries
  *  8. archive incidents resolved longer than retention.resolvedVisibleHours (unless the
- *     source still reports them ACTIVE, which would re-create them); rollup delta
+ *     source query still returns them, which would re-create them); rollup delta
  *  9. batches by channel, capped at engine.maxNotificationsPerTick (overflow is not written
  *     to the ledger and is re-planned next tick)
  *
@@ -153,10 +153,10 @@ export function tick(input: TickInput): TickOutput {
   // 3. ingest
   const routingCtx = { rules: input.rules.rules, services: input.services, teams: input.teams, settings };
   const sortedAlerts = [...alerts].sort((a, b) => (a.dedupKey < b.dedupKey ? -1 : a.dedupKey > b.dedupKey ? 1 : 0));
-  const seenActive = new Set<string>();
+  const seenInTick = new Set<string>();
   for (const alert of sortedAlerts) {
     const id = incidentIdFor(alert);
-    if (alert.sourceStatus === "ACTIVE") seenActive.add(id);
+    seenInTick.add(id);
     const existing = current.get(id);
     if (!existing) {
       if (alert.sourceStatus === "CLOSED") {
@@ -384,8 +384,9 @@ export function tick(input: TickInput): TickOutput {
     const inc = current.get(id);
     if (!inc || inc.status !== "resolved" || inc.resolvedAt === undefined) continue;
     if (inc.resolvedAt > now - visibleMs) continue;
-    // Still ACTIVE in the source (operator-resolved): keep it, or it would be re-created.
-    if (seenActive.has(id)) continue;
+    // Still returned by the source query (ACTIVE or recently CLOSED): keep it, or the next
+    // tick would re-create it.
+    if (seenInTick.has(id)) continue;
     archives.push({ day: utcDayCompact(inc.resolvedAt), incident: slimIncident(inc) });
     touched.delete(id);
     if (original.has(id)) incidentIdsToDelete.push(id);

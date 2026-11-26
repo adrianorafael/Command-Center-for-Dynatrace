@@ -1,3 +1,4 @@
+import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface } from "@dynatrace/strato-components/layouts";
@@ -9,15 +10,14 @@ import {
   FieldSet,
   FormField,
   Label,
-  NumberInput,
+  NumberInputV2 as NumberInput,
   Radio,
   RadioGroup,
   Select,
   Switch,
   TextInput,
   ToggleButtonGroup,
-  Hint,
-} from "@dynatrace/strato-components/forms";
+  } from "@dynatrace/strato-components/forms";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Heading, Text } from "@dynatrace/strato-components/typography";
 import { PlusIcon, XmarkIcon } from "@dynatrace/strato-icons";
@@ -151,12 +151,12 @@ const LayerEditor = ({
               if (t) onChange({ ...layer, startsAt: t });
             }}
           />
-          <Hint>Weekly handoffs happen on this weekday ({WEEKDAYS[new Date(layer.startsAt).getDay()]}).</Hint>
+          <FieldHint>Weekly handoffs happen on this weekday ({WEEKDAYS[new Date(layer.startsAt).getDay()]}).</FieldHint>
         </FormField>
         <FormField required>
           <Label>Handoff time</Label>
           <TextInput value={layer.handoffTime} onChange={(v) => onChange({ ...layer, handoffTime: v })} placeholder="HH:mm" />
-          <Hint>24-hour time in the schedule time zone</Hint>
+          <FieldHint>24-hour time in the schedule time zone</FieldHint>
         </FormField>
       </Flex>
       <Switch
@@ -403,7 +403,7 @@ export const ScheduleEditorPage = () => {
                       ))}
                     </Select.Content>
                   </Select>
-                  <Hint>Handoff times and restrictions use this zone, including daylight saving changes</Hint>
+                  <FieldHint>Handoff times and restrictions use this zone, including daylight saving changes</FieldHint>
                 </FormField>
               </Flex>
             </FieldSet>

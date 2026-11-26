@@ -58,6 +58,11 @@ export function validUntilTime(ttlMs: number, now: number = Date.now()): string 
   return new Date(now + clampTtlMs(ttlMs)).toISOString();
 }
 
+/** Documented relative form ("now+2d" in the SDK example), in whole minutes. */
+export function relativeValidUntil(ttlMs: number): string {
+  return `now+${Math.round(clampTtlMs(ttlMs) / 60_000)}m`;
+}
+
 function toEpoch(t: Date | string | undefined): number | undefined {
   if (t === undefined) return undefined;
   const ms = t instanceof Date ? t.getTime() : Date.parse(t);
@@ -122,13 +127,18 @@ export class AppStateRepository implements Repository {
 
   async put<T>(key: string, value: T, ttlMs?: number): Promise<void> {
     assertValidKey(key);
-    await this.client.setAppState({
-      key,
-      body: {
-        value: JSON.stringify(value),
-        ...(ttlMs !== undefined ? { validUntilTime: validUntilTime(ttlMs) } : {}),
-      },
-    });
+    const json = JSON.stringify(value);
+    if (ttlMs === undefined) {
+      await this.client.setAppState({ key, body: { value: json } });
+      return;
+    }
+    try {
+      await this.client.setAppState({ key, body: { value: json, validUntilTime: validUntilTime(ttlMs) } });
+    } catch (e) {
+      // ISO input is UNVERIFIED; on a 400 fall back once to the documented relative form.
+      if (statusOf(e) !== 400) throw e;
+      await this.client.setAppState({ key, body: { value: json, validUntilTime: relativeValidUntil(ttlMs) } });
+    }
   }
 
   async delete(key: string): Promise<void> {

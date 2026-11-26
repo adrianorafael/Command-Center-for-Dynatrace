@@ -3,9 +3,10 @@ import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { Modal } from "@dynatrace/strato-components/overlays";
 import { MessageContainer } from "@dynatrace/strato-components/content";
-import { DateTimePicker, FormField, FormFieldMessages, Label, Select, TextInput } from "@dynatrace/strato-components/forms";
+import { DateTimePicker, FormField, Label, Select, TextInput } from "@dynatrace/strato-components/forms";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { newId, onCallAt } from "../../hooks/domain";
+import { FieldError } from "../../components/FieldHint";
 import { UserPicker } from "../../components/UserPicker";
 import { formatDayTime, formatDuration, msToIso, pickerToMs, zoneAbbr } from "../../components/format";
 
@@ -86,12 +87,12 @@ export const OverrideModal = ({ request, onClose }: { request?: { scheduleId?: s
               ))}
             </Select.Content>
           </Select>
-          {tried && errors.schedule && <FormFieldMessages.Item variant="error">{errors.schedule}</FormFieldMessages.Item>}
+          {tried && errors.schedule && <FieldError>{errors.schedule}</FieldError>}
         </FormField>
         <FormField required>
           <Label>Who covers</Label>
           <UserPicker value={uid} onChange={(u) => setUid(u)} />
-          {tried && errors.uid && <FormFieldMessages.Item variant="error">{errors.uid}</FormFieldMessages.Item>}
+          {tried && errors.uid && <FieldError>{errors.uid}</FieldError>}
         </FormField>
         <Flex gap={16} flexWrap="wrap">
           <FormField required>

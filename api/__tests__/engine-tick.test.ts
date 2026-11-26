@@ -250,3 +250,18 @@ describe("enrichProblems", () => {
     expect(p["cc.priority"]).toBe("P2");
   });
 });
+
+describe("delivery-report race guard", () => {
+  it("updates only the ledger while a tick holds the lease", async () => {
+    const repo = seededRepo();
+    const res = await runEngineTick({ reason: "schedule" }, { repo, runQuery: grail(), now: () => NOW });
+    const key = res.batches.sms[0].key;
+    await repo.put(KEY.lock, { holder: "tick-other", acquiredAt: NOW + 1000 }, 120_000);
+    const out = await runDeliveryReport({ results: [{ key, status: "sent", at: NOW + 2000 }] }, { repo, now: () => NOW + 3000 });
+    expect(out.timelineSkipped).toBe(true);
+    expect((await repo.get<NotificationRecord>(KEY.notification(key)))?.value.status).toBe("sent");
+    const [inc] = await createStore(repo).listIncidents();
+    expect(inc.timeline.some((e) => e.type === "notification_sent")).toBe(false);
+    expect((await repo.get<{ holder: string }>(KEY.lock))?.value.holder).toBe("tick-other");
+  });
+});

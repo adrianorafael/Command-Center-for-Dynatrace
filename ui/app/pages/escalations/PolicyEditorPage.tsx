@@ -1,9 +1,10 @@
+import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { MessageContainer } from "@dynatrace/strato-components/content";
-import { FieldSet, FormField, Hint, Label, NumberInput, Select, Switch, TextInput } from "@dynatrace/strato-components/forms";
+import { FieldSet, FormField, Label, NumberInputV2 as NumberInput, Select, Switch, TextInput } from "@dynatrace/strato-components/forms";
 import { Menu } from "@dynatrace/strato-components/navigation";
 import { Heading, Text } from "@dynatrace/strato-components/typography";
 import { DotMenuIcon, PlusIcon, XmarkIcon } from "@dynatrace/strato-icons";
@@ -315,7 +316,7 @@ export const PolicyEditorPage = () => {
                             ))}
                           </Select.Content>
                         </Select>
-                        <Hint>Leave empty to use each person's notification rules (recommended)</Hint>
+                        <FieldHint>Leave empty to use each person's notification rules (recommended)</FieldHint>
                       </FormField>
                     </Flex>
                   </Surface>
@@ -340,7 +341,7 @@ export const PolicyEditorPage = () => {
                   <FormField>
                     <Label>Times</Label>
                     <NumberInput value={draft.repeat} min={1} max={5} onChange={(v) => update({ ...draft, repeat: Math.max(1, Math.min(5, v ?? 1)) })} />
-                    <Hint>Each repeat starts after the last step's delay. When all repeats are done the policy is exhausted and the incident stays triggered.</Hint>
+                    <FieldHint>Each repeat starts after the last step's delay. When all repeats are done the policy is exhausted and the incident stays triggered.</FieldHint>
                   </FormField>
                 )}
               </Flex>

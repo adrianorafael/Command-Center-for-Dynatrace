@@ -95,14 +95,15 @@ export const rollupRecord = {
     bump(d.bySource, inc.alert.source);
   },
   acknowledged(d: RollupDelta, inc: Incident): void {
-    if (inc.acknowledgedAt === undefined) return;
-    d.ttaSumMs += Math.max(0, inc.acknowledgedAt - inc.createdAt);
+    if (inc.acknowledgedAt === undefined || inc.acknowledgedAt < inc.createdAt) return;
+    d.ttaSumMs += inc.acknowledgedAt - inc.createdAt;
     d.ttaCount++;
   },
   resolved(d: RollupDelta, inc: Incident): void {
     d.resolved++;
-    if (inc.resolvedAt === undefined) return;
-    d.ttrSumMs += Math.max(0, inc.resolvedAt - inc.createdAt);
+    // Incidents created already closed (resolvedAt before createdAt) do not count for MTTR.
+    if (inc.resolvedAt === undefined || inc.resolvedAt < inc.createdAt) return;
+    d.ttrSumMs += inc.resolvedAt - inc.createdAt;
     d.ttrCount++;
   },
   page(d: RollupDelta, uid: string): void {
@@ -198,12 +199,12 @@ export function incidentTimings(incidents: Incident[]): { mttaMs?: number; mttrM
   let ttrSum = 0;
   let ttr = 0;
   for (const i of incidents) {
-    if (i.acknowledgedAt !== undefined) {
-      ttaSum += Math.max(0, i.acknowledgedAt - i.createdAt);
+    if (i.acknowledgedAt !== undefined && i.acknowledgedAt >= i.createdAt) {
+      ttaSum += i.acknowledgedAt - i.createdAt;
       tta++;
     }
-    if (i.status === "resolved" && i.resolvedAt !== undefined) {
-      ttrSum += Math.max(0, i.resolvedAt - i.createdAt);
+    if (i.status === "resolved" && i.resolvedAt !== undefined && i.resolvedAt >= i.createdAt) {
+      ttrSum += i.resolvedAt - i.createdAt;
       ttr++;
     }
   }
