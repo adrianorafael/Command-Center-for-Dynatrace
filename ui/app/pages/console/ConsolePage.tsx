@@ -223,7 +223,8 @@ export const ConsolePage = () => {
                   priority: "pinned",
                   team: "pinned",
                   assignee: "pinned",
-                  service: "pinned-optional",
+                  // FilterBar renders pinned items before pinned-optional ones; service is pinned so the timeframe stays last.
+                  service: "pinned",
                   source: "optional",
                   escalation: "optional",
                   created: "pinned",
