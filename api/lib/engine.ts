@@ -155,12 +155,45 @@ export function buildTestRequest(
   };
 }
 
-/** Heartbeat with the optional storage estimate (contract EngineHeartbeat + extra field). */
-export type EngineHeartbeatWithStorage = EngineHeartbeat & { storage?: StorageEstimate };
+/** Heartbeat plus engine extras (contract EngineHeartbeat + optional fields the UI may show). */
+export type EngineHeartbeatWithStorage = EngineHeartbeat & {
+  storage?: StorageEstimate;
+  /** Runs skipped because another tick held the lease (cumulative). */
+  skippedLocked?: number;
+  lastSkippedAt?: number;
+  /** A lease release that could not be verified (the next tick overwrites it once expired). */
+  releaseFailedAt?: number;
+};
 
+/** Writes the heartbeat, carrying the skip counters of the stored one (re-read just before writing). */
 async function writeHeartbeat(repo: Repository, hb: EngineHeartbeatWithStorage): Promise<void> {
-  await repo.put(KEY.heartbeat, hb).catch(() => undefined);
+  const cur = (await repo.get<EngineHeartbeatWithStorage>(KEY.heartbeat).catch(() => undefined))?.value;
+  const carried = {
+    ...(cur?.skippedLocked ? { skippedLocked: cur.skippedLocked } : {}),
+    ...(cur?.lastSkippedAt ? { lastSkippedAt: cur.lastSkippedAt } : {}),
+  };
+  await repo.put(KEY.heartbeat, { ...carried, ...hb }).catch(() => undefined);
 }
+
+/** A skipped run only bumps the counters; the running tick's heartbeat stays untouched. */
+async function recordLockedSkip(repo: Repository, now: number): Promise<void> {
+  const cur = (await repo.get<EngineHeartbeatWithStorage>(KEY.heartbeat).catch(() => undefined))?.value;
+  const base: EngineHeartbeatWithStorage = cur ?? {
+    schemaVersion: SCHEMA_VERSION,
+    lastTickAt: 0,
+    durationMs: 0,
+    counts: zeroCounts(),
+  };
+  await repo
+    .put(KEY.heartbeat, { ...base, skippedLocked: (base.skippedLocked ?? 0) + 1, lastSkippedAt: now })
+    .catch(() => undefined);
+}
+
+/** Effective lease TTL: above the longest tick, but short enough that a crashed tick blocks ≤ 2 runs. */
+export function effectiveLockTtlSec(configured: number): number {
+  return Math.min(MAX_LOCK_TTL_SEC, Math.max(MIN_LOCK_TTL_SEC, Number.isFinite(configured) ? configured : MIN_LOCK_TTL_SEC));
+}
+export const MAX_LOCK_TTL_SEC = 180;
 
 export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps): Promise<EngineTickResult> {
   const now = (deps.now ?? Date.now)();
@@ -202,13 +235,18 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
   if (!settings.engine.enabled) return { ...fail(), ok: true, skipped: "disabled" };
 
   const holder = deps.holder ?? `tick-${now}-${randomId()}`;
-  const lockTtlSec = Math.max(settings.engine.lockTtlSec, MIN_LOCK_TTL_SEC);
+  const lockTtlSec = effectiveLockTtlSec(settings.engine.lockTtlSec);
   let leased = false;
+  let skipped = false;
   let previous: EngineHeartbeatWithStorage | undefined;
   let storage: StorageEstimate | undefined;
   try {
     leased = await acquireLease(repo, holder, now, lockTtlSec);
-    if (!leased) return { ...fail(), ok: true, skipped: "locked" };
+    if (!leased) {
+      skipped = true;
+      await recordLockedSkip(repo, now);
+      return { ...fail(), ok: true, skipped: "locked" };
+    }
     previous = (await repo.get<EngineHeartbeatWithStorage>(KEY.heartbeat))?.value;
 
     const stillHolder = async () => (await repo.get<EngineLock>(KEY.lock))?.value.holder === holder;
@@ -363,15 +401,20 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
     errors.push(`tick: ${describeError(e)}`);
     return fail();
   } finally {
-    await writeHeartbeat(repo, {
-      schemaVersion: SCHEMA_VERSION,
-      lastTickAt: now,
-      durationMs: Date.now() - started,
-      counts,
-      ...(errors.length ? { lastError: errors[0]?.slice(0, 500) } : {}),
-      ...(storage ? { storage } : previous?.storage ? { storage: previous.storage } : {}),
-    });
-    if (leased) await releaseLease(repo, holder).catch(() => undefined);
+    if (!skipped) {
+      // Release first (always, verified by re-reading), then record the outcome.
+      const released = leased ? await releaseLease(repo, holder).catch(() => false) : true;
+      if (!released) errors.push("engine lease release could not be verified");
+      await writeHeartbeat(repo, {
+        schemaVersion: SCHEMA_VERSION,
+        lastTickAt: now,
+        durationMs: Date.now() - started,
+        counts,
+        ...(errors.length ? { lastError: errors[0]?.slice(0, 500) } : {}),
+        ...(storage ? { storage } : previous?.storage ? { storage: previous.storage } : {}),
+        ...(released ? {} : { releaseFailedAt: now }),
+      });
+    }
   }
 }
 

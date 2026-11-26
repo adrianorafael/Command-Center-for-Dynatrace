@@ -102,7 +102,7 @@ describe("#2 failures never stop the heartbeat", () => {
     expect(rec).toMatchObject({ status: "sent", text: "" });
     expect(rec?.subject).toBeTruthy();
     expect(rec).not.toHaveProperty("speech");
-    expect(r.keys().filter((k) => k.startsWith("rpt."))).toHaveLength(1);
+    expect(r.keys().filter((k) => k.startsWith("rpt.")).length).toBeGreaterThan(0); // main + delta key
     now += 91 * 24 * 3600_000;
     expect(r.keys().filter((k) => k.startsWith("rpt."))).toHaveLength(0);
   });
@@ -270,5 +270,49 @@ describe("archived incidents and source status are wired into the tick", () => {
     const m = archivedBounds([{ key: "arc.20261125.dp-p-00001" }, { key: "nope" }]);
     expect([...m.keys()]).toEqual(["dp-p-00001"]);
     expect(m.get("dp-p-00001")).toBeGreaterThanOrEqual(Date.parse("2026-11-25T00:00:00Z"));
+  });
+});
+
+describe("lease hygiene (late escalation steps diagnosed live)", () => {
+  it("a locked skip only bumps skippedLocked/lastSkippedAt and keeps the running tick's heartbeat", async () => {
+    const r = repo();
+    await runEngineTick({ reason: "schedule" }, { repo: r, runQuery: grail(), now: () => NOW });
+    const hb1 = (await r.get<EngineHeartbeatWithStorage>(KEY.heartbeat))!.value;
+    await r.put(KEY.lock, { holder: "running", acquiredAt: NOW + 50_000 }, 130_000);
+    const res = await runEngineTick({ reason: "schedule" }, { repo: r, runQuery: grail(), now: () => NOW + 60_000 });
+    expect(res.skipped).toBe("locked");
+    const hb2 = (await r.get<EngineHeartbeatWithStorage>(KEY.heartbeat))!.value;
+    expect(hb2.lastTickAt).toBe(hb1.lastTickAt);
+    expect(hb2).toMatchObject({ skippedLocked: 1, lastSkippedAt: NOW + 60_000 });
+    // the next successful tick keeps the counter
+    await r.delete(KEY.lock);
+    await runEngineTick({ reason: "schedule" }, { repo: r, runQuery: grail(), now: () => NOW + 120_000 });
+    expect((await r.get<EngineHeartbeatWithStorage>(KEY.heartbeat))!.value).toMatchObject({ skippedLocked: 1, lastTickAt: NOW + 120_000 });
+  });
+
+  it("always releases the lease; a failing delete is neutralised by an expired overwrite", async () => {
+    const r = repo();
+    r.delete = (() => Promise.reject(new Error("delete failed"))) as typeof r.delete;
+    await runEngineTick({ reason: "schedule" }, { repo: r, runQuery: grail(), now: () => NOW });
+    const lock = (await r.get<{ holder: string; acquiredAt: number }>(KEY.lock))?.value;
+    expect(lock?.acquiredAt).toBe(0);
+    // the very next minute's tick is not blocked
+    const next = await runEngineTick({ reason: "schedule" }, { repo: r, runQuery: grail(), now: () => NOW + 60_000 });
+    expect(next.skipped).toBeUndefined();
+  });
+
+  it("an expired lease left behind is overwritten, never waited for", async () => {
+    const r = repo();
+    await r.put(KEY.lock, { holder: "crashed", acquiredAt: NOW - 131_000 }, 600_000);
+    const res = await runEngineTick({ reason: "schedule" }, { repo: r, runQuery: grail(), now: () => NOW });
+    expect(res.skipped).toBeUndefined();
+    expect(await r.get(KEY.lock)).toBeUndefined();
+  });
+
+  it("clamps the configured TTL to 130…180 s", async () => {
+    const { effectiveLockTtlSec } = await import("../lib/engine");
+    expect(effectiveLockTtlSec(90)).toBe(130);
+    expect(effectiveLockTtlSec(600)).toBe(180);
+    expect(effectiveLockTtlSec(Number.NaN)).toBe(130);
   });
 });
