@@ -4,9 +4,16 @@
 
 **Command Center for Dynatrace** is an app created and maintained by [@adrianorafael](https://github.com/adrianorafael) on GitHub.
 
-It is an example of an **event console** that lets monitoring operations teams register an **"Ack"** to acknowledge problems, audit the status of acknowledge interactions, and explore the idea of having defined contacts for on-call activation or escalation.
+It is a **NOC event console with on-call management**, built natively on Dynatrace AppEngine. Version 2 turns Davis
+problems and events posted to the Dynatrace Events API into **incidents** that operators triage, acknowledge, assign,
+snooze and resolve, and it **pages the on-call people** of a team through a Dynatrace **Workflow** (Twilio SMS, voice
+and WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram, or a generic webhook). It explores what it takes to replace a
+dedicated alerting console such as **Splunk On-Call (VictorOps)**, **Atlassian Opsgenie** or a **Moogsoft-style NOC
+console** with an app that lives inside Dynatrace.
 
-This app is **not finished** — it is a **demonstration app** meant to show how easy it is to build your own Dynatrace App through **vibecoding**, following the official documentation at [developer.dynatrace.com](https://developer.dynatrace.com/) and using **Strato Design** to style it with Dynatrace's Design System.
+This app is **not finished** — it is a **demonstration app** meant to show how easy it is to build your own Dynatrace
+App through **vibecoding**, following the official documentation at [developer.dynatrace.com](https://developer.dynatrace.com/)
+and using **Strato Design** to style it with Dynatrace's Design System.
 
 > ⚠️ **Disclaimer**
 >
@@ -14,31 +21,196 @@ This app is **not finished** — it is a **demonstration app** meant to show how
 >
 > Deciding to download and install it in your environment is **at the user's own risk**. You are equally free to improve and expand its features.
 
+> **Paging is a safety-critical function.** Do not make this app the only way your team is woken up at night until
+> you have tested every channel end to end in your own environment, and read
+> [Limitations and unverified behaviour](#limitations-and-unverified-behaviour).
+
 ## Overview
 
-Command Center is a Dynatrace app built with React + TypeScript that provides a centralized and interactive view of all Problems in the environment, with features for triage, persistent acknowledgment, message sending, and contact escalation.
+| | |
+| --- | --- |
+| **Inbound** | Only through Dynatrace: Davis problems (`dt.davis.problems`), optionally Davis events (`dt.davis.events`) and generic events (`events`), read from Grail with DQL. External tools post events to the Dynatrace Events API. |
+| **Console** | Triage table with filters, bulk actions and keyboard shortcuts; incident detail with timeline, escalation progress, notification ledger, entities and notes. |
+| **On-call** | Teams whose members are **users of your Dynatrace environment** (IAM users, picked from the directory), rotating schedules with layers and overrides, escalation policies with steps and repeats, per-user contact methods and notification rules. |
+| **Outbound** | Only through the **Command Center · Engine** workflow, which runs every minute and sends through Twilio (SMS, voice, WhatsApp) and IFTTT by default, plus Slack, Microsoft Teams, Telegram and a generic HTTP webhook for any other tool. |
+| **Storage** | Dynatrace App State. No external database, no secrets in the app: provider credentials stay in the Credential Vault. |
+
+Current version: **2.0.0** — see [CHANGELOG.md](CHANGELOG.md). Version 2.0.0 is a full rebuild; nothing from the 1.x
+data model carries over (see [Upgrading from 1.x](#upgrading-from-1x)).
 
 ## Table of Contents
-1. [Prerequisites](#prerequisites)
-2. [Installation and Configuration](#installation-and-configuration)
-3. [Running in Development Mode](#running-in-development-mode)
-4. [Publishing to Environment (Deploy)](#publishing-to-environment-deploy)
-5. [Publishing to Another Environment](#publishing-to-another-environment)
-6. [Required OAuth Scopes](#required-oauth-scopes)
-7. [App Features](#app-features)
-8. [Important Behaviors](#important-behaviors)
-9. [Query Cost & Consumption (DPS)](#query-cost--consumption-dps)
-10. [Relevant File Structure](#relevant-file-structure)
-11. [Available Scripts](#available-scripts)
+1. [What it replaces](#what-it-replaces)
+2. [Feature tour](#feature-tour)
+3. [Architecture](#architecture)
+4. [Prerequisites](#prerequisites)
+5. [Installation and Configuration](#installation-and-configuration)
+6. [Running in Development Mode](#running-in-development-mode)
+7. [Publishing to Environment (Deploy)](#publishing-to-environment-deploy)
+8. [Publishing to Another Environment](#publishing-to-another-environment)
+9. [Required OAuth Scopes](#required-oauth-scopes)
+10. [Setting up paging, step by step](#setting-up-paging-step-by-step)
+11. [Sending events](#sending-events)
+12. [Data model and App State](#data-model-and-app-state)
+13. [Important Behaviors](#important-behaviors)
+14. [Query Cost & Consumption (DPS)](#query-cost--consumption-dps)
+15. [Security and privacy](#security-and-privacy)
+16. [Troubleshooting](#troubleshooting)
+17. [Testing](#testing)
+18. [Limitations and unverified behaviour](#limitations-and-unverified-behaviour)
+19. [Relevant File Structure](#relevant-file-structure)
+20. [Available Scripts](#available-scripts)
+21. [Versioning & Changelog](#versioning--changelog)
+
+Detailed guides: [inbound events](docs/guides/inbound-events.md) ·
+[outbound notifications](docs/guides/outbound-notifications.md) ·
+[on-call setup](docs/guides/on-call-setup.md) · [operations runbook](docs/guides/operations-runbook.md).
+
+## What it replaces
+
+| Capability of a dedicated console | How Command Center does it |
+| --- | --- |
+| Alert intake API (VictorOps REST endpoint, Opsgenie Alert API, Moogsoft event ingestion) | Dynatrace **Events API v2** and OpenPipeline. Davis turns problem-opening events into problems; Command Center reads them from Grail. |
+| Deduplication / correlation | Davis correlation into problems, plus Command Center's dedup key per source. Davis events that belong to a problem are folded into it. |
+| Incident timeline and audit | Append-only timeline per incident (who, when, what), actor taken from App State modification info. |
+| On-call schedules, rotations, overrides | Schedules with layers (daily, weekly or every N hours), handoff time, time zone, weekday/time restrictions and overrides. |
+| Escalation policies | Ordered steps with delays, targets (schedule, user, whole team), optional forced channels, repeats. Stops on acknowledgement. |
+| Contact methods and personal notification rules | Per user: SMS, voice, WhatsApp, Telegram, Slack, Teams, IFTTT, webhook, with "priority at or above Px → this method after N minutes". |
+| Routing / alert rules | Services plus ordered routing rules (first match wins), with a rule tester. |
+| Maintenance and quiet hours | Davis maintenance windows suppress paging (configurable); per-team quiet hours hold or downgrade low-priority pages. |
+| Reports (MTTA, MTTR, noisy services, on-call load) | Reports page built from daily rollups. |
+| Outbound integrations | One Dynatrace Workflow with eight sender tasks. Anything not covered by a built-in sender gets a JSON webhook. |
+
+What it does **not** do (yet): two-way acknowledgement from SMS/Slack replies, a mobile app, stakeholder status
+pages, conference bridges, or per-user permissions enforced on the server (see [Security and privacy](#security-and-privacy)).
+
+## Feature tour
+
+Screenshots on the [project page](https://adrianorafael.github.io/Command-Center-for-Dynatrace/#screenshots) were taken in
+**demo mode** with synthetic data.
+
+### Console (`/`)
+- Live incident table: status, priority, title, service, team, assignee, age, escalation level and source.
+- KPI strip: open P1, triggered, acknowledged, assigned to me, MTTA today; each card filters the table.
+- Filters for status, priority, team, service, source, assignee and escalation level, plus free-text search. Filters live in the URL,
+  so a NOC view can be bookmarked.
+- Row and bulk actions: acknowledge (with 10-second undo), reassign to a team or a user, snooze (15 minutes to 4 hours
+  or a custom time), escalate now, change priority, add a note, resolve.
+- Keyboard shortcuts: `j`/`k` move, `a` acknowledge, `r` resolve, `x` select, `/` search, `Shift+R` refresh, `Esc` close
+  (can be turned off in Settings → General).
+- A banner warns when the paging engine heartbeat is older than 3 minutes, has an error, or has never run.
+
+### Incident detail (`/incidents/:id`)
+Opens beside the console table. Tabs: **Timeline** (every state change, note and notification), **Escalation** (which
+step fired, who is next and when), **Notifications** (the delivery ledger: planned, sent, failed, timed out, with the
+provider error), **Entities** (affected entities and root cause) and **Notes**. Davis problems link to the Dynatrace
+problem page.
+
+### On-call (`/on-call`)
+- **Now**: who is on call for every schedule at this moment, until when, who is next, and coverage gaps.
+- **Schedules**: layered rotations with a coverage preview (Gantt view) while you edit.
+- **Overrides**: temporary replacements ("I take Friday night").
+
+### Teams (`/teams`)
+Members are picked from the Dynatrace user directory (type at least 3 characters). Roles: **admin**, **responder**,
+**observer**. Each member has contact methods and notification rules. Team detail shows members, the team's on-call and
+its default escalation policy.
+
+### Escalations (`/escalations`)
+Step editor (delay, targets, forced channels), repeat count, and a **simulation** that shows who would be notified at
+T+n minutes.
+
+### Services and routing (`/services`)
+Services own a team, an escalation policy and a default priority. **Routing rules** are evaluated top to bottom; the
+first match sets service, team, policy, priority and tags, or suppresses the alert. **Test a rule** runs the rules against
+recent alerts. **Priority mapping** sets the defaults by Davis severity and category.
+
+### Integrations (`/integrations`)
+- **Inbound**: per-source status and ready-to-copy snippets (curl, PowerShell, Python, Workflow JavaScript) with
+  placeholders.
+- **Outbound**: the eight providers with their Credential Vault entry ID, sender parameters, enable switch and a
+  **Send test notification** button.
+- **Workflows**: install status of the engine workflow, **Download workflow JSON**, **Run engine now**, recent executions,
+  the setup checklist and the External requests allowlist.
+
+### Reports (`/reports`)
+MTTA and MTTR over time, incidents per day, load by priority, incidents by team, noisiest services and sources, time to
+acknowledge distribution, notification delivery success, and on-call load per person.
+
+### Settings (`/settings`)
+General (tenant time zone, auto-refresh default, personal table density and acknowledge target, demo mode), event
+sources, routing defaults, paging engine limits, data retention, configuration **export and import** (JSON), required
+permissions, deletion of legacy 1.x data, and the app version.
+
+### Help (`/help`)
+Get-started checklist that ticks itself from your data, concepts, console workflow, sending events, notifications,
+keyboard shortcuts, troubleshooting and privacy notes.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph External["External tools"]
+    T[Monitoring / CI / scripts]
+  end
+  subgraph DT["Your Dynatrace environment"]
+    API["Events API v2<br/>/api/v2/events/ingest"]
+    DAVIS[Davis AI]
+    G[("Grail<br/>dt.davis.problems<br/>dt.davis.events<br/>events")]
+    subgraph APP["Command Center app"]
+      UI["UI (React + Strato)"]
+      FT["app function<br/>engine-tick"]
+      FR["app function<br/>delivery-report"]
+      S[("App State")]
+    end
+    subgraph WF["Workflow: Command Center · Engine (every minute)"]
+      TICK[tick]
+      SEND["8 senders<br/>sms · voice · whatsapp · ifttt<br/>slack · teams · telegram · webhook"]
+      REP[report]
+    end
+    CV[("Credential Vault")]
+  end
+  P["Twilio · IFTTT · Slack · Teams<br/>Telegram · your webhook"]
+
+  T -->|POST event| API --> G
+  DAVIS -->|opens problem| G
+  TICK -->|POST /apps/&lt;appId&gt;/api/engine-tick| FT
+  FT -->|DQL| G
+  FT <--> S
+  FT -->|batches per channel| TICK
+  TICK --> SEND
+  SEND -->|reads secret| CV
+  SEND -->|HTTPS| P
+  SEND --> REP
+  REP -->|POST delivery-report| FR --> S
+  UI <-->|read all, write config + operator actions| S
+  UI -->|run workflow: escalate now / test| WF
+```
+
+How one minute of the engine works:
+
+1. `tick` calls the `engine-tick` app function. It takes a short lease (`lock.engine`) so overlapping runs do not
+   double-page.
+2. The function runs the DQL queries for the enabled sources (Q1–Q4 below), normalises the records into alerts,
+   copies the `cc.*` properties of each problem's Davis events onto the problem, de-duplicates and routes them.
+3. It creates or updates `inc.*` incidents, folds operator actions (`act.*`) written by the UI, un-snoozes due incidents,
+   evaluates escalation policies against on-call schedules and plans one notification per person, step, channel and
+   attempt in the ledger (`ntf.*`).
+4. It returns the planned notifications grouped by channel. Each sender task reads its provider's Credential Vault entry
+   and calls the provider. Senders never retry; a notification that is not reported in time is retried by the engine
+   (up to 3 attempts by default).
+5. `report` hands the delivery results to the `delivery-report` app function, which updates the ledger and the incident
+   timeline. The engine writes a heartbeat (`hb.engine`) that the console watches.
+
+The domain logic (routing, schedules, escalation, action folding, notification planning, reports) is pure TypeScript
+in `ui/app/domain/` and shared by the UI and the app functions.
 
 ## Prerequisites
 
-- Node.js >= 18 (recommended: version 24 as per dt-app)
-- npm >= 9
-- Dynatrace account with Grail enabled (dt.davis.problems table)
-- Access to environment via dt-app CLI
-
-Install project dependencies:
+- Node.js >= 22 (the Dynatrace App Toolkit may recommend Node 24) and npm
+- A Dynatrace SaaS environment with Grail, AppEngine and Workflows
+- Permission to deploy apps (`npx dt-app deploy`), to create workflows, and — for paging — to manage Credential Vault
+  entries and the External requests allowlist (usually an environment admin)
+- Accounts at the notification providers you want to use (Twilio and/or IFTTT by default)
 
 ```bash
 npm install
@@ -46,35 +218,38 @@ npm install
 
 ## Installation and Configuration
 
-### Step 1: Configure the target environment in app.config.json:
+### Step 1 — Configure the target environment in `app.config.json`
 
 ```json
 {
   "environmentUrl": "https://YOUR-ENVIRONMENT.apps.dynatrace.com/",
-  "app": {
-    "id": "my.command.center",
-    ...
-  }
+  "app": { "id": "my.command.center", "name": "Command Center", "version": "2.0.0" }
 }
 ```
 
-Replace `YOUR-ENVIRONMENT` with your own Dynatrace tenant ID. The environment URL has the form `https://<tenant-id>.apps.dynatrace.com/` (production) — you can copy it from the address bar of your Dynatrace environment.
+Replace `YOUR-ENVIRONMENT` with your own Dynatrace tenant ID. The environment URL has the form
+`https://<tenant-id>.apps.dynatrace.com/` — copy it from the address bar of your Dynatrace environment.
 
-**IMPORTANT:** The app ID must start with "my." for unsigned apps. IDs without the "my." prefix require digital app signing.
+**IMPORTANT:** the app ID must start with `my.` for unsigned apps. IDs without that prefix require digital app signing.
+If you change the app ID, the engine workflow must be generated for the new ID (the Integrations page does that for you;
+the checked-in template uses `my.command.center`).
 
-### Step 1b (optional): Update the debug URL in .vscode/launch.json
+Files that carry the `YOUR-ENVIRONMENT` placeholder:
 
-If you use the VS Code "Debug Frontend" launch configuration, also update the `url` in [.vscode/launch.json](.vscode/launch.json) to point to your own environment. This file ships with a `YOUR-ENVIRONMENT` placeholder and is only used for in-IDE debugging — it does not affect `dt-app dev`/`deploy`.
+| File | What to change |
+| --- | --- |
+| `app.config.json` | `environmentUrl` |
+| `.vscode/launch.json` | `url` of the "Debug Frontend" configuration (optional, IDE debugging only) |
+| `workflow-templates/*.workflow.json` | nothing to change; the engine template uses `my.command.center` and `CREDENTIALS_VAULT-YOUR-…` placeholders that are informational only |
 
-### Step 2: Authenticate to the environment:
+### Step 2 — Authenticate
 
 ```bash
 npx dt-app auth
 ```
 
-This will open your browser for Dynatrace login. On first run, the user will need to grant the scopes listed in [Required OAuth Scopes](#required-oauth-scopes).
-
-If authentication fails with "invalid scopes", verify that the tenant has the necessary permissions and that the user has the corresponding IAM grants.
+Opens your browser for Dynatrace login. An "invalid scopes" error means the tenant or your user lacks the IAM grants
+for the scopes in [Required OAuth Scopes](#required-oauth-scopes).
 
 ## Running in Development Mode
 
@@ -82,11 +257,12 @@ If authentication fails with "invalid scopes", verify that the tenant has the ne
 npx dt-app dev
 ```
 
-The local server runs on http://localhost:3000. The dt-app provides a reverse proxy that forwards all API calls to the configured environmentUrl, automatically injecting the authentication token.
+**Open the link printed in the terminal, not `localhost:3000` directly** — the app must run inside the Dynatrace
+context. Changes hot-reload. Note that the engine workflow always calls the **deployed** app functions, so paging
+cannot be tested from the dev server alone.
 
-The link to open the app within Dynatrace is displayed in the terminal after the server starts. Always use that link (don't access localhost directly), as the app needs to run within the Dynatrace context to function.
-
-Any changes to files are automatically reflected (hot reload).
+Outside Dynatrace (offline preview, tests) the app switches to **demo mode** with synthetic data; you can also force
+it with `?demo=1` or Settings → General → Demo mode. A "Demo data" indicator is always visible in demo mode.
 
 ## Publishing to Environment (Deploy)
 
@@ -94,236 +270,543 @@ Any changes to files are automatically reflected (hot reload).
 npx dt-app deploy
 ```
 
-Executes the production build and publishes the app to the configured environment. After deployment, the app is available to all tenant users in:
+Builds and publishes to the environment in `app.config.json`. Afterwards the app is available under
+**Dynatrace → Apps → Command Center**.
 
-```
-Dynatrace → Apps → Command Center
-```
-
-The local server does not need to be running after deployment.
-
-Complete flow:
-1. `npx dt-app auth` (if not already authenticated)
-2. `npx dt-app deploy`
+- **App versions must increase monotonically per environment.** A deploy with the same or a lower `app.version` than
+  the one installed is rejected; bump `app.version` (SemVer) before every deploy.
+- Deploying the app does **not** install or update the engine workflow — see [Step 5](#step-5--install-the-engine-workflow).
 
 ## Publishing to Another Environment
 
-Deployment is per environment. To publish to a different environment:
+Deployment is per environment.
 
-**Step 1:** Edit the environmentUrl in app.config.json:
-```json
-"environmentUrl": "https://NEW-ENVIRONMENT.apps.dynatrace.com/"
-```
-
-**Step 2:** Re-authenticate:
-```bash
-npx dt-app auth
-```
-
-**Step 3:** Deploy:
-```bash
-npx dt-app deploy
-```
+1. Edit `environmentUrl` in `app.config.json`
+2. `npx dt-app auth`
+3. `npx dt-app deploy`
+4. Repeat the paging setup below (workflow, Credential Vault, External requests) — none of it is copied.
 
 **ATTENTION:**
-- App State (persisted Acks) is isolated by tenant. Each environment starts with a clean slate — acknowledgments from the previous environment are not migrated.
-- The new environment must have Grail enabled and the dt.davis.problems table available. Environments without Grail will not return problem data.
-- The administrator of the new environment must ensure that users have IAM permissions for the declared scopes (see [Required OAuth Scopes](#required-oauth-scopes)).
+- App State is isolated per tenant — teams, schedules, policies, contacts, incidents and settings do **not** migrate.
+  Use **Settings → Export and import** to move the configuration (incidents and history are not exported).
+- The target environment needs Grail with `dt.davis.problems` (and `dt.davis.events` / `events` if you enable those
+  sources), or the console stays empty.
+- The target's administrator must grant users the declared scopes, and the workflow actor its permissions.
 
 ## Required OAuth Scopes
 
-Scopes are declared in app.config.json and requested from the user on first app load (or after re-authentication with new scopes).
+| Scope | Purpose |
+| --- | --- |
+| `storage:buckets:read` | Required for any Grail read |
+| `storage:events:read` | Read `dt.davis.problems`, `dt.davis.events` and `events` (engine queries Q1–Q4) |
+| `state:app-states:read` | Read configuration, incidents and the notification ledger |
+| `state:app-states:write` | Persist configuration, incidents and operator actions |
+| `state:app-states:delete` | Remove folded actions and deleted configuration |
+| `iam:users:read` | Pick on-call team members from the environment's users and show their names |
+| `automation:workflows:read` | Show the engine workflow's install status and recent executions |
+| `automation:workflows:run` | **Escalate now**, **Run engine now** and **Send test notification** — all run the engine workflow |
 
-- `storage:logs:read` — Default dt-app template
-- `storage:buckets:read` — Default dt-app template
-- `storage:events:read` — DQL access to dt.davis.problems table (Grail)
-- `state:app-states:read` — Reading persisted Ack state
-- `state:app-states:write` — Writing Ack/Unack state
+Not requested, on purpose:
 
-If a new scope is added to app.config.json after deployment, existing users will need to re-authorize the app. This happens automatically on next load with a Dynatrace consent screen.
+- **`automation:workflows:write`** — only apps provided by Dynatrace can hold it. That is why the engine workflow is
+  imported by a person (or installed by an admin script) instead of created by the app.
+- **No Credential Vault scope** — the app never reads secrets; only the workflow's sender tasks do.
+- **No ingest scope** — the app never writes to Grail.
 
-## App Features
+Adding a scope after deployment requires every existing user to re-authorize on next load. Users also need IAM
+policies that allow them to use the app and grant the underlying permissions (Grail read for the event tables, App
+State, IAM user read, workflow read/run); the exact policy statements depend on how your account is organised.
 
-### Problems View
-- Table with all problems in the selected timeframe
-- Columns: Problem #, Started, Summary, Root Cause, Events, Assigned To, Status, Action
-- Pagination with 20 items per page
-- Red line highlight for OPEN problems
-- Direct links to problems in Dynatrace in the Problem # column
+## Setting up paging, step by step
 
-### Status Cards (Filters)
-- All problems, Open, Closed, Acknowledged, Maintenance
-- Click a card to filter the table by that status
-- Real-time count of problems per status
-- "--" value displayed when count is zero
+The short version is also in the app under **Help → Get started** and **Integrations → Workflows**. Full detail:
+[outbound notifications guide](docs/guides/outbound-notifications.md) and [on-call setup guide](docs/guides/on-call-setup.md).
 
-### Timeframe Filter
-- Timeframe selector integrated with Dynatrace presets
-- Default: "Today" (@d to now())
-- Timeframe is passed directly to the DQL query
+### Step 1 — Decide who the workflow actor is
 
-### Assignee Filter (Acknowledged by)
-- Filters table by the user who performed the Ack
-- Options: All users, Unassigned, My, and individual users
+Every workflow task runs as the workflow **actor**, and the app functions it calls run with the actor's permissions.
+A person who edits a workflow becomes its actor unless the actor is a **service user**, so create a **service user**
+(Account Management → Identity & access management) for the engine and use it as actor. Give the actor:
 
-### Auto-Refresh
-- Button with RefreshAuto icon next to TimeframeSelector
-- When active (clear icon): performs immediate refresh and repeats every 1 minute
-- When inactive (grayed icon): no automatic refresh
-- Refresh updates data in background without altering filters, timeframe, or any UI state
+| Permission | Why |
+| --- | --- |
+| `app-engine:apps:run`, `app-engine:functions:run` | Call this app's `engine-tick` and `delivery-report` functions |
+| `automation:workflows:read` | `execution()` / `result()` inside the tasks |
+| `credential-vault:entries:read` | Read the provider credentials in the sender tasks |
+| `storage:buckets:read`, `storage:events:read` | The engine's DQL queries |
+| `state:app-states:read`, `:write`, `:delete` | The engine reads and writes this app's App State |
 
-### Acknowledgment (Ack/Unack)
-- Action column: clickable UserEvents icon for OPEN problems (Ack)
-- Yellow UserEvents icon for ACKNOWLEDGED problems (Unack)
-- Disabled UserEvents icon for problems with no Ack/Unack option
-- Ack state is persisted in Dynatrace App State API (per tenant)
-- On app load, persisted state is loaded and applied over data from Grail
+This set has been seen working end to end; the **minimal** set has not been isolated.
 
-### History Modal (document icon)
-- Displays complete event history of the problem
-- Combines System events (Started, Closed — from Grail) with user events (Acknowledged, Unacknowledged — persisted in App State)
-- System events are always displayed regardless of persistence
+### Step 2 — Enable Workflows authorization settings
 
-### Send Message Modal (chat icon)
-- Fields: Title and Content
-- Send button enabled only when both fields are filled
-- Identified by the problem's display_id (e.g., P-12345)
+Open the **Workflows** app → **Settings** → **Authorization settings** and enable the permissions above for the actor.
+Without this, `tick` fails and nobody is paged — the console shows the "paging engine is stale" banner.
 
-### Escalation Call Modal (phone icon)
-- Displays the problem's escalation contact
-- When no contact is defined, displays "Contact undefined" and "no phone number"
+### Step 3 — Create Credential Vault entries
 
-### Assigned User Modal (click on name in Assigned To column)
-- Displays name and email of the user who performed the Ack
-- For current user: shows the actual email from Dynatrace profile
-- For other users: displays name and "no email"
-- Column shows "Me" when the logged-in user is responsible
+One entry per provider you use (Credential Vault → Add credential), with the **AppEngine** scope selected,
+**Allow access without app context** turned on (workflow tasks run without app context), and access for the workflow
+actor.
+
+| Provider | Credential type | Contents |
+| --- | --- | --- |
+| Twilio (SMS, voice, WhatsApp) | Username and password | Account SID (or API key SID) / auth token (or API key secret) |
+| IFTTT Webhooks | Token | Your IFTTT Webhooks key |
+| Slack | Token | The full incoming-webhook URL |
+| Microsoft Teams | Token | The full Teams **Workflows** webhook URL ("When a Teams webhook request is received") |
+| Telegram | Token | The bot token (the user's contact address is the chat ID) |
+| Generic webhook | Token (or username and password) | The full `https://` URL of your endpoint; optionally an auth header value |
+
+Command Center stores only the entry ID (`CREDENTIALS_VAULT-…`), never the secret.
+
+### Step 4 — Allow the provider hosts (External requests)
+
+**Settings → General → Environment management → External requests** — add the hosts of the providers you use:
+
+| Provider | Host |
+| --- | --- |
+| Twilio | `api.twilio.com` |
+| IFTTT | `maker.ifttt.com` |
+| Slack | `hooks.slack.com` |
+| Microsoft Teams | the host of your Teams Workflows webhook URL (copy it from the URL) |
+| Telegram | `api.telegram.org` |
+| Generic webhook | the host of your endpoint |
+
+The app functions make no external calls; only the workflow's sender tasks do.
+
+### Step 5 — Install the engine workflow
+
+Third-party apps cannot hold `automation:workflows:write`, so the app cannot create the workflow. Two options:
+
+**A. Import (recommended).** In Command Center → **Integrations → Workflows**, select **Download workflow JSON** (it is
+generated for your app ID and assigns a workflow ID if none is set). Open the **Workflows** app, upload the file, set the
+actor to your service user, and make sure the workflow is deployed. Back in Command Center select **Refresh status**;
+if the upload got a new ID, select **Save this ID**. The checked-in
+[`workflow-templates/command-center-engine.workflow.json`](workflow-templates/command-center-engine.workflow.json) is the
+same definition with placeholders.
+
+**B. Admin script.** With a platform token that has `automation:workflows:read` and `automation:workflows:write`:
+
+```bash
+DT_ENVIRONMENT=https://YOUR-ENVIRONMENT.apps.dynatrace.com \
+DT_PLATFORM_TOKEN=YOUR-PLATFORM-TOKEN \
+node scripts/install-workflow.mjs --app-id my.command.center --actor <service-user-uid>
+```
+
+The script is idempotent (update if it exists, restore from trash, otherwise create) and accepts `--dry-run`. Keep the
+token in your shell or a secret manager, never in a file in this repository.
+
+The installed workflow runs every minute: `tick` → 8 senders → `report`. Re-import it after upgrading Command Center —
+the Workflows tab shows **Update available** when the definition changed.
+
+### Step 6 — Configure the providers
+
+**Integrations → Outbound** → **Configure** each provider: paste the Credential Vault entry ID, fill the non-secret
+parameters, enable it and **Send test notification**.
+
+| Provider (default ID) | Parameters |
+| --- | --- |
+| Twilio SMS / Voice / WhatsApp (`twilio-sms`, `twilio-voice`, `twilio-whatsapp`) | Sender number in E.164 (WhatsApp: the approved sender); optional messaging service SID (SMS), voice and language (calls) |
+| IFTTT (`ifttt`) | Event name (default `command_center_alert`); the applet receives `value1` = subject, `value2` = text, `value3` = incident link |
+| Slack (`slack`), Microsoft Teams (`teams`) | none — the webhook URL is the secret |
+| Telegram (`telegram`) | Parse mode (`HTML` or `MarkdownV2`) |
+| Generic webhook (`webhook`) | Optional auth header name; the value comes from a username/password vault entry |
+
+The generic webhook receives `{ "source": "command-center", "version": 1, "notification": { … } }` with the full
+notification (incident ID, priority, recipient, subject, text, incident link) — the exit for any tool without a
+built-in sender (PagerDuty-style APIs, ITSM, email gateways, chat bots).
+
+### Step 7 — Teams, people, schedules, policies, routing
+
+1. **Teams** → create a team, add members from the user directory, set roles.
+2. For each member, add **contact methods** (phone in E.164, Telegram chat ID, Slack/Teams handle or routing key) and
+   **notification rules** ("P1–P2: voice immediately, SMS after 5 minutes").
+3. **On-call → Schedules** → add layers, rotation type, handoff time and time zone; check the coverage preview.
+4. **Escalations** → create a policy: step 1 on-call of the schedule after 0 minutes, step 2 the whole team after 10,
+   repeat once. Use the simulation.
+5. **Services** → create services (owning team, policy, default priority) and **routing rules**. Use **Test a rule**.
+6. **Settings → Routing defaults** → default team and policy for alerts no rule matches.
+
+Details and examples: [on-call setup guide](docs/guides/on-call-setup.md).
+
+### Step 8 — Send a test event
+
+Send an event (next section) or, on a **trial / test environment only**, import
+`workflow-templates/command-center-alert-simulator.workflow.json`: it posts one or two synthetic `[SIM] …` alerts every
+7 minutes. Never import the simulator into a production environment.
+
+## Sending events
+
+Davis problems arrive automatically. Any other tool sends an event to the Dynatrace Events API; Davis opens a problem
+for it, and Command Center picks the problem up on the next engine run.
+
+```bash
+curl -X POST "https://YOUR-ENVIRONMENT.live.dynatrace.com/api/v2/events/ingest" \
+  -H "Authorization: Api-Token YOUR-TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "eventType": "CUSTOM_ALERT",
+    "title": "Checkout latency above 2 s",
+    "timeout": 30,
+    "properties": {
+      "cc.service": "checkout",
+      "cc.priority": "P2",
+      "cc.tags": "team:payments,env:prod"
+    }
+  }'
+```
+
+- **Classic endpoint:** `https://YOUR-ENVIRONMENT.live.dynatrace.com/api/v2/events/ingest` with an **access token** that
+  has the `events.ingest` scope (`Authorization: Api-Token …`).
+- **Platform endpoint:** `https://YOUR-ENVIRONMENT.apps.dynatrace.com/platform/classic/environment-api/v2/events/ingest`
+  with a **platform token** (`Authorization: Bearer …`). Inside a Dynatrace workflow, the relative path
+  `/platform/classic/environment-api/v2/events/ingest` is authenticated as the workflow actor.
+- `eventType` `CUSTOM_ALERT`, `ERROR_EVENT`, `AVAILABILITY_EVENT`, `PERFORMANCE_EVENT` or `RESOURCE_CONTENTION_EVENT`
+  opens a Davis problem. `timeout` (minutes) is how long the event stays open unless you send it again.
+- The `properties` land as top-level fields on the Davis event; the engine copies `cc.*` from the events of a problem
+  onto the problem for routing.
+
+| Property | Effect (default path: event → Davis problem) |
+| --- | --- |
+| `cc.service` | Service by ID or name → team and escalation policy |
+| `cc.priority` | `P1`–`P5` (a routing rule's priority wins) |
+| `cc.tags` | Comma-separated tags for routing rules |
+| any other `cc.<name>` | Matchable in routing rules as `fields.cc.<name>` |
+
+On this default path the incident **is the Davis problem**: it resolves when Davis closes the problem (the event times
+out or the problem ends), or when an operator resolves it. `cc.dedup_key` and `cc.action` have **no effect** on
+problems. They apply only to the optional Davis-events source and to the generic-events convention — see the
+[inbound events guide](docs/guides/inbound-events.md) for all three paths.
+
+## Data model and App State
+
+All state lives in this app's App State in your environment. Keys are lower-case `[a-z0-9._-]`, at most 200 characters;
+values are JSON with a `schemaVersion`.
+
+| Key | Written by | Content | Expiry |
+| --- | --- | --- | --- |
+| `cfg.settings` | UI | Settings (sources, defaults, engine, retention, providers) | — |
+| `rules.main` | UI | Ordered routing rules | — |
+| `team.<id>` | UI | Team and members (IAM user IDs + roles) | — |
+| `sched.<id>` | UI | Schedule, layers, overrides | — |
+| `pol.<id>` | UI | Escalation policy | — |
+| `svc.<id>` | UI | Service | — |
+| `contact.<uid>` | UI | Contact methods and notification rules of one user | — |
+| `inc.<incId>` | engine | Incident (timeline capped at 200 entries) | while visible |
+| `act.<incId>.<ts>.<rand>` | UI | One operator action (append-only) | 7 days, deleted once folded |
+| `ntf.<key>` | engine | Notification ledger entry | 14 days |
+| `arc.<yyyymmdd>.<incId>` | engine | Archived resolved incident | `archiveDays` (default 30, max 90) |
+| `rpt.<yyyy-mm-dd>` | engine | Daily rollup for Reports | — (~2 KB/day) |
+| `hb.engine` | engine | Engine heartbeat and counters | — |
+| `lock.engine` | engine | Engine lease | 90 s (`lockTtlSec`) |
+
+Limits of the App State service: **10 MB per value, 50 MB per app** in total, keys up to 200 characters, expiry between
+1 minute and 90 days. App State has **no optimistic locking** — the last write wins. That is why operators never write
+incidents directly: each action is its own `act.*` key that the engine folds in order, and the UI shows the result of
+the same reducer immediately.
+
+Resolved incidents stay on the console for `resolvedVisibleHours` (default 24) and are then archived; Reports use the
+daily rollups, so long-term history is aggregated, not per incident.
 
 ## Important Behaviors
 
-### Real-time Data
-The app queries the dt.davis.problems table directly via DQL (Grail). Data is loaded when opening the app and changing the timeframe. A ProgressCircle is displayed while the query is executing.
+### The engine is the heart — watch its heartbeat
+Nothing is paged unless the engine workflow runs. The console banner appears when `hb.engine` is older than 3 minutes,
+reports an error, or has never been written. **Integrations → Workflows** shows the last executions.
 
-### Status Mapping
-Dynatrace returns the following statuses that are mapped by the app:
+### An incident is never resolved because it disappeared
+A query that fails or returns nothing is not "all clear". Incidents resolve only on an explicit CLOSED record from the
+source (or `cc.action: resolve` on the sources that support it) or by an operator.
 
-- `ACTIVE` → Open
-- `CLOSED` / `RESOLVED` → Closed
-- `ACKNOWLEDGED` → Acknowledged
-- `UNDER_MAINTENANCE` → Maintenance
+### At-least-once paging
+The notification ledger is the correctness mechanism, the engine lease only reduces overlap. In rare races (a run that
+overlaps a slow previous run, a delivery report that times out) a person can be notified twice. Senders never retry;
+retries are planned by the engine with a new attempt number.
 
-### Ack Persistence (App State)
-Acknowledgment is a local app operation — Dynatrace does not have an official Ack endpoint via API for dt.davis.problems.
+### Minute granularity
+The workflow runs every minute, so escalation delays and snooze ends are accurate to about one minute (plus the run's
+duration).
 
-The app persists state using the Dynatrace App State API:
-- Key: "problem-ack-states"
-- Value: JSON with `{ [problemId]: { action, assignedTo, history } }`
-- State is shared among all tenant users
-- The last Ack/Unack of each problem prevails
+### Private workflow, owner-only manual runs
+The engine workflow is private because its task results contain phone numbers and message texts. A private workflow is
+only visible to its owner, so **Escalate now**, **Run engine now** and **Send test notification** work only for users who
+can see the workflow. The minute schedule pages everyone regardless.
 
-**LIMITATION:** App State has a 400KB total limit. In environments with many problems being acknowledged over time, periodic cleanup of old entries may be necessary.
+### Configuration is last-write-wins
+Two people editing the same team or schedule at the same time: the later save wins. Edits carry a revision number, but
+there is no server-side lock or conflict check.
 
-### No Grail Problem
-If the environment does not have Grail enabled or the dt.davis.problems table doesn't exist, the table will display "No data available." and no problems will be listed.
+### Roles are guidance, not enforcement
+Any user who can open the app can change any configuration. Control who may open the app with Dynatrace IAM policies.
 
-### Authentication Failure on Startup
-If `dt-app dev` returns "Authentication failed", run:
-```bash
-npx dt-app auth
-```
+### Demo mode
+Outside Dynatrace, with `?demo=1`, or when switched on in Settings, the app uses in-memory synthetic data and never
+calls Dynatrace APIs. Use it for training and screenshots.
 
-This occurs when the app.config.json scopes have been changed since the last authentication.
-
-### display_id Field
-The text displayed in the Problem # column is the display_id field (e.g., P-12345). The link points to the problem using the event.id (internal technical ID from Grail). The link format is:
-
-```
-{environmentUrl}/ui/apps/dynatrace.davis.problems/problem/{event.id}?from=%40d&to=now%28%29
-```
-
-### Current User
-The name displayed in "Assigned To" and in modals is obtained via `getCurrentUserDetails()` from the `@dynatrace-sdk/app-environment` SDK. In development, it returns the user authenticated via `dt-app auth`.
+### Upgrading from 1.x
+Version 1.x stored acknowledgements in one App State key, `problem-ack-states`. Version 2 does not read it. **Settings →
+Export and import → Legacy data** offers to delete it. Users must re-consent to the new scopes on first load.
 
 ## Query Cost & Consumption (DPS)
 
-> ⚠️ **Read this before running the app in a production environment.** This app runs live DQL queries against Grail, which consumes Dynatrace Platform Subscription (DPS) budget. Understand and measure it to avoid surprises on your bill.
+> ⚠️ **Read this before running the app in a production environment.** This app runs live DQL queries against Grail,
+> which consumes Dynatrace Platform Subscription (DPS) budget. Understand and measure it to avoid surprises on your bill.
 
 ### What drives cost
 
-The only meaningful cost driver is the **Grail query** on `dt.davis.problems` executed by [useProblems.ts](ui/app/hooks/useProblems.ts). The App State reads/writes (Ack persistence) have negligible cost. Grail query consumption is billed by the **amount of data analyzed (GB scanned)** per execution.
-
-The number of executions — and therefore the total cost — is multiplied by these factors:
+Unlike 1.x, the **UI runs no Grail queries**. All DQL runs in the `engine-tick` app function, called by the engine
+workflow **every minute, all day: 1,440 runs per day** (plus manual runs; the workflow's hourly execution limit is 240).
+The queries live in [`ui/app/data/dql.ts`](ui/app/data/dql.ts); [`api/lib/sources.ts`](api/lib/sources.ts) decides which
+run on each tick.
 
 | Factor | Effect on cost | Notes |
 | --- | --- | --- |
-| **Auto-refresh (1 min)** | 🔴 **Dominant** — 1 query per minute, per open tab | On by default. This is the biggest lever. |
-| **Timeframe width** | Wider window = more data scanned | Default is "Today", which is narrow. |
-| **Concurrent users / open tabs** | Multiplies linearly | Each open app instance runs its own auto-refresh. |
-| **Number of problems in the environment** | More records = more GB scanned | Environment-dependent. |
+| **Engine schedule (1 min)** | 🔴 **Dominant** — 1,440 runs/day, independent of users | Required for paging. Turning the engine off (Settings → Paging engine) stops paging too. |
+| **Enabled sources** | Each extra source adds one query per run | Davis problems (Q1) always; Davis events (Q2) and generic events (Q3) are off by default. |
+| **Problems with events** | Q4 adds one query per 100 linked event IDs, at most 5 per run | Only when active problems reference Davis events. |
+| **Lookback** | Wider window = more data scanned | Q1 default 72 h (Settings → Event sources); Q2/Q3 fixed 24 h; Q4 uses the problem lookback. |
+| **Data volume** | More problems/events = more GB scanned | Environment-dependent. |
+| **Open tabs / users** | No Grail cost | Each open tab polls **App State** every 30 s by default (Settings → General → Auto-refresh). |
+
+Queries per run: **1** (Q1 only, no linked events) · **2** (default: Q1 + one Q4) · up to **8** (all sources, five Q4
+chunks).
 
 ### Rough estimate
 
-Use this formula to project consumption:
-
 ```
-GB/month ≈ GB_per_query × queries_per_hour × hours_per_day × days × concurrent_users
-cost     ≈ GB/month × your DPS "Grail Query – data analyzed" rate
+queries/month ≈ 1,440 runs/day × queries_per_run × 30 days
+GB/month      ≈ queries/month × GB_per_query
+cost          ≈ GB/month × your DPS "Grail Query – data analyzed" rate
 ```
 
-**Illustrative example** (busy environment, auto-refresh ON):
-- ~5 MB scanned per query (small environments: well under 1 MB)
-- 60 queries/h × 8 h × 22 days × 20 users ≈ **~211,000 queries/month**
-- ≈ **~1 TB/month scanned** → multiply by your contract's Grail Query rate.
+| Scenario (illustrative) | Queries/month | GB scanned at 0.5 MB/query* | GB scanned at 5 MB/query* | Est. cost** |
+| --- | --- | --- | --- | --- |
+| Defaults: Q1 + Q4 (2 per run) | ~86,000 | ~43 GB | ~430 GB | Low–moderate |
+| All sources: Q1 + Q2 + Q3 + Q4 (4 per run) | ~173,000 | ~86 GB | ~860 GB | ⚠️ Watch this |
+| Worst case: all sources, five Q4 chunks (8 per run) | ~346,000 | ~173 GB | ~1.7 TB | ⚠️ Watch this |
 
-Without auto-refresh, consumption drops to roughly **one query per app open / timeframe change**.
+\* Small environments scan well under 1 MB per query on these tables; busy ones more. These are assumptions, not
+measurements. \*\* Multiply GB scanned by your contract's *"Grail Query – data analyzed"* rate — the dollar amount
+depends entirely on your rate card, so **measure before relying on estimates**.
+
+**Other consumption to check on your rate card** (not measured, billing model not researched here):
+- **Workflow executions:** ~1,440 per day (~43,000 per month), each with 10 tasks (`tick`, 8 senders, `report`).
+- **App function invocations:** up to 2 per run (`engine-tick` every run, `delivery-report` only when something was sent).
+- **App State operations:** each run lists several key prefixes; each open UI tab lists them every 30 s.
 
 ### How to measure precisely (recommended)
 
-Don't rely on the estimate — measure it in **your** environment:
-
-1. **Notebook / DQL metadata:** paste the app's query into a Dynatrace Notebook and inspect the scan metadata. Programmatically, `queryExecute(...)` returns `metadata.grail.scannedBytes` and `scannedRecords` — the real cost per execution.
-2. **Account Management → Cost & usage → Grail Query:** confirms aggregated consumption after running scenarios (e.g. auto-refresh on vs off, narrow vs wide timeframe).
+1. Paste the queries below into a Dynatrace **Notebook** and inspect the scan metadata. Programmatically,
+   `queryExecute(...)` returns `metadata.grail.scannedBytes` and `scannedRecords` — the real cost per execution.
+2. **Account Management → Cost & usage → Grail Query** confirms the aggregated consumption after a day of running.
+   Check the workflow and AppEngine lines on the same page.
 
 ### How to reduce cost
 
-- **Increase the auto-refresh interval** (e.g. 60s → 5 min) or turn it off by default — biggest single win. The interval is set in [Problems.tsx](ui/app/pages/Problems.tsx) (`60_000` ms in the auto-refresh effect).
-- **Keep the default timeframe narrow** ("Today").
-- **Project only the fields you need** with `| fields ...` in the `fetch` — Grail is columnar, so scanning fewer fields scans fewer bytes.
-- Avoid leaving many app tabs open simultaneously.
+- Keep Davis events (Q2) and generic events (Q3) **off** unless you send events that do not open problems.
+- Lower the problem lookback (Settings → Event sources) if your problems rarely stay open for days.
+- Close tabs you do not use; raise the auto-refresh interval for wall screens (App State polling only).
+- Changing the workflow interval reduces runs but makes escalation coarser — not recommended for paging.
+
+### The queries (from `ui/app/data/dql.ts`)
+
+```
+// Q1 — Davis problems (always on). ✅ executed on a tenant
+fetch dt.davis.problems, from: now() - 72h
+| filter not(dt.davis.is_duplicate)
+| dedup event.id, sort: { timestamp desc }
+| filter event.status == "ACTIVE" or event.end >= now() - 2h
+| fields timestamp, event.id, display_id, event.name, event.description, event.category, event.severity,
+         event.status, event.start, event.end, dt.davis.last_reopen_timestamp,
+         dt.davis.event_ids, dt.davis.affected_users_count, dt.davis.mute.status,
+         maintenance.is_under_maintenance, smartscape.affected_entities, root_cause.smartscape_entity,
+         affected_entity_ids, affected_entity_names, root_cause_entity_name, entity_tags
+| sort event.start desc
+| limit 1000
+```
+
+```
+// Q2 — Davis events (optional; event types from Settings). ✅ executed on a tenant
+fetch dt.davis.events, from: now() - 24h
+| filter in(event.type, array("CUSTOM_ALERT", "ERROR_EVENT"))
+| dedup event.id, sort: { timestamp desc }
+| filter event.status == "ACTIVE" or event.end >= now() - 2h
+| fieldsKeep timestamp, event.id, event.name, event.description, event.type, event.category, event.severity,
+         event.status, event.start, event.end, event.provider, dt.davis.is_frequent_event,
+         maintenance.is_under_maintenance, dt.source_entity, entity_tags, "cc.*"
+| limit 1000
+```
+
+```
+// Q3 — generic events convention (optional). ⚠️ parses and runs, not validated with data
+fetch events, from: now() - 24h
+| filter event.type == "command_center.alert"
+| filter isNotNull(cc.dedup_key)
+| sort timestamp asc
+| summarize { last_action = takeLast(cc.action), title = takeLast(event.name),
+              description = takeLast(event.description), priority = takeLast(cc.priority),
+              service = takeLast(cc.service), tags = takeLast(cc.tags),
+              first_seen = min(timestamp), last_seen = max(timestamp) },
+            by: { cc.dedup_key }
+| limit 1000
+```
+
+```
+// Q4 — cc.* properties of the events behind active problems (up to 100 IDs per query). ✅ executed on a tenant
+fetch dt.davis.events, from: now() - 72h
+| filter in(event.id, array("<event id>", "…"))
+| dedup event.id, sort: { timestamp desc }
+| fieldsKeep event.id, event.type, event.provider, "cc.*"
+| limit 1000
+```
+
+## Security and privacy
+
+- **No secrets in the app.** Provider credentials live in the Credential Vault; App State holds only the entry IDs.
+  Sender tasks never return secrets or webhook URLs in their results.
+- **Contact data is visible to every app user.** Phone numbers, chat IDs and handles in `contact.*` are readable by
+  everyone who can open the app (App State has no per-key permissions). Emails are not stored; they are read live from
+  IAM. Tell your team before they enter personal numbers.
+- **Keep the engine workflow private.** Task results contain phone numbers and message texts and are visible in the
+  workflow's execution log to anyone who can see the workflow.
+- **Any app user can change any configuration**, and an App State admin can clear all states — export the configuration
+  regularly (Settings → Export and import).
+- **Audit identity** comes from App State modification info (`lastModifiedBy`), not from what the browser claims.
+- **Outbound traffic** is limited by the External requests allowlist; allow only the provider hosts you use.
+- **Inbound tokens:** create ingest tokens with only `events.ingest` (or the equivalent platform permission), store them in
+  the sending tool's secret store, and rotate them.
+- Message texts include the incident title; do not put sensitive data in event titles if they are sent to third parties.
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+| --- | --- |
+| "The paging engine hasn't run yet" / "is stale" banner | The engine workflow is not installed, not deployed, or failing. Open **Integrations → Workflows** and the workflow's execution log. Most often: Workflows **Authorization settings** not enabled for the actor, or the actor lacks `app-engine:functions:run`. |
+| `tick` fails with HTTP 403 | The actor lacks a permission (app functions, Grail read, App State). See [Step 1](#step-1--decide-who-the-workflow-actor-is). |
+| `tick` fails with HTTP 404 | The workflow was generated for a different app ID. Download the workflow JSON again from Integrations and re-import it. |
+| No incidents appear | Check Settings → Event sources, then whether the event reached Grail (`fetch dt.davis.events` in a Notebook) and whether Davis opened a problem. Events below the problem-opening types do not open problems: enable the Davis-events source. |
+| Routing ignores `cc.service` | The service name or ID does not match a service in Command Center, or a routing rule with an explicit service matched first. Use **Services → Test a rule**. |
+| A notification shows **failed** | Open the incident's **Notifications** tab for the provider error. Usual causes: host missing in **External requests**, vault entry without **Allow access without app context**, actor without access to the vault entry, wrong vault entry type, phone number not in E.164. |
+| A notification shows **timeout** | The `report` task did not run or failed. Check the workflow execution; the engine retries up to 3 attempts. |
+| Escalate now / Send test notification are disabled or fail | You cannot see the private engine workflow (owner-only), the workflow ID in Settings is wrong (use **Save this ID**), or demo mode is on. |
+| "Update available" on the Workflows tab | The app was upgraded. Download the workflow JSON and upload it over the existing workflow (keep the service-user actor). |
+| Deploy rejected because of the version | `app.version` must be higher than the version installed in that environment. |
+| "invalid scopes" on `dt-app auth` | The tenant or your user lacks IAM grants for a scope in `app.config.json`. |
+| Deploy fails — app must be signed | The app ID must start with `my.` for unsigned apps. |
+| User picker finds nobody | Type at least 3 characters. Only users of this environment are listed; you need `iam:users:read`. |
+| Configuration lost | An admin cleared App State, or the app was uninstalled. Import your last export (Settings → Export and import). |
+
+More in the [operations runbook](docs/guides/operations-runbook.md).
+
+## Testing
+
+```bash
+npm test            # vitest: domain core, repositories, workflow definition and scripts, engine tick
+npm run typecheck   # tsc for ui/ and api/
+npm run lint        # ESLint incl. security and no-secrets rules
+npm run build       # dt-app build (works offline)
+npm run check       # all of the above
+```
+
+Offline preview in demo mode (no tenant needed):
+
+```bash
+npx dt-app build
+node scripts/preview-server.mjs --port 4173          # serves dist/ui under /ui/ with a stub runtime
+# open http://127.0.0.1:4173/ui/ — the app detects it runs outside Dynatrace and uses demo data
+node scripts/screenshot.mjs docs/screenshots          # optional; needs the playwright package and a Chrome binary
+```
+
+`node scripts/gen-workflow-templates.mjs --check` fails when the checked-in engine workflow template no longer matches
+the definition in code (a unit test checks the same).
+
+What the tests cannot cover: real provider calls (Twilio, IFTTT, Slack, Teams, Telegram) and tenant-specific Grail data.
+Test every channel in your environment with **Send test notification** before relying on it.
+
+## Limitations and unverified behaviour
+
+Verified in a Dynatrace environment: event ingest through both endpoints, Davis opening problems for the five event types
+above, `cc.*` properties on Davis events and their copy onto problems, queries Q1, Q2 and Q4, and the imported engine
+workflow running `tick` → 8 senders → `report` successfully every minute with Workflows authorization settings enabled.
+
+Not verified, or only partly:
+
+- ⚠️ **Q3 (generic events)** parses and runs but was not validated with data; the `events` convention is untested end to end.
+- **Provider APIs** were implemented from vendor documentation; each channel must be tested in your environment.
+- **Minimal actor permission set** — the set in Step 1 works; which items are strictly required was not isolated.
+- **Problems open longer than the lookback** (default 72 h) are not returned by Q1; the incident stays open until
+  resolved by an operator or a later CLOSED record.
+- **IANA time-zone data in the function runtime** is assumed for schedules; schedules are tested in Node.
+- **App State list size** — no documented cap on how many keys one list call returns; very large ledgers are untested.
+- **Billing** of workflow executions, app functions and App State operations was not researched.
+- **Microsoft Teams**: only Teams Workflows webhooks are supported (Office 365 connector webhooks were retired by Microsoft).
+- **Two-way replies** (acknowledge by SMS or chat) are not implemented.
 
 ## Relevant File Structure
 
-- **app.config.json** — Main app configuration: environmentUrl, ID, OAuth scopes, icon.
-
-- **ui/app/pages/Problems.tsx** — Main component. Contains all UI: cards, table, modals, filters, auto-refresh and Ack/Unack logic.
-
-- **ui/app/types/problems.ts** — Single source of truth for all shared TypeScript types: `Problem`, `ProblemStatus`, `HistoryEvent`, `HistoryEventType`, `EscalationContact`, `FilterStatus`. Imported by both `Problems.tsx` and `useProblems.ts`.
-
-- **ui/app/utils/timeframe.ts** — Shared utility: `parseTimeframeDate`. Resolves Strato `TimeValue` objects and plain expression strings (e.g. `"now()-2h"`, `"@d"`) to a JS `Date`. Re-evaluates expressions at call time so auto-refresh always uses the current instant.
-
-- **ui/app/hooks/useProblems.ts** — Hook that executes the DQL query on `dt.davis.problems` and maps records to the `Problem` type. Accepts a `Timeframe | { from: string; to: string } | null` object. Rebuilds the query whenever the timeframe reference changes, so calling `applyTimeframe()` in `Problems.tsx` triggers a fresh fetch.
-
-- **ui/app/hooks/useAckEvents.ts** — Hook that reads and writes Ack state to the Dynatrace App State API (`stateClient` from `@dynatrace-sdk/client-state`). Persists only user events (Ack/Unack). Write failures are caught and logged without disrupting the UI (optimistic update is preserved).
-
-- **ui/assets/icons/headset-v2-128x128.svg** — App icon displayed in Dynatrace menu.
-
-- **ui/assets/Dynatrace_Logo.svg** — Logo displayed in app header (Command Center).
+```
+app.config.json                    app id, version, scopes, environment placeholder
+api/
+  engine-tick.function.ts          app function called by the workflow's tick task
+  delivery-report.function.ts      app function called by the workflow's report task
+  lib/                             engine run, sources (Q1–Q4), lease, delivery report
+ui/app/
+  domain/                          pure TypeScript core (no React, no SDK)
+    contracts.ts                   shared types (frozen; schemaVersion 1)
+    alerts/ routing/ schedule/ escalation/ incidents/ notifications/ engine/ reports/ validation/ time/
+    demo/fixtures.ts               synthetic demo data
+  data/                            platform adapters
+    repository.ts                  repository port + App State key schema
+    appStateRepository.ts          App State adapter; memoryRepository.ts for demo/tests
+    dql.ts                         DQL builders Q1–Q4
+    workflows/                     engine workflow definition, task scripts, status/installer
+  pages/                           console, oncall, teams, escalations, services, integrations, reports, settings, help
+  components/ hooks/               shared UI pieces and the app data context
+workflow-templates/                engine workflow template + trial-only alert simulator
+scripts/                           install-workflow, gen-workflow-templates, preview-server, screenshot
+docs/                              project page (index.html), guides/, screenshots/
+specs/command-center-v2.md         specification
+design/DESIGN.md                   screen and component design
+```
 
 ## Available Scripts
 
-This project was bootstrapped with the Dynatrace App Toolkit (`dt-app`). The following npm scripts are available:
-
 | Script | Runs | Description |
 | --- | --- | --- |
-| `npm run start` | `dt-app dev` | Runs the app in development mode with hot reload and auto-opens the browser. |
-| `npm run build` | `dt-app build` | Builds the app for production into the `dist` folder. |
-| `npm run deploy` | `dt-app deploy` | Builds and deploys the app to the environment in `app.config.json`. |
-| `npm run uninstall` | `dt-app uninstall` | Uninstalls the app from the environment in `app.config.json`. |
-| `npm run create:function` | `dt-app function create` | Generates a new serverless function in the `api` folder. |
-| `npm run create:action` | `dt-app action create` | Generates a new action. |
-| `npm run update` | `dt-app update` | Updates `@dynatrace`-scoped packages and applies automatic migrations. |
-| `npm run info` | `dt-app info` | Outputs CLI and environment information. |
-| `npm run help` | `dt-app help` | Outputs help for the Dynatrace App Toolkit. |
-| `npm run lint` | `eslint .` | Lints the project (includes security/SDL rules). |
+| `npm run start` | `dt-app dev` | Development mode with hot reload |
+| `npm run build` | `dt-app build` | Production build into `dist/` |
+| `npm run deploy` | `dt-app deploy` | Build and deploy to the configured environment |
+| `npm run uninstall` | `dt-app uninstall` | Remove the app from the environment (App State may be lost — export first) |
+| `npm run update` | `dt-app update` | Update `@dynatrace` packages and apply migrations |
+| `npm run lint` | `eslint .` | Lint, including security and secret rules |
+| `npm run typecheck` | `tsc` | Type-check `ui/` and `api/` |
+| `npm test` | `vitest run` | Unit tests |
+| `npm run check` | lint + typecheck + test + build | Everything before a release |
+| `node scripts/install-workflow.mjs` | — | Admin install/update of the engine workflow via the Automation API |
+| `node scripts/gen-workflow-templates.mjs` | — | Regenerate (or `--check`) the engine workflow template |
+| `node scripts/preview-server.mjs` | — | Serve the built UI offline in demo mode |
+| `node scripts/screenshot.mjs` | — | Screenshot every route of the offline preview (needs playwright) |
 
-To learn more about the Dynatrace Platform, see [Dynatrace Developer](https://developer.dynatrace.com/). To learn React, see the [React documentation](https://reactjs.org/).
+## Versioning & Changelog
+
+This app follows [Semantic Versioning](https://semver.org/), where "breaking" means breaking **for the person running
+the app**:
+
+| Bump | When |
+| --- | --- |
+| **MAJOR** | A scope changed (everyone must re-consent) · persisted state format changed without migration · a feature was removed · a default changed in a way that raises cost |
+| **MINOR** | New view, chart, filter or setting — nothing existing breaks |
+| **PATCH** | Bug fix, copy, styling, dependency bump, query optimized with identical results |
+
+- `app.config.json` → `app.version` is the single source of truth.
+- Every release is recorded in [CHANGELOG.md](CHANGELOG.md).
+- The same version is never published twice; Dynatrace rejects a deploy whose version is not higher than the installed one.
+
+**Current version:** 2.0.0 (see [`app.config.json`](app.config.json)).
+
+To learn more about the Dynatrace Platform, see [Dynatrace Developer](https://developer.dynatrace.com/).
+
+---
+
+Built following [Development Pattern for Dynatrace](https://github.com/adrianorafael/development-pattern-for-Dynatrace).
