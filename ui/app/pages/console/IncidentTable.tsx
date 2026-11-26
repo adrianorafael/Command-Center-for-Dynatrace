@@ -447,10 +447,11 @@ export const IncidentTable = ({
       onRowSelectionChange={onSelect}
       interactiveRows
       activeRow={activeId}
-      // DataTable reports `null` when the active row id is not among its rows (data still loading, or a deep-linked
-      // incident hidden by the filters); ignore that so /incidents/:id keeps the details panel open.
-      onActiveRowChange={(id) => {
-        if (id === null && activeId && !rows.some((r) => r.id === activeId)) return;
+      // DataTable resets the active row to `null` (with no event) whenever `data` changes: first load, every
+      // auto-refresh and every filter change. Ignore that reset so /incidents/:id deep links and the open details
+      // panel survive polling; user deactivation always carries an event.
+      onActiveRowChange={(id, event) => {
+        if (id === null && !event) return;
         onActivate(id);
       }}
       loading={loading}
