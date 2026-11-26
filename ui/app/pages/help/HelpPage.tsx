@@ -47,7 +47,7 @@ Notifications leave Dynatrace only through the **Command Center · Engine** work
 
 1. In **Integrations → Workflows**, download the workflow JSON and upload it in the Workflows app. Set a **service user** as actor.
 2. In the Workflows app's authorization settings, grant the actor the permissions the workflow needs.
-3. Create one **Credential Vault** entry per provider (Twilio, IFTTT, Slack, Microsoft Teams, Telegram, or your webhook) with scope **AppEngine**, owned by the workflow actor, with **Owner access only** and **Allow access without app context** both on. Its ID looks like `CREDENTIAL_VAULT_ENTRY-…`.
+3. Create one **Credential Vault** entry per provider (Twilio, IFTTT, Slack, Microsoft Teams, Telegram, or your webhook) with scope **AppEngine**, owned by the workflow actor, with **Owner access only** and **Allow access without app context** both on. Its ID looks like \`CREDENTIAL_VAULT_ENTRY-…\`.
 4. In **Integrations → Outbound**, paste the credential vault ID, set the sender, enable the provider, and send a test.
 5. Add the provider hosts to **Settings → External requests**.
 
