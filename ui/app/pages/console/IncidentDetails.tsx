@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex } from "@dynatrace/strato-components/layouts";
-import { Heading, Text, ExternalLink, Paragraph } from "@dynatrace/strato-components/typography";
+import { Heading, Text, ExternalLink } from "@dynatrace/strato-components/typography";
 import { Menu, Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { FormField, Label, TextArea } from "@dynatrace/strato-components/forms";
 import { Avatar, Chip, ChipGroup, Markdown } from "@dynatrace/strato-components/content";

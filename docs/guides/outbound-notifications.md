@@ -152,8 +152,8 @@ The generic webhook's `notification` object:
 }
 ```
 
-Use `key` as an idempotency key: a retry has the same key with a higher `attempt`, a duplicate delivery has the same key
-and attempt. Any 2xx counts as sent.
+Use `key` as an idempotency key: a duplicate delivery has the identical key; a retry has the same key except the last
+segment (`attempt` + 1). Any 2xx counts as sent.
 
 Provider payloads were implemented from each vendor's documentation and could not all be exercised here — test every
 channel you enable.
@@ -171,5 +171,6 @@ The ledger is visible per incident under **Notifications**; totals are on **Repo
 ## Privacy
 
 Task results (visible in the workflow's execution log) contain recipients' phone numbers and message texts. Keep the
-workflow **private**. Consequence: only its owner can see it, so **Escalate now**, **Run engine now** and **Send test
-notification** work only for users who can see the workflow; the minute schedule pages everyone regardless.
+workflow **private**. Consequence: only its owner can see it, so the immediate runs behind **Run engine now**, **Send test
+notification** and **Escalate now** work only for users who can see the workflow. An *Escalate now* by anyone else is
+still recorded and sent by the next scheduled run (within about a minute).

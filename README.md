@@ -150,7 +150,7 @@ keyboard shortcuts, troubleshooting and privacy notes.
 ```mermaid
 flowchart LR
   subgraph External["External tools"]
-    T[Monitoring / CI / scripts]
+    T["Monitoring / CI / scripts"]
   end
   subgraph DT["Your Dynatrace environment"]
     API["Events API v2<br/>/api/v2/events/ingest"]
@@ -171,9 +171,9 @@ flowchart LR
   end
   P["Twilio · IFTTT · Slack · Teams<br/>Telegram · your webhook"]
 
-  T -->|POST event| API --> G
+  T -->|"POST event"| API --> G
   DAVIS -->|opens problem| G
-  TICK -->|POST /apps/&lt;appId&gt;/api/engine-tick| FT
+  TICK -->|"POST /apps/{appId}/api/engine-tick"| FT
   FT -->|DQL| G
   FT <--> S
   FT -->|batches per channel| TICK
@@ -181,9 +181,9 @@ flowchart LR
   SEND -->|reads secret| CV
   SEND -->|HTTPS| P
   SEND --> REP
-  REP -->|POST delivery-report| FR --> S
-  UI <-->|read all, write config + operator actions| S
-  UI -->|run workflow: escalate now / test| WF
+  REP -->|"POST delivery-report"| FR --> S
+  UI <-->|"read all, write config and operator actions"| S
+  UI -->|"run workflow (escalate now, test)"| WF
 ```
 
 How one minute of the engine works:
@@ -262,7 +262,8 @@ context. Changes hot-reload. Note that the engine workflow always calls the **de
 cannot be tested from the dev server alone.
 
 Outside Dynatrace (offline preview, tests) the app switches to **demo mode** with synthetic data; you can also force
-it with `?demo=1` or Settings → General → Demo mode. A "Demo data" indicator is always visible in demo mode.
+it with `?demo=1` or Settings → General → Demo mode (stored in this browser only). Demo mode is always indicated in
+the app.
 
 ## Publishing to Environment (Deploy)
 
@@ -304,7 +305,7 @@ Deployment is per environment.
 | `state:app-states:delete` | Remove folded actions and deleted configuration |
 | `iam:users:read` | Pick on-call team members from the environment's users and show their names |
 | `automation:workflows:read` | Show the engine workflow's install status and recent executions |
-| `automation:workflows:run` | **Escalate now**, **Run engine now** and **Send test notification** — all run the engine workflow |
+| `automation:workflows:run` | **Run engine now**, **Send test notification** and the immediate run after **Escalate now** |
 
 Not requested, on purpose:
 
@@ -340,7 +341,8 @@ This set has been seen working end to end; the **minimal** set has not been isol
 
 ### Step 2 — Enable Workflows authorization settings
 
-Open the **Workflows** app → **Settings** → **Authorization settings** and enable the permissions above for the actor.
+Open the **Workflows** app → **Settings** → **Authorization settings** and enable the permissions above for the user
+who acts as the workflow actor.
 Without this, `tick` fails and nobody is paged — the console shows the "paging engine is stale" banner.
 
 ### Step 3 — Create Credential Vault entries
@@ -420,7 +422,8 @@ built-in sender (PagerDuty-style APIs, ITSM, email gateways, chat bots).
 ### Step 7 — Teams, people, schedules, policies, routing
 
 1. **Teams** → create a team, add members from the user directory, set roles.
-2. For each member, add **contact methods** (phone in E.164, Telegram chat ID, Slack/Teams handle or routing key) and
+2. For each member, add **contact methods** (phone in E.164, Telegram chat ID, a label for Slack/Teams/IFTTT, a routing
+   key for the webhook) and
    **notification rules** ("P1–P2: voice immediately, SMS after 5 minutes").
 3. **On-call → Schedules** → add layers, rotation type, handoff time and time zone; check the coverage preview.
 4. **Escalations** → create a policy: step 1 on-call of the schedule after 0 minutes, step 2 the whole team after 10,
@@ -530,8 +533,9 @@ duration).
 
 ### Private workflow, owner-only manual runs
 The engine workflow is private because its task results contain phone numbers and message texts. A private workflow is
-only visible to its owner, so **Escalate now**, **Run engine now** and **Send test notification** work only for users who
-can see the workflow. The minute schedule pages everyone regardless.
+only visible to its owner, so the immediate runs behind **Run engine now**, **Send test notification** and **Escalate now**
+work only for users who can see the workflow. An *Escalate now* by anyone else is still recorded and sent by the next
+scheduled run (within about a minute). The minute schedule pages everyone regardless.
 
 ### Configuration is last-write-wins
 Two people editing the same team or schedule at the same time: the later save wins. Edits carry a revision number, but
@@ -541,8 +545,8 @@ there is no server-side lock or conflict check.
 Any user who can open the app can change any configuration. Control who may open the app with Dynatrace IAM policies.
 
 ### Demo mode
-Outside Dynatrace, with `?demo=1`, or when switched on in Settings, the app uses in-memory synthetic data and never
-calls Dynatrace APIs. Use it for training and screenshots.
+Outside Dynatrace, with `?demo=1`, or when switched on in Settings (per browser), the app uses in-memory synthetic data
+and never calls Dynatrace APIs. Use it for training and screenshots.
 
 ### Upgrading from 1.x
 Version 1.x stored acknowledgements in one App State key, `problem-ack-states`. Version 2 does not read it. **Settings →
@@ -690,7 +694,7 @@ fetch dt.davis.events, from: now() - 72h
 | Routing ignores `cc.service` | The service name or ID does not match a service in Command Center, or a routing rule with an explicit service matched first. Use **Services → Test a rule**. |
 | A notification shows **failed** | Open the incident's **Notifications** tab for the provider error. Usual causes: host missing in **External requests**, vault entry without **Allow access without app context**, actor without access to the vault entry, wrong vault entry type, phone number not in E.164. |
 | A notification shows **timeout** | The `report` task did not run or failed. Check the workflow execution; the engine retries up to 3 attempts. |
-| Escalate now / Send test notification are disabled or fail | You cannot see the private engine workflow (owner-only), the workflow ID in Settings is wrong (use **Save this ID**), or demo mode is on. |
+| Run engine now / Send test fail, or "Escalation recorded, but the engine didn't start" | You cannot see the private engine workflow (owner-only), the workflow ID in Settings is wrong (use **Save this ID**), or demo mode is on. An escalation is still sent by the next scheduled run. |
 | "Update available" on the Workflows tab | The app was upgraded. Download the workflow JSON and upload it over the existing workflow (keep the service-user actor). |
 | Deploy rejected because of the version | `app.version` must be higher than the version installed in that environment. |
 | "invalid scopes" on `dt-app auth` | The tenant or your user lacks IAM grants for a scope in `app.config.json`. |
@@ -716,7 +720,7 @@ Offline preview in demo mode (no tenant needed):
 npx dt-app build
 node scripts/preview-server.mjs --port 4173          # serves dist/ui under /ui/ with a stub runtime
 # open http://127.0.0.1:4173/ui/ — the app detects it runs outside Dynatrace and uses demo data
-node scripts/screenshot.mjs docs/screenshots          # optional; needs the playwright package and a Chrome binary
+node scripts/screenshot.mjs ./screenshots-out         # optional; one PNG per route; needs playwright and a Chrome binary
 ```
 
 `node scripts/gen-workflow-templates.mjs --check` fails when the checked-in engine workflow template no longer matches

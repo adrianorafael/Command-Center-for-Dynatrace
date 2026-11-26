@@ -43,9 +43,9 @@ Open a member → **Contact methods**.
 | --- | --- |
 | SMS, voice, WhatsApp | Phone number in E.164, e.g. `+15550100000` |
 | Telegram | Chat ID (the person starts a chat with your bot first) |
-| Slack, Microsoft Teams | Handle or routing text included in the message (the webhook decides the channel) |
-| IFTTT | Free text passed to your applet |
-| Webhook | Routing key for your endpoint |
+| Slack, Microsoft Teams | Any label, e.g. a handle. The webhook decides the channel; the message is prefixed with the person's name (or this address when no name is known) |
+| IFTTT | Any label. It is **not** sent: the applet receives only subject, text and incident link, so one IFTTT applet serves everyone with this method |
+| Webhook | Routing key for your endpoint (sent as `to.address`) |
 
 **Notification rules** decide which method is used, for which priority, and after how many minutes:
 

@@ -14,7 +14,7 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 
 | # | Rule |
 | --- | --- |
-| R1 | Never publish a secret — no tokens, `.env`, tenant IDs, tenant URLs, emails, phone numbers or real names. Use `YOUR-ENVIRONMENT`, `YOUR-TOKEN`, `HOST-0000000000000001`, `user-0001`, `+15550100000`. |
+| R1 | Never publish a secret — no tokens, `.env`, tenant IDs, tenant URLs, emails, phone numbers or real names. Use `YOUR-ENVIRONMENT`, `YOUR-TOKEN`, `HOST-0000000000000000`, `user-0001`, `+15550100000`. |
 | R2 | Never invent an API — verify every component, prop, SDK method, DQL function and workflow action against `node_modules/**/*.d.ts`, `dt-app-mcp`, or developer.dynatrace.com, and cite it. |
 | R3 | Strato only — `@dynatrace/strato-components/<subpath>`, `@dynatrace/strato-icons`, `@dynatrace/strato-design-tokens`. No MUI, Tailwind, Recharts, Chart.js or D3. |
 | R4 | Research the docs, depth-first, before writing a spec. |
@@ -130,7 +130,7 @@ npm run check            # all of the above
 
 node scripts/gen-workflow-templates.mjs [--check]      # regenerate / verify the engine workflow template
 npx dt-app build && node scripts/preview-server.mjs    # offline preview at http://127.0.0.1:4173/ui/ (demo mode)
-node scripts/screenshot.mjs docs/screenshots           # needs playwright + a Chrome binary
+node scripts/screenshot.mjs ./screenshots-out          # one PNG per route; needs playwright + a Chrome binary
 
 npx dt-app auth          # authenticate against the environment in app.config.json
 npx dt-app dev           # open the printed link, NOT localhost:3000
