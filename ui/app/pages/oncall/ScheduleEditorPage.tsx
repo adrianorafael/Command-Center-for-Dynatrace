@@ -1,6 +1,6 @@
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Accordion, MessageContainer, Avatar } from "@dynatrace/strato-components/content";
@@ -258,6 +258,13 @@ const LayerEditor = ({
 
 export const ScheduleEditorPage = () => {
   const { id = "new" } = useParams();
+  const [search] = useSearchParams();
+  const presetTeam = search.get("teamId") ?? undefined;
+  /** Only in-app paths, so a crafted link can't send the user elsewhere. */
+  const returnTo = (() => {
+    const r = search.get("returnTo");
+    return r && r.startsWith("/") && !r.startsWith("//") ? r : undefined;
+  })();
   const navigate = useNavigate();
   const { data, isLoading, error, refresh, now, mutate } = useAppData();
   const existing = data?.schedules.find((s) => s.id === id);
@@ -281,7 +288,7 @@ export const ScheduleEditorPage = () => {
         schemaVersion: SCHEMA_VERSION,
         id: newId("schedule"),
         name: "",
-        teamId: data.teams[0]?.id,
+        teamId: presetTeam ?? data.teams[0]?.id,
         timeZone: tz,
         rev: 0,
         layers: [newLayer(0, now)],
@@ -289,7 +296,7 @@ export const ScheduleEditorPage = () => {
       } satisfies Schedule);
     setDraft(base);
     setExpanded(base.layers.slice(0, 1).map((l) => l.id));
-  }, [data, existing, draft, now]);
+  }, [data, existing, draft, now, presetTeam]);
 
   // Debounced coverage preview (300 ms).
   useEffect(() => {
@@ -334,7 +341,7 @@ export const ScheduleEditorPage = () => {
     mutate((s) => s.saveSchedule(nextRev(draft)), isNew ? "Schedule created" : "Schedule saved")
       .then(() => {
         setDirty(false);
-        navigate("/on-call?tab=schedules");
+        navigate(returnTo ?? "/on-call?tab=schedules");
       })
       .catch(() => undefined)
       .finally(() => setSaving(false));
@@ -356,7 +363,7 @@ export const ScheduleEditorPage = () => {
           subtitle="Layers rotate members; later layers and overrides take precedence"
           action={
             <Flex gap={8}>
-              <Button onClick={() => (dirty ? setConfirmDiscard(true) : navigate("/on-call?tab=schedules"))}>Cancel</Button>
+              <Button onClick={() => (dirty ? setConfirmDiscard(true) : navigate(returnTo ?? "/on-call?tab=schedules"))}>Cancel</Button>
               <Button color="primary" variant="accent" loading={saving} onClick={save}>
                 Save
               </Button>
@@ -487,7 +494,7 @@ export const ScheduleEditorPage = () => {
         title="Discard unsaved changes?"
         confirmLabel="Discard"
         onDismiss={() => setConfirmDiscard(false)}
-        onConfirm={() => navigate("/on-call?tab=schedules")}
+        onConfirm={() => navigate(returnTo ?? "/on-call?tab=schedules")}
       >
         Your changes to this schedule will be lost.
       </ConfirmModal>

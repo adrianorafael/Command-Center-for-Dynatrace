@@ -5,15 +5,17 @@
  * - Pure: returns a new Incident, never mutates the input.
  * - Idempotent: when an `actionId` (the stored `act.*` key) is given, an action already
  *   folded (its id is recorded in a timeline entry) is a no-op — a failed delete cannot
- *   double-fold.
+ *   double-fold. Actions that are not applied (stale / not applicable) leave an
+ *   "action_ignored" timeline entry so the operator sees why.
+ * - "escalate" keeps the cycle and asks the engine to fire the next step immediately.
  * - Order-tolerant: actions are folded sorted by (at, key). A status action (ack, unack,
  *   resolve, reopen, snooze, escalate) whose `at` is older than the last status change made
  *   by another operator action is stale and ignored — so the outcome is the same whether
  *   actions arrive in one tick or across several ticks (last-writer-wins by operator time).
  *   Engine/source-driven changes (source resolve/reopen, snooze expiry) do not make human
  *   actions stale, which avoids losing an ack to client clock skew.
- * - Every state-restarting transition (unack, reopen, escalate, snooze expiry, source
- *   reopen) starts a new escalation cycle at `now` (cycle + 1), so elapsed steps never fire
+ * - Every state-restarting transition (unack, reopen, snooze expiry, source reopen) starts a
+ *   new escalation cycle at `now` (cycle + 1), so elapsed steps never fire
  *   all at once and notification keys never collide with the previous cycle.
  */
 
@@ -28,6 +30,7 @@ import {
 } from "../contracts";
 import { incidentIdFor } from "../ids";
 import type { RouteDecision } from "../routing/match";
+import { setEngineState } from "./meta";
 
 export const MAX_NOTE_LENGTH = 4000;
 export const UNKNOWN_ACTOR = "unknown";
@@ -120,12 +123,28 @@ export function applyActionDetailed(
   if (opts.actionId && wasFolded(incident, opts.actionId)) {
     return { incident, applied: false, reason: "duplicate" };
   }
+  // Never trust a client clock beyond the server's: clamp to ≤ now (callers also clamp to the
+  // record's server lastModifiedTime), so a future-dated action cannot freeze the status.
+  if (action.at > now) action = { ...action, at: now };
+  const actor = by || UNKNOWN_ACTOR;
+  /** Not applied: keep an audit entry (only for stored actions, which have an identity). */
+  const ignored = (reason: "stale" | "not-applicable", why: string): ApplyResult => {
+    if (!opts.actionId) return { incident, applied: false, reason };
+    const copy = cloneIncident(incident);
+    pushTimeline(copy, {
+      at: action.at,
+      type: "action_ignored",
+      by: actor,
+      detail: `${action.type}: ${why}`,
+      data: { actionId: opts.actionId, action: action.type, reason },
+    });
+    return { incident: copy, applied: false, reason };
+  };
   const isStatus = STATUS_ACTIONS.has(action.type);
   if (isStatus && action.at < lastStatusActionAt(incident)) {
-    return { incident, applied: false, reason: "stale" };
+    return ignored("stale", "superseded by a newer operator action");
   }
   const inc = cloneIncident(incident);
-  const actor = by || UNKNOWN_ACTOR;
   const data: Record<string, string | number | boolean> = {};
   if (opts.actionId) data["actionId"] = opts.actionId;
   if (isStatus) data["statusAction"] = true;
@@ -137,7 +156,7 @@ export function applyActionDetailed(
       ...(detail ? { detail } : {}),
       data: { ...data, ...(extra ?? {}) },
     });
-  const notApplicable = (): ApplyResult => ({ incident, applied: false, reason: "not-applicable" });
+  const notApplicable = (): ApplyResult => ignored("not-applicable", `not applicable while ${incident.status}`);
 
   switch (action.type) {
     case "ack":
@@ -181,12 +200,13 @@ export function applyActionDetailed(
       entry("snoozed", undefined, { until: action.until });
       break;
     case "escalate":
+      // Fires the NEXT step of the current cycle immediately (the engine shifts the clock).
       if (inc.status === "resolved") return notApplicable();
       inc.status = "triggered";
       clearAck(inc);
       delete inc.snoozedUntil;
-      restartEscalation(inc, now);
-      entry("escalated", "Escalated manually", { cycle: inc.escalation.cycle });
+      setEngineState(inc, { escalateRequestedAt: now });
+      entry("escalated", "Escalated manually — next step now", { cycle: inc.escalation.cycle });
       break;
     case "reassign": {
       const a = action.assignee;
@@ -247,14 +267,20 @@ interface Normalised {
   by: string;
 }
 
+/**
+ * Stored actions are ordered and stale-checked by server time: `at` is clamped to the
+ * record's `lastModifiedTime` (set by App State), so a client clock in the future cannot win.
+ */
 function normalise(a: PendingAction): Normalised {
   if (isStored(a)) {
-    return { key: a.key, action: a.value, by: a.lastModifiedBy ?? a.value.by ?? UNKNOWN_ACTOR };
+    const server = a.lastModifiedTime;
+    const action = server !== undefined && Number.isFinite(server) && a.value.at > server ? { ...a.value, at: server } : a.value;
+    return { key: a.key, action, by: a.lastModifiedBy ?? a.value.by ?? UNKNOWN_ACTOR };
   }
   return { key: `${a.at}.${a.clientId}.${a.type}`, action: a, by: a.by ?? UNKNOWN_ACTOR };
 }
 
-/** Same ordering the engine uses: by `at`, then key. */
+/** Same ordering the engine uses: by (server-clamped) `at`, then key. */
 export function sortActions<T extends PendingAction>(actions: T[]): T[] {
   return [...actions].sort((x, y) => {
     const a = normalise(x);
@@ -268,12 +294,15 @@ export interface FoldResult {
   /** Keys of the actions considered (all, applied or not — they can be deleted). */
   foldedKeys: string[];
   applied: number;
+  /** True when the incident changed (applied actions or action_ignored audit entries). */
+  changed: boolean;
 }
 
 /** Fold pending actions (any order) into the incident. */
 export function foldActions(incident: Incident, actions: PendingAction[], now: number): FoldResult {
   let inc = incident;
   let applied = 0;
+  let changed = false;
   const foldedKeys: string[] = [];
   for (const a of sortActions(actions)) {
     const n = normalise(a);
@@ -281,9 +310,10 @@ export function foldActions(incident: Incident, actions: PendingAction[], now: n
     foldedKeys.push(n.key);
     const r = applyActionDetailed(inc, n.action, n.by, now, isStored(a) ? { actionId: n.key } : {});
     inc = r.incident;
+    if (r.reason === "stale" || r.reason === "not-applicable") changed = changed || r.incident !== incident;
     if (r.applied) applied++;
   }
-  return { incident: inc, foldedKeys, applied };
+  return { incident: inc, foldedKeys, applied, changed: changed || applied > 0 };
 }
 
 /**

@@ -58,3 +58,31 @@ describe("routing", () => {
     expect(routeAlert(a, { ...ctx, rules: [r("s", { then: { suppress: true } })] }).suppress).toBe(true);
   });
 });
+
+import { regexSafetyIssue, MAX_REGEX_INPUT } from "../routing/match";
+import { validateRule } from "../validation/validate";
+
+describe("regex safety (ReDoS)", () => {
+  it("rejects nested quantifiers, alternation under a quantifier and back-references", () => {
+    for (const p of ["(a+)+", "(a|aa)+$", "(\\w*x)*", "((ab)*c)+", "(a{2,})+", "(x|y)*z", "(a)\\1", "([a-z]+)*"]) {
+      expect(regexSafetyIssue(p), p).toBeDefined();
+      expect(safeRegex(p), p).toBeNull();
+    }
+  });
+  it("accepts ordinary patterns", () => {
+    for (const p of ["^host-[a-z]$", "postgres|replica|redis", "(?:prod|stage)-db", "error\\s+rate", "[(+*)]+", "a+b*c?", "(ab)?c", "\\(x+\\)+", "\\d{3}-\\d{4}", "foo.*?bar"]) {
+      expect(regexSafetyIssue(p), p).toBeUndefined();
+    }
+  });
+  it("the reviewer's catastrophic case is refused fast and inputs are capped at 1 000 chars", () => {
+    const t = performance.now();
+    const a = alert({ sourceId: "x", title: "a".repeat(36) + "b" });
+    expect(evaluateCondition(a, { field: "title", op: "regex", value: "(a|aa)+$" })).toBe(false);
+    expect(performance.now() - t).toBeLessThan(50);
+    expect(MAX_REGEX_INPUT).toBe(1000);
+    const long = alert({ sourceId: "y", title: "x".repeat(1500) + "needle" });
+    expect(evaluateCondition(long, { field: "title", op: "regex", value: "needle" })).toBe(false);
+    const v = validateRule({ id: "r", name: "r", enabled: true, match: "all", conditions: [{ field: "title", op: "regex", value: "(a+)+" }], then: { priority: "P1" } });
+    expect(v.map((e) => e.message).join(" ")).toContain("Nested quantifiers");
+  });
+});

@@ -1,6 +1,6 @@
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Flex, PageLayout } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { MessageContainer } from "@dynatrace/strato-components/content";
@@ -15,6 +15,13 @@ import { RulesTab, TestTab, newService } from "./ServicesPage";
 
 export const ServiceDetailPage = () => {
   const { id = "new" } = useParams();
+  const [search] = useSearchParams();
+  const presetTeam = search.get("teamId") ?? undefined;
+  /** Only in-app paths, so a crafted link can't send the user elsewhere. */
+  const returnTo = (() => {
+    const r = search.get("returnTo");
+    return r && r.startsWith("/") && !r.startsWith("//") ? r : undefined;
+  })();
   const navigate = useNavigate();
   const { data, isLoading, error, refresh, mutate } = useAppData();
   const existing = data?.services.find((s) => s.id === id);
@@ -25,8 +32,8 @@ export const ServiceDetailPage = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!draft && data) setDraft(existing ?? newService(data.teams[0]?.id));
-  }, [data, existing, draft]);
+    if (!draft && data) setDraft(existing ?? { ...newService(presetTeam ?? data.teams[0]?.id), policyId: data.teams.find((t) => t.id === presetTeam)?.defaultPolicyId });
+  }, [data, existing, draft, presetTeam]);
 
   if (!draft || isLoading || error)
     return (
@@ -53,7 +60,7 @@ export const ServiceDetailPage = () => {
     if (errors.length) return;
     setSaving(true);
     mutate((s) => s.saveService(nextRev(draft)), isNew ? "Service created" : "Service saved")
-      .then(() => isNew && navigate(`/services/${draft.id}`, { replace: true }))
+      .then(() => isNew && navigate(returnTo ?? `/services/${draft.id}`, { replace: !returnTo }))
       .catch(() => undefined)
       .finally(() => setSaving(false));
   };
@@ -132,7 +139,7 @@ export const ServiceDetailPage = () => {
           subtitle={isNew ? "Create the service, then add routing rules for it" : "Rules are evaluated top to bottom; first match wins"}
           action={
             <Flex gap={8}>
-              <Button onClick={() => navigate("/services")}>Cancel</Button>
+              <Button onClick={() => navigate(returnTo ?? "/services")}>Cancel</Button>
               <Button color="primary" variant="accent" loading={saving} onClick={save}>
                 Save
               </Button>

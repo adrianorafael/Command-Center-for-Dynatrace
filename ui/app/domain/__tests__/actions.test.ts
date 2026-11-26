@@ -68,12 +68,13 @@ describe("applyAction", () => {
     expect(u.status).toBe("triggered");
     expect(u.escalation.cycle).toBe(2);
   });
-  it("escalate restarts the cycle and clears ack", () => {
+  it("escalate keeps the cycle, clears ack and flags 'next step now' for the engine", () => {
     let inc = newInc();
     const base = { schemaVersion: 1 as const, incidentId: inc.id, clientId: "c" };
-    inc = applyAction(inc, { ...base, at: T0 + 1, type: "ack" }, "u", T0);
+    inc = applyAction(inc, { ...base, at: T0 + 1, type: "ack" }, "u", T0 + 1);
     inc = applyAction(inc, { ...base, at: T0 + 2, type: "escalate" }, "u", T0 + 5);
-    expect(inc).toMatchObject({ status: "triggered", escalation: { cycle: 2, startedAt: T0 + 5 } });
+    expect(inc).toMatchObject({ status: "triggered", escalation: { cycle: 1, startedAt: T0 }, escalateRequestedAt: T0 + 5 });
+    expect(inc.acknowledgedAt).toBeUndefined();
   });
   it("timeline is capped and keeps 'created'", () => {
     const inc = newInc();

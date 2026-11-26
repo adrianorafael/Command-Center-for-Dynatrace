@@ -10,8 +10,9 @@
  *  5. un-snooze due incidents (new cycle)
  *  6. escalation + notification planning for triggered, non-suppressed incidents
  *  7. ledger timeouts → retries (attempt + 1) or final failure timeline entries
- *  8. archive incidents resolved longer than retention.resolvedVisibleHours (unless the
- *     source query still returns them, which would re-create them); rollup delta
+ *  8. archive incidents resolved longer than retention.resolvedVisibleHours once their alert
+ *     was absent from ARCHIVE_ABSENT_TICKS consecutive OK source queries (failed/truncated
+ *     queries never count); archived ids passed back in are not resurrected; rollup delta
  *  9. batches by channel, capped at engine.maxNotificationsPerTick (overflow is not written
  *     to the ledger and is re-planned next tick)
  *
@@ -23,6 +24,7 @@ import type { Stored } from "../../data/repository";
 import {
   CHANNELS,
   type Alert,
+  type AlertSource,
   type EngineCounts,
   type EscalationPolicy,
   type Incident,
@@ -37,7 +39,7 @@ import {
   type UserContact,
 } from "../contracts";
 import { dedupAlerts } from "../alerts/dedup";
-import { advanceEscalation } from "../escalation/machine";
+import { advanceEscalation, doneOrdinal, firingFor, totalOrdinals } from "../escalation/machine";
 import { describeTarget } from "../escalation/targets";
 import { incidentIdFor } from "../ids";
 import {
@@ -46,10 +48,19 @@ import {
   createIncident,
   foldActions,
   pushTimeline,
+  restartEscalation,
   unsnoozeIfDue,
 } from "../incidents/actions";
+import { engineState, setEngineState } from "../incidents/meta";
 import { incidentIdFromActionKey, utcDay, utcDayCompact } from "../keys";
-import { planIncidentNotifications, processLedger, toRequest, type CandidateRequest, type PlanContext } from "../notifications/plan";
+import {
+  buildPagedIndex,
+  planIncidentNotifications,
+  processLedger,
+  toRequest,
+  type CandidateRequest,
+  type PlanContext,
+} from "../notifications/plan";
 import { priorityRank } from "../priority";
 import { emptyDelta, rollupRecord, type RollupDelta } from "../reports/metrics";
 import { routeAlert } from "../routing/match";
@@ -71,7 +82,23 @@ export interface TickInput {
   alerts: Alert[];
   /** Absolute app URL for message links, e.g. https://<env>.apps.dynatrace.com/ui/apps/my.command.center */
   appBaseUrl?: string;
+  /**
+   * Outcome of each source query this tick (missing = "ok"). Incidents of a source whose
+   * query "failed" or was "truncated" are never counted absent and never archived.
+   */
+  sourceStatus?: Partial<Record<AlertSource, SourceQueryStatus>>;
+  /**
+   * Incidents already archived (`arc.*`), so a still-returned alert does not resurrect them.
+   * Map form: id → resolvedAt (or an upper bound, e.g. the end of the archive key's UTC day —
+   * see `archiveResolvedBound`). Set form: the bound is `now − resolvedVisibleHours` (always
+   * ≥ the real resolvedAt, because archiving happens only after that window).
+   * An archived incident is re-created only when its alert is ACTIVE with
+   * `reopenedAt` newer than that bound.
+   */
+  archived?: ReadonlySet<string> | ReadonlyMap<string, number>;
 }
+
+export type SourceQueryStatus = "ok" | "failed" | "truncated";
 
 export interface ArchiveWrite {
   /** yyyymmdd (UTC) of the resolve time — `KEY.archive(day, incident.id)`. */
@@ -103,6 +130,22 @@ export const ORPHAN_ACTION_MAX_AGE_MS = 24 * HOUR_MS;
 /** Refresh `lastSeenAt` of unchanged incidents at most this often (limits writes). */
 export const LAST_SEEN_REFRESH_MS = 10 * 60_000;
 export const ARCHIVE_TIMELINE_KEEP = 50;
+/** A resolved incident is archived only after its alert was absent from this many consecutive OK queries. */
+export const ARCHIVE_ABSENT_TICKS = 3;
+
+/** Upper bound of the resolve time encoded in an `arc.<yyyymmdd>.<id>` key (end of that UTC day). */
+export function archiveResolvedBound(archiveKey: string): { id: string; bound: number } | undefined {
+  const m = /^arc\.(\d{4})(\d{2})(\d{2})\.(.+)$/.exec(archiveKey);
+  if (!m) return undefined;
+  const bound = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1) - 1;
+  return { id: m[4] ?? "", bound };
+}
+
+function maxLedgerCycle(ledger: readonly NotificationRecord[], incidentId: string): number {
+  let max = 0;
+  for (const r of ledger) if (r.incidentId === incidentId && r.cycle > max) max = r.cycle;
+  return max;
+}
 
 export function emptyBatches(): NotificationBatches {
   const b = {} as NotificationBatches;
@@ -125,6 +168,7 @@ export function slimIncident(inc: Incident): Incident {
 
 export function tick(input: TickInput): TickOutput {
   const { now, settings } = input;
+  const archived = input.archived;
   const errors: string[] = [];
   const counts: EngineCounts = {
     alertsFetched: input.alerts.length,
@@ -163,7 +207,20 @@ export function tick(input: TickInput): TickOutput {
         const end = alert.endedAt ?? now;
         if (end < now - settings.retention.resolvedVisibleHours * HOUR_MS) continue;
       }
+      let revived = false;
+      if (archived?.has(id)) {
+        // Archived: only a genuinely newer re-trigger brings it back.
+        const bound = archived instanceof Map ? (archived.get(id) ?? Infinity) : now - settings.retention.resolvedVisibleHours * HOUR_MS;
+        if (!(alert.sourceStatus === "ACTIVE" && alert.reopenedAt !== undefined && alert.reopenedAt > bound)) continue;
+        revived = true;
+      }
       const inc = createIncident(alert, routeAlert(alert, routingCtx), now);
+      // A re-created id must not collide with ledger keys of its earlier life.
+      const prevCycle = maxLedgerCycle(input.ledger, id);
+      if (prevCycle >= inc.escalation.cycle) inc.escalation.cycle = prevCycle + 1;
+      if (revived) {
+        pushTimeline(inc, { at: now, type: "reopened", by: "source", detail: "Re-triggered after it was archived", data: { cycle: inc.escalation.cycle } });
+      }
       set(inc);
       counts.incidentsCreated++;
       rollupRecord.created(delta, inc);
@@ -179,7 +236,9 @@ export function tick(input: TickInput): TickOutput {
       rollupRecord.resolved(delta, incident);
     }
     const snapshotChanged = !sameJson(existing.alert, alert);
-    if (change || snapshotChanged || now - existing.lastSeenAt >= LAST_SEEN_REFRESH_MS) set(incident);
+    const wasAbsent = engineState(existing).absentTicks !== undefined;
+    if (wasAbsent) setEngineState(incident, { absentTicks: undefined });
+    if (change || snapshotChanged || wasAbsent || now - existing.lastSeenAt >= LAST_SEEN_REFRESH_MS) set(incident);
   }
 
   // 4. fold operator actions
@@ -188,7 +247,7 @@ export function tick(input: TickInput): TickOutput {
   for (const a of input.pendingActions) {
     const incId = a.value?.incidentId ?? incidentIdFromActionKey(a.key);
     if (!incId || !current.has(incId)) {
-      const at = a.value?.at ?? a.lastModifiedTime ?? now;
+      const at = Math.min(a.value?.at ?? now, a.lastModifiedTime ?? now, now);
       if (now - at > ORPHAN_ACTION_MAX_AGE_MS) actionKeysToDelete.push(a.key);
       continue;
     }
@@ -202,7 +261,7 @@ export function tick(input: TickInput): TickOutput {
     const r = foldActions(before, list, now);
     actionKeysToDelete.push(...r.foldedKeys);
     counts.actionsFolded += r.applied;
-    if (r.applied > 0) {
+    if (r.changed) {
       const after = r.incident;
       if (before.status !== "acknowledged" && after.status === "acknowledged") rollupRecord.acknowledged(delta, after);
       if (before.status !== "resolved" && after.status === "resolved") {
@@ -221,6 +280,7 @@ export function tick(input: TickInput): TickOutput {
 
   // 6. escalation & planning
   const ledgerKeys = new Set(input.ledger.map((r) => r.key));
+  const pagedIndex = buildPagedIndex(input.ledger);
   const planCtx: PlanContext = {
     now,
     settings,
@@ -237,55 +297,100 @@ export function tick(input: TickInput): TickOutput {
     if (!inc || inc.status !== "triggered") continue;
     const team = input.teams.find((t) => t.id === inc?.teamId);
     const ps = pagingState(inc, team, settings, now);
-    if (inc.suppressed !== ps.suppressed) {
-      const next = cloneIncident(inc);
-      const wasHeld = inc.suppressed === "maintenance" || inc.suppressed === "quiet-hours";
-      if (ps.suppressed) next.suppressed = ps.suppressed;
-      else delete next.suppressed;
-      pushTimeline(next, {
-        at: now,
-        type: ps.suppressed ? "suppressed" : "unsuppressed",
-        by: "system",
-        detail: ps.suppressed ? `Paging suppressed (${ps.suppressed})` : "Paging resumed",
-        ...(ps.suppressed ? { data: { reason: ps.suppressed } } : {}),
-      });
-      // Paging held before anything fired: delays count from when paging resumes.
-      if (wasHeld && ps.page && next.escalation.lastStepIndex < 0) next.escalation.startedAt = now;
+    const update = (fn: (next: Incident) => void): Incident => {
+      const next = cloneIncident(inc as Incident);
+      fn(next);
+      set(next);
       inc = next;
-      set(inc);
+      return next;
+    };
+    if (inc.suppressed !== ps.suppressed) {
+      update((next) => {
+        if (ps.suppressed) next.suppressed = ps.suppressed;
+        else delete next.suppressed;
+        pushTimeline(next, {
+          at: now,
+          type: ps.suppressed ? "suppressed" : "unsuppressed",
+          by: "system",
+          detail: ps.suppressed ? `Paging suppressed (${ps.suppressed})` : "Paging resumed",
+          ...(ps.suppressed ? { data: { reason: ps.suppressed } } : {}),
+        });
+      });
+    }
+    // Paging hold (maintenance / quiet-hours hold) pauses the escalation clock: on resume,
+    // startedAt moves forward by the held time, so nothing that "elapsed" while held bursts out.
+    const held = !ps.page && (ps.suppressed === "maintenance" || ps.suppressed === "quiet-hours");
+    const heldSince = engineState(inc).heldSince;
+    if (held && heldSince === undefined) {
+      update((next) => setEngineState(next, { heldSince: now }));
+    } else if (!held && heldSince !== undefined) {
+      update((next) => {
+        next.escalation = { ...next.escalation, startedAt: next.escalation.startedAt + Math.max(0, now - heldSince) };
+        setEngineState(next, { heldSince: undefined });
+      });
     }
     if (!ps.page) continue;
-    const policy = inc.policyId ? input.policies.find((p) => p.id === inc?.policyId) : undefined;
+
+    // Policy: the incident's, else its team's default, else the current settings default.
+    const policyIds = [inc.policyId, team?.defaultPolicyId, settings.defaults.policyId].filter((x): x is string => !!x);
+    const policy = policyIds.map((pid) => input.policies.find((p) => p.id === pid)).find((p) => !!p);
     if (!policy) {
-      if (inc.policyId) errors.push(`Incident ${inc.id}: escalation policy ${inc.policyId} not found`);
+      const cycle = inc.escalation.cycle;
+      const already = inc.timeline.some(
+        (e) => e.type === "notification_skipped" && e.data?.["reason"] === "no-policy" && e.data?.["cycle"] === cycle,
+      );
+      if (!already) {
+        const detail = inc.policyId
+          ? `Escalation policy ${inc.policyId} not found and no default policy is configured — nobody is paged`
+          : "No escalation policy (incident, team or settings default) — nobody is paged";
+        errors.push(`Incident ${inc.id}: ${detail}`);
+        update((next) => pushTimeline(next, { at: now, type: "notification_skipped", by: "system", detail, data: { reason: "no-policy", cycle } }));
+      }
       continue;
     }
+
+    // Escalate now: make the next step of the current cycle due immediately.
+    const escalateAt = engineState(inc).escalateRequestedAt;
+    if (escalateAt !== undefined) {
+      update((next) => {
+        let nextOrdinal = doneOrdinal(next.escalation, policy) + 1;
+        if (nextOrdinal >= totalOrdinals(policy)) {
+          restartEscalation(next, now);
+          nextOrdinal = 0;
+        }
+        const f = firingFor(policy, next.escalation.startedAt, nextOrdinal);
+        if (f && f.dueAt > now) {
+          next.escalation = { ...next.escalation, startedAt: next.escalation.startedAt - (f.dueAt - now) };
+        }
+        setEngineState(next, { escalateRequestedAt: undefined });
+      });
+    }
+
     const adv = advanceEscalation(inc, policy, now);
     if (adv.newlyDue.length > 0 || adv.becameExhausted) {
-      const next = cloneIncident(inc);
-      next.escalation = adv.progress;
-      for (const f of adv.newlyDue) {
-        pushTimeline(next, {
-          at: now,
-          type: "escalation_step",
-          by: "system",
-          detail: `Step ${f.stepIndex + 1}${f.pass > 0 ? ` (repeat ${f.pass})` : ""}: ${f.step.targets
-            .map((t) => describeTarget(t, { schedules: input.schedules, teams: input.teams }))
-            .join(", ")}`,
-          data: { ordinal: f.ordinal, stepIndex: f.stepIndex, pass: f.pass, cycle: next.escalation.cycle },
-        });
-      }
-      if (adv.becameExhausted) {
-        pushTimeline(next, {
-          at: now,
-          type: "escalation_exhausted",
-          by: "system",
-          detail: `Policy ${policy.name} exhausted without acknowledgement`,
-          data: { cycle: next.escalation.cycle },
-        });
-      }
-      inc = next;
-      set(inc);
+      update((next) => {
+        next.escalation = adv.progress;
+        for (const f of adv.newlyDue) {
+          pushTimeline(next, {
+            at: now,
+            type: "escalation_step",
+            by: "system",
+            detail: `Step ${f.stepIndex + 1}${f.pass > 0 ? ` (repeat ${f.pass})` : ""}: ${f.step.targets
+              .map((t) => describeTarget(t, { schedules: input.schedules, teams: input.teams }))
+              .join(", ")}`,
+            data: { ordinal: f.ordinal, stepIndex: f.stepIndex, pass: f.pass, cycle: next.escalation.cycle },
+          });
+        }
+        if (adv.becameExhausted) {
+          pushTimeline(next, {
+            at: now,
+            type: "escalation_exhausted",
+            by: "system",
+            detail: `Policy ${policy.name} exhausted without acknowledgement`,
+            data: { cycle: next.escalation.cycle },
+          });
+        }
+      });
     }
     const plan = planIncidentNotifications(
       inc,
@@ -294,21 +399,28 @@ export function tick(input: TickInput): TickOutput {
       ledgerKeys,
       ps.allowedChannels,
       new Set(adv.newlyDue.map((f) => f.ordinal)),
+      pagedIndex,
     );
     candidates.push(...plan.candidates);
-    if (plan.issues.length > 0) {
-      const next = cloneIncident(inc);
-      for (const issue of plan.issues) {
-        errors.push(`Incident ${issue.incidentId}: ${issue.detail}`);
-        pushTimeline(next, {
-          at: now,
-          type: "notification_skipped",
-          by: "system",
-          detail: issue.detail,
-          data: { reason: issue.reason, ...(issue.uid ? { uid: issue.uid } : {}) },
-        });
-      }
-      set(next);
+    const current0 = inc;
+    const newIssues = plan.issues.filter(
+      (issue) =>
+        !issue.key ||
+        !current0.timeline.some((e) => e.type === "notification_skipped" && e.data?.["key"] === issue.key),
+    );
+    if (newIssues.length > 0) {
+      update((next) => {
+        for (const issue of newIssues) {
+          errors.push(`Incident ${issue.incidentId}: ${issue.detail}`);
+          pushTimeline(next, {
+            at: now,
+            type: "notification_skipped",
+            by: "system",
+            detail: issue.detail,
+            data: { reason: issue.reason, ...(issue.uid ? { uid: issue.uid } : {}), ...(issue.key ? { key: issue.key } : {}) },
+          });
+        }
+      });
     }
   }
 
@@ -387,6 +499,15 @@ export function tick(input: TickInput): TickOutput {
     // Still returned by the source query (ACTIVE or recently CLOSED): keep it, or the next
     // tick would re-create it.
     if (seenInTick.has(id)) continue;
+    // A failed/truncated query proves nothing about absence.
+    if ((input.sourceStatus?.[inc.alert.source] ?? "ok") !== "ok") continue;
+    const absent = (engineState(inc).absentTicks ?? 0) + 1;
+    if (absent < ARCHIVE_ABSENT_TICKS) {
+      const next = cloneIncident(inc);
+      setEngineState(next, { absentTicks: absent });
+      set(next);
+      continue;
+    }
     archives.push({ day: utcDayCompact(inc.resolvedAt), incident: slimIncident(inc) });
     touched.delete(id);
     if (original.has(id)) incidentIdsToDelete.push(id);

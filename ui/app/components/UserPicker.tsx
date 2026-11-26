@@ -12,7 +12,7 @@ export const FORBIDDEN =
   "User search is unavailable (IAM returned 403). Check that your user belongs to the Dynatrace account that owns this environment and may view users; ask your account admin.";
 
 /** IAM answered 403 "User not authorized" (cause depends on account setup). */
-function isForbidden(e: unknown): boolean {
+export function isForbidden(e: unknown): boolean {
   if (typeof e !== "object" || e === null) return false;
   const status = (e as { response?: { status?: unknown }; status?: unknown }).response?.status ?? (e as { status?: unknown }).status;
   const msg = e instanceof Error ? e.message : "";

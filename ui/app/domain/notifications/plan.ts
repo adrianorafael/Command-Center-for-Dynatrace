@@ -109,8 +109,10 @@ export interface PlanIssue {
   incidentId: string;
   uid?: string;
   ordinal?: number;
-  reason: "no-targets" | "no-contact" | "no-provider";
+  reason: "no-targets" | "no-contact" | "no-provider" | "expired";
   detail: string;
+  /** For "expired": the dropped notification key (report once). */
+  key?: string;
 }
 
 export interface CandidateRequest {
@@ -167,10 +169,42 @@ function buildRecord(
   return { ...req, schemaVersion: SCHEMA_VERSION, status: "planned", plannedAt: ctx.now };
 }
 
+/** Key of the "who was paged on which channel" index: `<incId>|<cycle>|<uid>|<channel>`. */
+export function pagedIndexKey(incidentId: string, cycle: number, uid: string, channel: Channel): string {
+  return `${incidentId}|${cycle}|${uid}|${channel}`;
+}
+
+/** Highest escalation ordinal already paged per (incident, cycle, uid, channel). */
+export function buildPagedIndex(ledger: readonly NotificationRecord[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const r of ledger) {
+    const k = pagedIndexKey(r.incidentId, r.cycle, r.to.uid, r.channel);
+    const prev = out.get(k);
+    if (prev === undefined || r.step > prev) out.set(k, r.step);
+  }
+  return out;
+}
+
+/** Only the latest due firing of each policy step (older passes are superseded). */
+export function latestFiringPerStep(due: StepFiring[]): StepFiring[] {
+  const best = new Map<number, StepFiring>();
+  for (const f of due) {
+    const prev = best.get(f.stepIndex);
+    if (!prev || f.ordinal > prev.ordinal) best.set(f.stepIndex, f);
+  }
+  return [...best.values()].sort((a, b) => b.ordinal - a.ordinal);
+}
+
 /**
  * Candidate first-attempt requests for one incident from its due firings, skipping keys in
- * `ledgerKeys`. Issues are reported only for `reportFor` ordinals (newly due), to avoid
- * repeating them every tick.
+ * `ledgerKeys`. Anti-burst rules (after an outage or a paging hold several ordinals can be
+ * due at once):
+ * - only the latest due firing of each step is considered;
+ * - a (user, channel) gets at most one page per incident per tick (highest ordinal wins),
+ *   and none for a firing older than one that already paged them (`pagedIndex`).
+ * Issues are reported only for `reportFor` ordinals (newly due), except "expired" (a due,
+ * never-sent first page older than PLAN_CATCHUP_MS), which carries the key so the caller can
+ * report it once.
  */
 export function planIncidentNotifications(
   inc: Incident,
@@ -179,10 +213,13 @@ export function planIncidentNotifications(
   ledgerKeys: ReadonlySet<string>,
   allowedChannels?: readonly Channel[],
   reportFor: ReadonlySet<number> = new Set(),
+  pagedIndex: ReadonlyMap<string, number> = new Map(),
 ): { candidates: CandidateRequest[]; issues: PlanIssue[] } {
   const candidates: CandidateRequest[] = [];
   const issues: PlanIssue[] = [];
-  for (const f of due) {
+  const pagedThisTick = new Set<string>();
+  const cycle = inc.escalation.cycle;
+  for (const f of latestFiringPerStep(due)) {
     const report = reportFor.has(f.ordinal);
     const targets = expandTargets(f.step.targets, { schedules: ctx.schedules, teams: ctx.teams }, f.dueAt);
     if (targets.length === 0 && report) {
@@ -197,7 +234,10 @@ export function planIncidentNotifications(
       for (const ch of choices) {
         const dueAt = f.dueAt + ch.delayMs;
         if (dueAt > ctx.now) continue;
-        if (!report && dueAt < ctx.now - PLAN_CATCHUP_MS) continue;
+        const target = pagedIndexKey(inc.id, cycle, t.uid, ch.channel);
+        if (pagedThisTick.has(target)) continue;
+        const pagedOrdinal = pagedIndex.get(target);
+        if (pagedOrdinal !== undefined && pagedOrdinal > f.ordinal) continue;
         const provider = providerFor(ctx.settings, ch.channel);
         if (!provider) {
           if (report) {
@@ -207,6 +247,18 @@ export function planIncidentNotifications(
         }
         const rec = buildRecord(inc, ctx, f, t.uid, ch, provider, contact, 1);
         if (ledgerKeys.has(rec.key)) continue;
+        if (!report && dueAt < ctx.now - PLAN_CATCHUP_MS) {
+          issues.push({
+            incidentId: inc.id,
+            uid: t.uid,
+            ordinal: f.ordinal,
+            key: rec.key,
+            reason: "expired",
+            detail: `${ch.channel} page to ${contact?.displayName ?? t.uid} not sent within ${Math.round(PLAN_CATCHUP_MS / MINUTE_MS)} min of its due time; dropped`,
+          });
+          continue;
+        }
+        pagedThisTick.add(target);
         candidates.push({ record: rec, dueAt });
       }
     }

@@ -191,7 +191,13 @@ describe("engine tick", () => {
     const r2 = act({ incidentId: "dp-p-2", at: T0 + MIN, type: "resolve" });
     const o1 = tick({ ...st, now: T0 + 2 * MIN, pendingActions: [r1, r2], alerts: [] });
     st = { ...st, ...persist({ ...st, pendingActions: [r1, r2] }, o1) };
-    const o2 = tick({ ...st, now: T0 + 25 * H, alerts: [alert({ sourceId: "P-2" })] });
+    // absent in ARCHIVE_ABSENT_TICKS (3) consecutive OK queries before it is archived
+    for (const m of [0, 1]) {
+      const o = tick({ ...st, now: T0 + 25 * H + m * MIN, alerts: [alert({ sourceId: "P-2" })] });
+      expect(o.archives).toHaveLength(0);
+      st = { ...st, ...persist(st, o) };
+    }
+    const o2 = tick({ ...st, now: T0 + 25 * H + 2 * MIN, alerts: [alert({ sourceId: "P-2" })] });
     expect(o2.archives.map((a) => [a.day, a.incident.id])).toEqual([["20261102", "dp-p-1"]]);
     expect(o2.incidentIdsToDelete).toEqual(["dp-p-1"]);
     expect(o2.incidentsToWrite.find((i) => i.id === "dp-p-1")).toBeUndefined();
@@ -216,12 +222,24 @@ describe("engine tick", () => {
     expect(o1.incidentsToWrite).toHaveLength(0);
   });
 
-  it("escalate-now action restarts at step 0 with a new cycle", () => {
+  it("escalate-now fires the NEXT step of the current cycle immediately", () => {
     const i0 = input({ alerts: [alert({ sourceId: "P-1" })] });
-    const st = { ...i0, ...persist(i0, tick(i0)) };
+    const st = delivered({ ...i0, ...persist(i0, tick(i0)) });
     const esc = act({ incidentId: "dp-p-1", at: T0 + 3 * MIN, type: "escalate" });
     const o = tick({ ...st, now: T0 + 3 * MIN, pendingActions: [esc] });
-    expect(allRequests(o).map((r) => [r.cycle, r.step])).toEqual([[2, 0]]);
+    expect(allRequests(o).map((r) => [r.cycle, r.step])).toEqual([[1, 1]]);
+    const inc = o.incidentsToWrite[0]!;
+    expect(inc.escalation).toMatchObject({ cycle: 1, lastStepIndex: 1 });
+    expect((inc as { escalateRequestedAt?: number }).escalateRequestedAt).toBeUndefined();
+    // the policy continues from there: the repeat pass (ordinal 2) is due one gap (10 min) later
+    const st2 = delivered({ ...st, ...persist({ ...st, pendingActions: [esc] }, o) });
+    expect(allRequests(tick({ ...st2, now: T0 + 12 * MIN }))).toHaveLength(0);
+    expect(allRequests(tick({ ...st2, now: T0 + 13 * MIN })).map((r) => r.step)).toEqual([2]);
+    // escalating past the last step starts a new cycle at step 0
+    const exhausted = { ...inc, escalation: { ...inc.escalation, repeatsDone: 1, lastStepIndex: 1, exhausted: true } };
+    const esc2 = act({ incidentId: "dp-p-1", at: T0 + 20 * MIN, type: "escalate" });
+    const o2 = tick({ ...st2, incidents: [exhausted], now: T0 + 20 * MIN, pendingActions: [esc2] });
+    expect(allRequests(o2).map((r) => [r.cycle, r.step])).toEqual([[2, 0]]);
   });
 });
 
@@ -262,7 +280,11 @@ describe("engine tick — long-running behaviour", () => {
     const o2 = tick({ ...st, now: T0 + 25 * H, alerts: [closed] });
     expect(o2.archives).toHaveLength(0);
     expect(o2.counts.incidentsCreated).toBe(0);
-    const o3 = tick({ ...st, now: T0 + 26 * H, alerts: [] });
+    let o3 = tick({ ...st, now: T0 + 26 * H, alerts: [] });
+    for (const m of [1, 2]) {
+      st = { ...st, ...persist(st, o3) };
+      o3 = tick({ ...st, now: T0 + 26 * H + m * MIN, alerts: [] });
+    }
     expect(o3.archives.map((a) => a.incident.id)).toEqual(["dp-p-1"]);
   });
   it("incidents created already closed do not count for MTTR", () => {

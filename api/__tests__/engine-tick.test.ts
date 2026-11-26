@@ -179,8 +179,8 @@ describe("engine-tick", () => {
     const q = grail();
     expect((await runEngineTick({ reason: "schedule" }, { repo, runQuery: q, now: () => NOW })).skipped).toBe("locked");
     expect(q).not.toHaveBeenCalled();
-    // stale lease (older than lockTtlSec = 90 s) is taken over
-    await repo.put(KEY.lock, { holder: "other", acquiredAt: NOW - 100_000 }, 120_000);
+    // stale lease (older than lockTtlSec ≥ 130 s) is taken over
+    await repo.put(KEY.lock, { holder: "other", acquiredAt: NOW - 200_000 }, 120_000);
     expect((await runEngineTick({ reason: "schedule" }, { repo, runQuery: q, now: () => NOW })).skipped).toBeUndefined();
 
     const s = settings();

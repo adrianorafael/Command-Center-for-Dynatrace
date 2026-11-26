@@ -23,6 +23,25 @@ import {
 } from "../domain/contracts";
 import { KEY, PREFIX, type Repository, type Store, type Stored } from "./repository";
 import { defaultSettings } from "./domainPort";
+import { applyRollupDelta } from "../domain/reports/metrics";
+
+/** Rollup delta keys `rpt.<day>.d.<rand>` (writers outside the engine lease); summed on read. */
+export const ROLLUP_DELTA_MARK = ".d.";
+export function rollupDeltaKey(day: string, rand: string): string {
+  return `${KEY.rollup(day)}${ROLLUP_DELTA_MARK}${rand}`;
+}
+
+/** Sum `rpt.<day>` with any pending `rpt.<day>.d.*` deltas, one rollup per day (sorted by day). */
+export function sumRollups(rows: Stored<DailyRollup>[]): DailyRollup[] {
+  const byDay = new Map<string, DailyRollup>();
+  for (const r of rows) {
+    const day = r.value.day;
+    const { schemaVersion: _v, ...delta } = r.value;
+    void _v;
+    byDay.set(day, applyRollupDelta(byDay.get(day), delta));
+  }
+  return [...byDay.values()].sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+}
 
 /** Operator actions expire if the engine never folds them (spec §4: act.* TTL now+7d). */
 export const ACTION_TTL_MS = 7 * 24 * 3600_000;
@@ -122,7 +141,7 @@ export function createStore(repo: Repository): Store {
       return values(await repo.list<NotificationRecord>(prefix));
     },
 
-    listRollups: async () => values(await repo.list<DailyRollup>(PREFIX.rollup)),
+    listRollups: async () => sumRollups(await repo.list<DailyRollup>(PREFIX.rollup)),
 
     async getHeartbeat() {
       return (await repo.get<EngineHeartbeat>(KEY.heartbeat))?.value;

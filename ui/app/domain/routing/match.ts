@@ -5,8 +5,8 @@
  * - Multi-valued fields (entity.*, tag) match when ANY value matches; `negate` inverts the
  *   whole condition result.
  * - equals / contains / in are case-insensitive; `in` takes a comma-separated list.
- * - regex is case-insensitive, pattern ≤ 500 chars, tested against ≤ 10 000 chars; invalid
- *   patterns never match (and never throw).
+ * - regex is case-insensitive, pattern ≤ 500 chars, tested against ≤ 1 000 chars; invalid
+ *   or potentially catastrophic patterns (see `regexSafetyIssue`) never match and never throw.
  * - lte / gte compare numerically (non-numeric values never match).
  * - exists: the field has at least one non-empty value.
  *
@@ -28,7 +28,7 @@ import type {
 import { parsePriority } from "../priority";
 
 export const MAX_REGEX_LENGTH = 500;
-export const MAX_REGEX_INPUT = 10_000;
+export const MAX_REGEX_INPUT = 1_000;
 
 export const RULE_FIELDS = [
   "title",
@@ -83,11 +83,82 @@ export function fieldValues(alert: Alert, field: string): string[] {
   }
 }
 
+/**
+ * Heuristic ReDoS guard (in the spirit of the "safe-regex" star-height check). Returns a reason
+ * when the pattern has:
+ * - a quantified group that itself contains a quantifier — `(a+)+`, `(\w*x)*`, `(a{2,})+`;
+ * - a quantified group containing alternation — `(a|aa)+`, `(x|y)*`;
+ * - a back-reference (`\1`), which defeats linear-time reasoning;
+ * - more than 10 quantifiers overall.
+ * Conservative: some harmless patterns are rejected; rule authors can rewrite them.
+ */
+export function regexSafetyIssue(pattern: string): string | undefined {
+  if (pattern.length > MAX_REGEX_LENGTH) return `Pattern longer than ${MAX_REGEX_LENGTH} characters`;
+  if (/\\[1-9]/.test(pattern) || /\\k</.test(pattern)) return "Back-references are not allowed";
+  // Tokenise just enough: skip escapes and character classes.
+  const stack: { hasQuant: boolean; hasAlt: boolean }[] = [];
+  let quantifiers = 0;
+  const isQuant = (i: number): boolean => {
+    const c = pattern[i];
+    if (c === "*" || c === "+" || c === "?") return true;
+    return c === "{" && /^\{\d+(,\d*)?\}/.test(pattern.slice(i));
+  };
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    if (c === "\\") {
+      i++;
+      continue;
+    }
+    if (c === "[") {
+      i++;
+      while (i < pattern.length && pattern[i] !== "]") {
+        if (pattern[i] === "\\") i++;
+        i++;
+      }
+      continue;
+    }
+    if (c === "(") {
+      stack.push({ hasQuant: false, hasAlt: false });
+      continue;
+    }
+    if (c === "|") {
+      const top = stack[stack.length - 1];
+      if (top) top.hasAlt = true;
+      continue;
+    }
+    if (c === ")") {
+      const g = stack.pop() ?? { hasQuant: false, hasAlt: false };
+      const quantified = isQuant(i + 1);
+      // `?` alone (optional group) cannot blow up; only repetition can.
+      const repeated = quantified && pattern[i + 1] !== "?";
+      if (repeated && g.hasQuant) return "Nested quantifiers (e.g. (a+)+) can take exponential time";
+      if (repeated && g.hasAlt) return "Alternation inside a repeated group (e.g. (a|aa)+) can take exponential time";
+      const parent = stack[stack.length - 1];
+      if (parent && (g.hasQuant || quantified)) parent.hasQuant = true;
+      if (parent && g.hasAlt) parent.hasAlt = true;
+      continue;
+    }
+    if (isQuant(i)) {
+      // `?` directly after a quantifier makes it lazy — not a new quantifier.
+      const prev = pattern[i - 1];
+      if (c === "?" && (prev === "*" || prev === "+" || prev === "?" || prev === "}")) continue;
+      // `(?:`, `(?=`, `(?!`, `(?<` — group modifiers, not quantifiers.
+      if (c === "?" && prev === "(") continue;
+      quantifiers++;
+      const top = stack[stack.length - 1];
+      if (top) top.hasQuant = true;
+    }
+  }
+  if (quantifiers > 10) return "Too many quantifiers";
+  return undefined;
+}
+
 const regexCache = new Map<string, RegExp | null>();
 
-/** Compile safely (cached); null when invalid or too long. */
+/** Compile safely (cached); null when invalid, too long or potentially catastrophic. */
 export function safeRegex(pattern: string): RegExp | null {
   if (pattern.length > MAX_REGEX_LENGTH) return null;
+  if (regexSafetyIssue(pattern)) return null;
   const cached = regexCache.get(pattern);
   if (cached !== undefined) return cached;
   let re: RegExp | null = null;

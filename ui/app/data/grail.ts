@@ -16,10 +16,27 @@ export type GrailRecord = Record<string, unknown>;
 
 type QueryStateName = "NOT_STARTED" | "RUNNING" | "SUCCEEDED" | "RESULT_GONE" | "CANCELLED" | "FAILED";
 
+interface NotificationLike {
+  notificationType?: string;
+  severity?: string;
+  message?: string;
+}
+
 interface ResultLike {
   state: QueryStateName;
   requestToken?: string;
-  result?: { records: (Record<string, unknown> | null)[] };
+  result?: {
+    records: (Record<string, unknown> | null)[];
+    metadata?: { grail?: { notifications?: NotificationLike[]; sampled?: boolean } };
+  };
+}
+
+/** Records plus whether Grail cut the result short (limits, scan limit, sampling). */
+export interface GrailResult {
+  records: GrailRecord[];
+  truncated: boolean;
+  /** Notification types / messages that caused `truncated` (short, no data). */
+  notices: string[];
 }
 
 /** Subset of QueryExecutionClient (injectable for tests). */
@@ -38,6 +55,8 @@ export interface RunQueryOptions {
 }
 
 export type RunQuery = (query: string, options?: RunQueryOptions) => Promise<GrailRecord[]>;
+/** Engine dependency: either form is accepted (tests may return plain record arrays). */
+export type QueryRunner = (query: string, options?: RunQueryOptions) => Promise<GrailRecord[] | GrailResult>;
 
 export class GrailQueryError extends Error {
   constructor(
@@ -53,18 +72,34 @@ function records(r: ResultLike): GrailRecord[] {
   return (r.result?.records ?? []).filter((x): x is GrailRecord => x !== null && typeof x === "object");
 }
 
-export const runQuery: RunQuery = async (query, options = {}) => {
+/**
+ * Truncation signals. Observed on a trial tenant (2026-11-26): a `maxResultRecords` cut yields
+ * metadata.grail.notifications[{ notificationType: "API_RECORDS_LIMIT_ADDED", severity: "WARNING" }];
+ * a DQL `| limit n` adds NO notification, so callers also compare the record count with their limit.
+ * Types per client-query GrailMetadata { notifications?: MetadataNotification[], sampled? }.
+ */
+const TRUNCATION_RE = /LIMIT|SCAN|SAMPL|TRUNCAT|PARTIAL/i;
+
+export function truncationNotices(r: { result?: ResultLike["result"] }): string[] {
+  const g = r.result?.metadata?.grail;
+  const out: string[] = [];
+  for (const n of g?.notifications ?? []) {
+    const type = n.notificationType ?? "";
+    if (TRUNCATION_RE.test(type) || TRUNCATION_RE.test(n.message ?? "")) out.push(type || (n.message ?? "").slice(0, 80));
+  }
+  if (g?.sampled) out.push("SAMPLED");
+  return out;
+}
+
+export async function runGrailQuery(query: string, options: RunQueryOptions = {}): Promise<GrailResult> {
   const client = options.client ?? (queryExecutionClient as unknown as QueryClientLike);
   const timeoutMs = options.timeoutMs ?? 30_000;
   const deadline = Date.now() + timeoutMs;
   const slice = Math.min(10_000, timeoutMs);
+  const maxResultRecords = options.maxResultRecords ?? 1000;
 
   let r = await client.queryExecute({
-    body: {
-      query,
-      requestTimeoutMilliseconds: slice,
-      maxResultRecords: options.maxResultRecords ?? 1000,
-    },
+    body: { query, requestTimeoutMilliseconds: slice, maxResultRecords },
   });
   // Poll responses carry no token; keep the one from queryExecute.
   const requestToken = r.requestToken;
@@ -77,8 +112,23 @@ export const runQuery: RunQuery = async (query, options = {}) => {
     });
   }
   if (r.state !== "SUCCEEDED") throw new GrailQueryError(`Query ended in state ${r.state}`, r.state);
-  return records(r);
-};
+  const recs = records(r);
+  const notices = truncationNotices(r);
+  if (recs.length >= maxResultRecords && !notices.length) notices.push(`RECORDS>=${maxResultRecords}`);
+  return { records: recs, truncated: notices.length > 0, notices };
+}
+
+export const runQuery: RunQuery = async (query, options = {}) => (await runGrailQuery(query, options)).records;
+
+/** Normalise either runner result form. */
+export function asGrailResult(r: GrailRecord[] | GrailResult, limit = 1000): GrailResult {
+  if (Array.isArray(r)) {
+    return r.length >= limit
+      ? { records: r, truncated: true, notices: [`RECORDS>=${limit}`] }
+      : { records: r, truncated: false, notices: [] };
+  }
+  return r;
+}
 
 /** Error text safe to show/store: message only, no stack, capped. */
 export function describeError(e: unknown): string {

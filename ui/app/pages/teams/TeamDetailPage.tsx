@@ -1,13 +1,12 @@
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { Flex, Grid, PageLayout } from "@dynatrace/strato-components/layouts";
-import { Button } from "@dynatrace/strato-components/buttons";
-import { Avatar, Chip, InformationOverlay } from "@dynatrace/strato-components/content";
-import { FormField, Label, Select } from "@dynatrace/strato-components/forms";
+import { Button, InlineButton } from "@dynatrace/strato-components/buttons";
+import { Avatar, Chip, InformationOverlay, MessageContainer } from "@dynatrace/strato-components/content";
 import { Menu, Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Heading, Link, Paragraph, Text } from "@dynatrace/strato-components/typography";
-import { DotMenuIcon, PlusIcon } from "@dynatrace/strato-icons";
+import { DotMenuIcon, PlusIcon, WarningIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { TeamMember, TeamRole } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
@@ -15,7 +14,6 @@ import { newId, onCallAt } from "../../hooks/domain";
 import { CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
-import { UserPicker } from "../../components/UserPicker";
 import { ShiftGantt } from "../../components/ShiftGantt";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { initials, maskAddress } from "../../components/format";
@@ -26,6 +24,8 @@ import { PolicyView } from "../escalations/PolicyView";
 import { TeamFormModal, teamReferences } from "./TeamsPage";
 import { ContactSheet } from "./ContactSheet";
 import { QuietHoursEditor } from "./QuietHoursEditor";
+import { AddPeopleModal } from "./AddPeopleModal";
+import { TeamReadiness, teamReadiness, type ReadinessFix } from "./TeamReadiness";
 
 export const ROLE_LABEL: Record<TeamRole, string> = { admin: "Team admin", responder: "Responder", observer: "Observer" };
 const ROLE_HELP = "Team admins edit the team, schedules and policies. Responders receive pages and can acknowledge and resolve. Observers have read-only access and get no pages. Roles are guidance: every app user can technically write app state.";
@@ -43,8 +43,8 @@ export const TeamDetailPage = () => {
   const { data, isLoading, error, refresh, now, userName, users, mutate } = useAppData();
   const team = data?.teams.find((t) => t.id === id);
   const [tab, setTab] = useState(0);
-  const [pick, setPick] = useState<string | null>(null);
-  const [role, setRole] = useState<TeamRole>("responder");
+  const [addPeople, setAddPeople] = useState(false);
+  const [needContacts, setNeedContacts] = useState<string[]>([]);
   const [edit, setEdit] = useState(false);
   const [contactUid, setContactUid] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -90,6 +90,36 @@ export const TeamDetailPage = () => {
   const policy = data.policies.find((p) => p.id === team.defaultPolicyId);
   const services = data.services.filter((s) => s.teamId === team.id || data.rules.rules.some((r) => r.then.teamId === team.id && r.then.serviceId === s.id));
   const refs = teamReferences(team.id, data);
+  const readiness = teamReadiness(team, data, userName);
+  const back = `returnTo=${encodeURIComponent(`/teams/${team.id}`)}`;
+  const hasContact = (uid: string) => (data.contacts.find((c) => c.uid === uid)?.methods.length ?? 0) > 0;
+  const fix = (key: ReadinessFix) => {
+    if (key === "members") {
+      setTab(0);
+      setAddPeople(true);
+    } else if (key === "contacts") {
+      setTab(0);
+      const first = team.members.find((m) => m.role !== "observer" && !hasContact(m.uid));
+      if (first) setContactUid(first.uid);
+    } else if (key === "schedule") navigate(`/on-call/schedules/new?teamId=${team.id}&${back}`);
+    else if (key === "policy") {
+      if (data.policies.some((p) => p.teamId === team.id)) setEdit(true);
+      else navigate(`/escalations/new?teamId=${team.id}&${back}`);
+    } else navigate(`/services/new?teamId=${team.id}&${back}`);
+  };
+  const help = (text: string) => (
+    <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+      {text}
+    </Text>
+  );
+  const addPeopleButton = (
+    <Button color="primary" variant="accent" onClick={() => setAddPeople(true)}>
+      <Button.Prefix>
+        <PlusIcon />
+      </Button.Prefix>
+      Add people
+    </Button>
+  );
 
   const columns: DataTableColumnDef<MemberRow>[] = [
     {
@@ -129,9 +159,26 @@ export const TeamDetailPage = () => {
       id: "methods",
       header: "Contact methods",
       accessor: "methods",
-      width: 260,
+      width: 320,
       cell: ({ rowData }) =>
-        rowData.methods ? <CellText>{rowData.methods}</CellText> : <Text style={{ color: Colors.Text.Critical.Default }}>None: can't be paged</Text>,
+        rowData.methods ? (
+          <Flex alignItems="center" gap={8} style={{ minWidth: 0 }} paddingX={8}>
+            <Flex style={{ minWidth: 0 }} flexGrow={1}>
+              <CellText>{rowData.methods}</CellText>
+            </Flex>
+            <InlineButton onClick={() => setContactUid(rowData.uid)} aria-label={`Add a contact method for ${rowData.name}`}>
+              + Add
+            </InlineButton>
+          </Flex>
+        ) : (
+          <Flex alignItems="center" gap={8} paddingX={8}>
+            <WarningIcon style={{ color: Colors.Icon.Warning.Default }} />
+            <Text>{rowData.role === "observer" ? "No contact method" : "No contact method: can't be paged"}</Text>
+            <InlineButton onClick={() => setContactUid(rowData.uid)} aria-label={`Add a contact method for ${rowData.name}`}>
+              Add
+            </InlineButton>
+          </Flex>
+        ),
     },
     { id: "oncall", header: "On call now", accessor: (r) => (r.onCall ? "Yes" : "No"), width: 110 },
   ];
@@ -169,42 +216,35 @@ export const TeamDetailPage = () => {
             </Flex>
           }
         />
+        <TeamReadiness items={readiness} onFix={fix} />
         <Tabs selectedIndex={tab} onChange={setTab}>
           <Tab title={`Members (${team.members.length})`}>
             <Flex flexDirection="column" gap={12} paddingTop={16}>
-              <Flex gap={8} alignItems="flex-end" flexWrap="wrap">
-                <Flex flexDirection="column" style={{ minWidth: 320 }}>
-                  <FormField>
-                    <Label>Add member</Label>
-                    <UserPicker value={pick} onChange={(u) => setPick(u)} exclude={team.members.map((m) => m.uid)} />
-                  </FormField>
-                </Flex>
-                <FormField>
-                  <Label>Role</Label>
-                  <Select value={role} onChange={(v) => v && setRole(v)}>
-                    <Select.Content>
-                      {(Object.keys(ROLE_LABEL) as TeamRole[]).map((r) => (
-                        <Select.Option key={r} value={r}>
-                          {ROLE_LABEL[r]}
-                        </Select.Option>
-                      ))}
-                    </Select.Content>
-                  </Select>
-                </FormField>
-                <Button
-                  disabled={!pick}
-                  onClick={() => {
-                    if (!pick) return;
-                    void saveMembers([...team.members, { uid: pick, role }], "Member added");
-                    setPick(null);
-                  }}
-                >
-                  <Button.Prefix>
-                    <PlusIcon />
-                  </Button.Prefix>
-                  Add member
-                </Button>
+              <Flex alignItems="center" justifyContent="space-between" gap={8} flexWrap="wrap">
+                {help("Members are Dynatrace users. Responders and team admins can be paged when an escalation policy targets this team or its on-call schedule; observers are never paged. Each person needs a contact method to be reached.")}
+                {team.members.length > 0 && addPeopleButton}
               </Flex>
+              {needContacts.length > 0 && (
+                <MessageContainer variant="warning">
+                  <MessageContainer.Title>
+                    {needContacts.length} {needContacts.length === 1 ? "person can't" : "people can't"} be notified yet
+                  </MessageContainer.Title>
+                  <MessageContainer.Description>
+                    {needContacts.map(userName).join(", ")} {needContacts.length === 1 ? "has" : "have"} no contact method (SMS, voice, chat or webhook).
+                  </MessageContainer.Description>
+                  <MessageContainer.Actions>
+                    <Button onClick={() => setContactUid(needContacts[0])}>Add contact methods</Button>
+                    <Button onClick={() => setNeedContacts([])}>Later</Button>
+                  </MessageContainer.Actions>
+                </MessageContainer>
+              )}
+              {team.members.length === 0 ? (
+                <SimpleEmpty
+                  title="Add the people who respond for this team"
+                  details="1. Add people (Dynatrace users). 2. Give each a contact method. 3. Create an on-call schedule. 4. Choose an escalation policy. 5. Route a service or rule to this team. The checklist above tracks your progress."
+                  actions={addPeopleButton}
+                />
+              ) : (
               <DataTable data={rows} columns={columns} rowId={(r) => r.uid} fullWidth sortable variant={LIST_TABLE_VARIANT}>
                 <DataTable.RowActions>
                   {(row) => {
@@ -240,19 +280,18 @@ export const TeamDetailPage = () => {
                     );
                   }}
                 </DataTable.RowActions>
-                <DataTable.EmptyState>
-                  <SimpleEmpty size="small" title="No members yet" details="Search tenant users above. Members must be Dynatrace users." />
-                </DataTable.EmptyState>
               </DataTable>
+              )}
             </Flex>
           </Tab>
           <Tab title="On-call">
             <Flex flexDirection="column" gap={16} paddingTop={16}>
+              {help("A schedule rotates the team's members and decides who is on call at any moment. Escalation steps that target the schedule page that person.")}
               {schedules.length === 0 ? (
                 <SimpleEmpty
                   title="This team has no schedule"
                   details="Create a schedule so escalation policies can page whoever is on call."
-                  actions={<Button onClick={() => navigate("/on-call/schedules/new")}>New schedule</Button>}
+                  actions={<Button onClick={() => navigate(`/on-call/schedules/new?teamId=${team.id}&${back}`)}>New schedule</Button>}
                 />
               ) : (
                 <>
@@ -271,6 +310,7 @@ export const TeamDetailPage = () => {
           </Tab>
           <Tab title="Escalation">
             <Flex flexDirection="column" gap={12} paddingTop={16}>
+              {help("The default escalation policy decides who is notified, on which channels, and how long to wait before the next step when an incident for this team triggers.")}
               {policy ? (
                 <>
                   <Heading level={3}>{policy.name}</Heading>
@@ -283,20 +323,32 @@ export const TeamDetailPage = () => {
                 <SimpleEmpty
                   title="No default escalation policy"
                   details="Choose one in Edit team, or create a policy for this team."
-                  actions={<Button onClick={() => navigate("/escalations/new")}>New escalation policy</Button>}
+                  actions={
+                    <Flex gap={8}>
+                      <Button onClick={() => navigate(`/escalations/new?teamId=${team.id}&${back}`)}>New escalation policy</Button>
+                      {data.policies.length > 0 && <Button onClick={() => setEdit(true)}>Choose existing policy</Button>}
+                    </Flex>
+                  }
                 />
               )}
             </Flex>
           </Tab>
           <Tab title={`Quiet hours (${team.quietHours?.length ?? 0})`}>
-            <Flex flexDirection="column" paddingTop={16}>
+            <Flex flexDirection="column" gap={12} paddingTop={16}>
+              {help("Quiet hours hold or soften paging for less urgent incidents in a time window, for example at night. Urgent incidents still page.")}
               <QuietHoursEditor team={team} />
             </Flex>
           </Tab>
           <Tab title={`Services (${services.length})`}>
             <Flex flexDirection="column" gap={8} paddingTop={16}>
+              {help("Services and routing rules decide which alerts become this team's incidents. Without one, the team receives no incidents.")}
               {services.length === 0 ? (
-                <Paragraph>No services are routed to this team.</Paragraph>
+                <Flex flexDirection="column" gap={8}>
+                  <Paragraph>No services are routed to this team.</Paragraph>
+                  <Flex>
+                    <Button onClick={() => navigate(`/services/new?teamId=${team.id}&${back}`)}>New service for this team</Button>
+                  </Flex>
+                </Flex>
               ) : (
                 services.map((s) => (
                   <Link key={s.id} as={RouterLink} to={`/services/${s.id}`}>
@@ -309,7 +361,21 @@ export const TeamDetailPage = () => {
         </Tabs>
       </Flex>
       <TeamFormModal team={team} show={edit} onClose={() => setEdit(false)} />
-      <ContactSheet uid={contactUid} show={!!contactUid} onClose={() => setContactUid(undefined)} />
+      <ContactSheet
+        uid={contactUid}
+        show={!!contactUid}
+        onClose={() => {
+          const done = contactUid;
+          setContactUid(undefined);
+          setNeedContacts((list) => list.filter((u) => u !== done));
+        }}
+      />
+      <AddPeopleModal
+        team={team}
+        show={addPeople}
+        onClose={() => setAddPeople(false)}
+        onAdded={(uids) => setNeedContacts(uids.filter((u) => !hasContact(u)))}
+      />
       <OverrideModal request={override} onClose={() => setOverride(undefined)} />
       {refs.length > 0 ? (
         <ConfirmModal

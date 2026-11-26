@@ -1,6 +1,6 @@
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { MessageContainer } from "@dynatrace/strato-components/content";
@@ -97,6 +97,13 @@ const StepNumber = ({ n }: { n: number }) => (
 
 export const PolicyEditorPage = () => {
   const { id = "new" } = useParams();
+  const [search] = useSearchParams();
+  const presetTeam = search.get("teamId") ?? undefined;
+  /** Only in-app paths, so a crafted link can't send the user elsewhere. */
+  const returnTo = (() => {
+    const r = search.get("returnTo");
+    return r && r.startsWith("/") && !r.startsWith("//") ? r : undefined;
+  })();
   const navigate = useNavigate();
   const { data, isLoading, error, refresh, mutate } = useAppData();
   const existing = data?.policies.find((p) => p.id === id);
@@ -114,18 +121,21 @@ export const PolicyEditorPage = () => {
         schemaVersion: SCHEMA_VERSION,
         id: newId("policy"),
         name: "",
-        teamId: data.teams[0]?.id,
+        teamId: presetTeam ?? data.teams[0]?.id,
         rev: 0,
         repeat: 0,
         steps: [
           {
             delayMinutes: 0,
-            targets: data.schedules[0] ? [{ type: "schedule", scheduleId: data.schedules[0].id }] : [],
+            targets: (() => {
+              const sch = data.schedules.find((x) => x.teamId === (presetTeam ?? data.teams[0]?.id)) ?? data.schedules[0];
+              return sch ? [{ type: "schedule" as const, scheduleId: sch.id }] : [];
+            })(),
           },
         ],
       },
     );
-  }, [data, existing, draft]);
+  }, [data, existing, draft, presetTeam]);
 
   const errors = useMemo(() => (draft ? validatePolicy(draft, { teams: data?.teams, schedules: data?.schedules }) : []), [draft, data]);
   const configured = useMemo(() => new Set((data?.settings.providers ?? []).filter((p) => p.enabled).map((p) => p.channel)), [data]);
@@ -177,10 +187,15 @@ export const PolicyEditorPage = () => {
     setTried(true);
     if (errors.length) return;
     setSaving(true);
-    mutate((s) => s.savePolicy(nextRev(draft)), isNew ? "Policy created" : "Policy saved")
+    // Created from a team's checklist: also make it that team's default policy when it has none.
+    const team = presetTeam ? data?.teams.find((t) => t.id === presetTeam && !t.defaultPolicyId) : undefined;
+    mutate(async (s) => {
+      await s.savePolicy(nextRev(draft));
+      if (team) await s.saveTeam(nextRev({ ...team, defaultPolicyId: draft.id }));
+    }, isNew ? (team ? `Policy created and set as ${team.name}'s default` : "Policy created") : "Policy saved")
       .then(() => {
         setDirty(false);
-        navigate("/escalations");
+        navigate(returnTo ?? "/escalations");
       })
       .catch(() => undefined)
       .finally(() => setSaving(false));
@@ -195,7 +210,7 @@ export const PolicyEditorPage = () => {
           subtitle="Steps run in order until someone acknowledges"
           action={
             <Flex gap={8}>
-              <Button onClick={() => (dirty ? setConfirmDiscard(true) : navigate("/escalations"))}>Cancel</Button>
+              <Button onClick={() => (dirty ? setConfirmDiscard(true) : navigate(returnTo ?? "/escalations"))}>Cancel</Button>
               <Button color="primary" variant="accent" loading={saving} onClick={save}>
                 Save
               </Button>
@@ -361,7 +376,7 @@ export const PolicyEditorPage = () => {
         title="Discard unsaved changes?"
         confirmLabel="Discard"
         onDismiss={() => setConfirmDiscard(false)}
-        onConfirm={() => navigate("/escalations")}
+        onConfirm={() => navigate(returnTo ?? "/escalations")}
       >
         Your changes to this policy will be lost.
       </ConfirmModal>

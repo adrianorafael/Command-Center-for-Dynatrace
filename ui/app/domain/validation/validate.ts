@@ -17,7 +17,7 @@ import {
   type UserContact,
 } from "../contracts";
 import { isPriority } from "../priority";
-import { RULE_FIELDS, safeRegex, MAX_REGEX_LENGTH } from "../routing/match";
+import { RULE_FIELDS, regexSafetyIssue, safeRegex } from "../routing/match";
 import { isValidTimeZone, parseHHmm } from "../time/tz";
 
 export interface ValidationError {
@@ -200,7 +200,8 @@ export function validateRule(r: RoutingRule, ctx: RefContext = {}, prefix = ""):
     if (!OPS.includes(cond.op)) c.add(`${p}.op`, "Unknown operator");
     if (cond.op !== "exists" && !(cond.value ?? "").trim()) c.add(`${p}.value`, "Required");
     if (cond.op === "regex" && cond.value) {
-      if (cond.value.length > MAX_REGEX_LENGTH) c.add(`${p}.value`, `Pattern longer than ${MAX_REGEX_LENGTH}`);
+      const unsafe = regexSafetyIssue(cond.value);
+      if (unsafe) c.add(`${p}.value`, unsafe);
       else if (!safeRegex(cond.value)) c.add(`${p}.value`, "Invalid regular expression");
     }
     if ((cond.op === "lte" || cond.op === "gte") && !Number.isFinite(Number(cond.value))) {

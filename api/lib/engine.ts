@@ -10,6 +10,7 @@
  */
 
 import {
+  CHANNELS,
   SCHEMA_VERSION,
   type Channel,
   type DailyRollup,
@@ -22,21 +23,36 @@ import {
   type ProviderConfig,
   type Settings,
 } from "../../ui/app/domain/contracts";
-import { KEY, type Repository } from "../../ui/app/data/repository";
+import { KEY, PREFIX, type Repository, type Stored } from "../../ui/app/data/repository";
 import { createStore } from "../../ui/app/data/store";
-import { describeError, type RunQuery } from "../../ui/app/data/grail";
+import { describeError, type QueryRunner } from "../../ui/app/data/grail";
+import { MIN_LOCK_TTL_SEC } from "../../ui/app/data/domainPort";
+import { withAttempt } from "../../ui/app/domain/keys";
 import { normalizeRecords } from "../../ui/app/domain/alerts/normalize";
 import { emptyBatches, tick } from "../../ui/app/domain/engine/tick";
-import { applyRollupDelta, isEmptyDelta, type RollupDelta } from "../../ui/app/domain/reports/metrics";
-import { acquireLease, releaseLease } from "./lease";
-import { fetchSources } from "./sources";
+import { acquireLease, releaseLease, type EngineLock } from "./lease";
+import { fetchSources, type SourceRecords } from "./sources";
+import {
+  APP_STATE_LIMIT_BYTES,
+  SHED_THRESHOLD_BYTES,
+  addRollup,
+  foldRollupDeltas,
+  isFinalRecord,
+  shedArchives,
+  slimRecord,
+  usage,
+  type PrefixUsage,
+  type StorageEstimate,
+} from "./storage";
+
+export { addRollup };
 
 export const NOTIFICATION_TTL_MS = 14 * 24 * 3600_000;
 const DAY_MS = 24 * 3600_000;
 
 export interface EngineDeps {
   repo: Repository;
-  runQuery: RunQuery;
+  runQuery: QueryRunner;
   now?: () => number;
   /** Lease holder id (random per invocation). */
   holder?: string;
@@ -139,39 +155,67 @@ export function buildTestRequest(
   };
 }
 
+/** Heartbeat with the optional storage estimate (contract EngineHeartbeat + extra field). */
+export type EngineHeartbeatWithStorage = EngineHeartbeat & { storage?: StorageEstimate };
+
+/** Archives/rollups are listed for the storage estimate at most this often. */
+export const STORAGE_SCAN_INTERVAL_MS = 15 * 60_000;
+
+async function writeHeartbeat(repo: Repository, hb: EngineHeartbeatWithStorage): Promise<void> {
+  await repo.put(KEY.heartbeat, hb).catch(() => undefined);
+}
+
 export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps): Promise<EngineTickResult> {
   const now = (deps.now ?? Date.now)();
   const started = Date.now();
   const repo = deps.repo;
   const store = createStore(repo);
-  const settings = await store.getSettings();
-  const base = {
-    ok: true,
-    tickAt: now,
-    batches: emptyBatches(),
-    counts: zeroCounts(),
-    errors: [] as string[],
-    providers: providerViews(settings),
-  };
-
-  if (payload?.reason === "test") {
-    if (!payload.testRequest) return { ...base, ok: false, errors: ["Test notification: testRequest is missing"] };
-    const t = buildTestRequest(settings, payload.testRequest, now, deps.appBaseUrl);
-    if (!t.request) return { ...base, ok: false, errors: [t.error ?? "Test notification failed"] };
-    base.batches[t.request.channel].push(t.request);
-    return base;
-  }
-
-  if (!settings.engine.enabled) return { ...base, skipped: "disabled" };
-
-  const holder = deps.holder ?? `tick-${now}-${randomId()}`;
-  if (!(await acquireLease(repo, holder, now, settings.engine.lockTtlSec))) {
-    return { ...base, skipped: "locked" };
-  }
-
   const errors: string[] = [];
   let counts = zeroCounts();
+  let providers: ProviderView[] = [];
+  const fail = (extra: Partial<EngineTickResult> = {}): EngineTickResult => ({
+    ok: false,
+    tickAt: now,
+    batches: emptyBatches(),
+    counts,
+    errors,
+    providers,
+    ...extra,
+  });
+
+  let settings: Settings;
   try {
+    settings = await store.getSettings();
+  } catch (e) {
+    errors.push(`settings: ${describeError(e)}`);
+    await writeHeartbeat(repo, { schemaVersion: SCHEMA_VERSION, lastTickAt: now, durationMs: Date.now() - started, counts, lastError: errors[0] });
+    return fail();
+  }
+  providers = providerViews(settings);
+
+  if (payload?.reason === "test") {
+    if (!payload.testRequest) return fail({ errors: ["Test notification: testRequest is missing"] });
+    const t = buildTestRequest(settings, payload.testRequest, now, deps.appBaseUrl);
+    if (!t.request) return fail({ errors: [t.error ?? "Test notification failed"] });
+    const batches = emptyBatches();
+    batches[t.request.channel].push(t.request);
+    return { ok: true, tickAt: now, batches, counts, errors, providers };
+  }
+
+  if (!settings.engine.enabled) return { ...fail(), ok: true, skipped: "disabled" };
+
+  const holder = deps.holder ?? `tick-${now}-${randomId()}`;
+  const lockTtlSec = Math.max(settings.engine.lockTtlSec, MIN_LOCK_TTL_SEC);
+  let leased = false;
+  let previous: EngineHeartbeatWithStorage | undefined;
+  let storage: StorageEstimate | undefined;
+  try {
+    leased = await acquireLease(repo, holder, now, lockTtlSec);
+    if (!leased) return { ...fail(), ok: true, skipped: "locked" };
+    previous = (await repo.get<EngineHeartbeatWithStorage>(KEY.heartbeat))?.value;
+
+    const stillHolder = async () => (await repo.get<EngineLock>(KEY.lock))?.value.holder === holder;
+
     const [teams, schedules, policies, services, rules, contacts, incidents, pendingActions, ledger, sources] =
       await Promise.all([
         store.listTeams(),
@@ -183,7 +227,7 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
         store.listIncidents(),
         store.listActions(),
         store.listNotifications(),
-        fetchSources(settings, deps.runQuery),
+        fetchSources(settings, deps.runQuery, undefined, now),
       ]);
     errors.push(...sources.errors);
 
@@ -205,12 +249,20 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
       pendingActions,
       ledger,
       alerts,
+      ...tickExtras(sources),
       ...(deps.appBaseUrl ? { appBaseUrl: deps.appBaseUrl } : {}),
     });
     errors.push(...out.errors);
     counts = out.counts;
 
-    const fail = (what: string) => (key: string, e: unknown) => errors.push(`${what} ${key}: ${describeError(e)}`);
+    const failed = (what: string) => (key: string, e: unknown) => errors.push(`${what} ${key}: ${describeError(e)}`);
+
+    // The tick may have run long: never write with a lost lease (another tick owns the state now).
+    if (!(await stillHolder())) {
+      leased = false;
+      errors.push("engine lease lost before writing; nothing written");
+      return fail();
+    }
 
     // 1) incidents
     let incidentWriteFailed = false;
@@ -220,22 +272,53 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
       (inc) => repo.put(KEY.incident(inc.id), inc),
       (inc, e) => {
         incidentWriteFailed = true;
-        fail("write incident")(inc.id, e);
+        failed("write incident")(inc.id, e);
       },
     );
-    // 2) ledger
-    await forEachLimited(
-      out.notificationsToWrite,
-      8,
-      (r: NotificationRecord) => repo.put(KEY.notification(r.key), r, NOTIFICATION_TTL_MS),
-      (r, e) => fail("write notification")(r.key, e),
+
+    // 2) ledger. A timeout is not written over a record that meanwhile became sent/failed, and its
+    //    retry is dropped; only requests whose ledger record was written are returned for sending
+    //    (otherwise an unrecorded page would be re-planned and re-sent every minute).
+    const maxAttempts = settings.engine.maxAttempts;
+    const resolvedMeanwhile = new Set<string>();
+    for (const r of out.notificationsToWrite) {
+      if (r.status !== "timeout") continue;
+      const cur = (await repo.get<NotificationRecord>(KEY.notification(r.key)).catch(() => undefined))?.value;
+      if (cur && (cur.status === "sent" || cur.status === "failed")) resolvedMeanwhile.add(r.key);
+    }
+    const toWrite = out.notificationsToWrite.filter(
+      (r) => !resolvedMeanwhile.has(r.key) && !(r.attempt > 1 && resolvedMeanwhile.has(withAttempt(r.key, r.attempt - 1))),
     );
+    const written = new Set<string>();
+    await forEachLimited(
+      toWrite,
+      8,
+      async (r: NotificationRecord) => {
+        await repo.put(KEY.notification(r.key), isFinalRecord(r, maxAttempts) ? slimRecord(r) : r, NOTIFICATION_TTL_MS);
+        written.add(r.key);
+      },
+      (r, e) => failed("write notification")(r.key, e),
+    );
+    const batches = emptyBatches();
+    let dropped = 0;
+    for (const c of CHANNELS) {
+      for (const n of out.batches[c]) {
+        if (written.has(n.key)) batches[c].push(n);
+        else dropped++;
+      }
+    }
+    if (dropped > 0) errors.push(`${dropped} notification(s) not sent: ledger write failed or superseded`);
+
     // 3) folded actions — only when every incident write succeeded
     if (!incidentWriteFailed) {
-      await forEachLimited(out.actionKeysToDelete, 8, (k) => repo.delete(k), fail("delete action"));
+      await forEachLimited(out.actionKeysToDelete, 8, (k) => repo.delete(k), failed("delete action"));
     }
-    // 4) rollup
+
+    // 4) rollups: this tick's delta, plus deltas written by delivery reports outside the lease
     await addRollup(repo, out.rollupDelta).catch((e: unknown) => errors.push(`rollup: ${describeError(e)}`));
+    const rollupRows = await repo.list<DailyRollup>(PREFIX.rollup).catch(() => [] as Stored<DailyRollup>[]);
+    await foldRollupDeltas(repo, rollupRows).catch((e: unknown) => errors.push(`rollup fold: ${describeError(e)}`));
+
     // 5) archives, then drop their live keys
     const archiveTtl = Math.min(90, Math.max(1, settings.retention.archiveDays)) * DAY_MS;
     const archived = new Set<string>();
@@ -246,43 +329,89 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
         await repo.put(KEY.archive(a.day, a.incident.id), a.incident, archiveTtl);
         archived.add(a.incident.id);
       },
-      (a, e) => fail("archive")(a.incident.id, e),
+      (a, e) => failed("archive")(a.incident.id, e),
     );
     await forEachLimited(
       out.incidentIdsToDelete.filter((id) => archived.has(id)),
       8,
       (id) => repo.delete(KEY.incident(id)),
-      fail("delete incident"),
+      failed("delete incident"),
     );
 
-    const response: EngineTickResult = {
-      ok: true,
-      tickAt: now,
-      batches: out.batches,
-      counts,
-      errors,
-      providers: base.providers,
-    };
-    return response;
+    // 6) storage estimate (+ shedding of the oldest archives above the threshold)
+    storage = await estimateStorage(repo, now, previous?.storage, {
+      [PREFIX.incident]: usage(incidents.map((value) => ({ value }))),
+      [PREFIX.action]: usage(pendingActions),
+      [PREFIX.notification]: usage(ledger.map((value) => ({ value }))),
+      [PREFIX.team]: usage(teams.map((value) => ({ value }))),
+      [PREFIX.schedule]: usage(schedules.map((value) => ({ value }))),
+      [PREFIX.policy]: usage(policies.map((value) => ({ value }))),
+      [PREFIX.service]: usage(services.map((value) => ({ value }))),
+      [PREFIX.contact]: usage(contacts.map((value) => ({ value }))),
+      cfg: usage([{ value: settings }, { value: rules }]),
+    }).catch((e: unknown) => {
+      errors.push(`storage estimate: ${describeError(e)}`);
+      return previous?.storage;
+    });
+
+    if (!(await stillHolder())) {
+      leased = false;
+      errors.push("engine lease lost while writing; notifications deferred to the next tick");
+      return fail({ counts });
+    }
+    return { ok: true, tickAt: now, batches, counts, errors, providers };
   } catch (e) {
     errors.push(`tick: ${describeError(e)}`);
-    return { ...base, ok: false, counts, errors };
+    return fail();
   } finally {
-    const hb: EngineHeartbeat = {
+    await writeHeartbeat(repo, {
       schemaVersion: SCHEMA_VERSION,
       lastTickAt: now,
       durationMs: Date.now() - started,
       counts,
       ...(errors.length ? { lastError: errors[0]?.slice(0, 500) } : {}),
-    };
-    await repo.put(KEY.heartbeat, hb).catch(() => undefined);
-    await releaseLease(repo, holder).catch(() => undefined);
+      ...(storage ? { storage } : previous?.storage ? { storage: previous.storage } : {}),
+    });
+    if (leased) await releaseLease(repo, holder).catch(() => undefined);
   }
 }
 
-export async function addRollup(repo: Repository, delta: RollupDelta): Promise<void> {
-  if (isEmptyDelta(delta)) return;
-  const key = KEY.rollup(delta.day);
-  const existing = await repo.get<DailyRollup>(key);
-  await repo.put(key, applyRollupDelta(existing?.value, delta));
+/**
+ * Bytes per prefix from what this tick already loaded; archives and rollups are listed at most
+ * every STORAGE_SCAN_INTERVAL_MS (otherwise carried over from the previous estimate).
+ */
+async function estimateStorage(
+  repo: Repository,
+  now: number,
+  previous: StorageEstimate | undefined,
+  loaded: Record<string, PrefixUsage>,
+): Promise<StorageEstimate> {
+  const byPrefix: Record<string, PrefixUsage> = { ...loaded };
+  let shed = 0;
+  const scan = !previous || now - previous.at >= STORAGE_SCAN_INTERVAL_MS;
+  let at = previous?.at ?? now;
+  if (scan) {
+    at = now;
+    const [archives, rollups] = await Promise.all([repo.list(PREFIX.archive), repo.list(PREFIX.rollup)]);
+    byPrefix[PREFIX.archive] = usage(archives);
+    byPrefix[PREFIX.rollup] = usage(rollups);
+    const total = Object.values(byPrefix).reduce((n, u) => n + u.bytes, 0);
+    if (total > SHED_THRESHOLD_BYTES) {
+      const r = await shedArchives(repo, archives, total);
+      shed = r.deleted;
+      byPrefix[PREFIX.archive] = { keys: archives.length - r.deleted, bytes: byPrefix[PREFIX.archive].bytes - r.freed };
+    }
+  } else {
+    for (const p of [PREFIX.archive, PREFIX.rollup]) {
+      const u = previous?.byPrefix[p];
+      if (u) byPrefix[p] = u;
+    }
+  }
+  const totalBytes = Object.values(byPrefix).reduce((n, u) => n + u.bytes, 0);
+  return { at, totalBytes, limitBytes: APP_STATE_LIMIT_BYTES, byPrefix, ...(shed ? { shed } : {}) };
+}
+
+/** Optional TickInput fields agent A adds (source health, archived ids) — wired when present. */
+function tickExtras(sources: SourceRecords): Record<string, unknown> {
+  return { sourceStatus: sources.status };
 }

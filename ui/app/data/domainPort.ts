@@ -14,8 +14,16 @@ import { defaultSettings as domainDefaultSettings } from "../domain/validation/d
  */
 export const DEFAULT_ENGINE_WORKFLOW_ID = "6f1c9a52-3d2e-4b7a-9c41-cc2e5a0d7e01";
 
+/**
+ * Lease TTL must exceed the longest tick (queries ≤ ~50 s + writes; function limit 120 s), or a
+ * second tick can start while the first is still writing.
+ */
+export const MIN_LOCK_TTL_SEC = 130;
+export const DEFAULT_LOCK_TTL_SEC = 150;
+
 export function defaultSettings(): Settings {
   const s = domainDefaultSettings();
   if (!s.engine.workflowId) s.engine.workflowId = DEFAULT_ENGINE_WORKFLOW_ID;
+  if (!(s.engine.lockTtlSec >= MIN_LOCK_TTL_SEC)) s.engine.lockTtlSec = DEFAULT_LOCK_TTL_SEC;
   return s;
 }
