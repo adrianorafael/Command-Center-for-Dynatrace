@@ -20,19 +20,15 @@ export const PRIORITY_COLOR: Record<Priority, string> = {
   P5: Colors.Charts.SecurityRiskLevel.None.Default,
 };
 
-const CHIP_COLOR: Record<Priority, "critical" | "warning" | "primary" | "neutral"> = {
-  P1: "critical",
-  P2: "critical",
-  P3: "warning",
-  P4: "primary",
-  P5: "neutral",
+/** Same chip size and content for every priority (no icons); P1 is the only solid (accent) chip. */
+const STYLE: Record<Priority, { color: "critical" | "warning" | "primary" | "neutral"; variant: "accent" | "emphasized" }> = {
+  P1: { color: "critical", variant: "accent" },
+  P2: { color: "critical", variant: "emphasized" },
+  P3: { color: "warning", variant: "emphasized" },
+  P4: { color: "primary", variant: "emphasized" },
+  P5: { color: "neutral", variant: "emphasized" },
 };
 
-/**
- * One chip style for P1–P5 (owner decision, supersedes DESIGN §1.2's solid P1 + icon): the same `emphasized` variant,
- * size, weight and width for every priority, text centered, no icon. Hue follows the DESIGN ramp; the label always
- * carries the meaning (P1 and P2 share the red tint and differ by label).
- */
 export const PriorityChip = ({
   priority,
   size = "default",
@@ -41,14 +37,11 @@ export const PriorityChip = ({
   priority: Priority;
   size?: "default" | "condensed";
   count?: number;
-}) => (
-  <Chip
-    color={CHIP_COLOR[priority]}
-    variant="emphasized"
-    size={size}
-    aria-label={`Priority ${priority}`}
-    style={{ minWidth: count === undefined ? 36 : 52, justifyContent: "center" }}
-  >
-    {count === undefined ? priority : `${priority} ${count}`}
-  </Chip>
-);
+}) => {
+  const s = STYLE[priority];
+  return (
+    <Chip color={s.color} variant={s.variant} size={size} aria-label={`Priority ${priority}`}>
+      {count === undefined ? priority : `${priority} ${count}`}
+    </Chip>
+  );
+};

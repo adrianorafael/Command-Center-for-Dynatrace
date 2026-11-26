@@ -9,7 +9,6 @@ import { Text } from "@dynatrace/strato-components/typography";
 import { showToast } from "@dynatrace/strato-components/notifications";
 import { RefreshAutoIcon, RefreshIcon } from "@dynatrace/strato-icons";
 import type { Timeframe } from "@dynatrace/strato-components/core";
-import Colors from "@dynatrace/strato-design-tokens/colors";
 import { PRIORITIES } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { readPrefs } from "../../hooks/prefs";
@@ -173,17 +172,14 @@ export const ConsolePage = () => {
             title="Console"
             subtitle="Incidents from Davis problems and ingested events, newest first"
             suffix={
-              <Flex alignItems="center" gap={8} flexWrap="wrap" justifyContent="flex-end">
-                <TimeframeSelector value={timeframe} onChange={setTimeframe}>
-                  <TimeframeSelector.Trigger placeholder="Created: any time" aria-label="Created timeframe" />
-                </TimeframeSelector>
+              <Flex alignItems="center" gap={8}>
                 {showSpinner && <ProgressCircle size="small" aria-label="Refreshing" />}
-                {lastUpdated && (
-                  <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued, whiteSpace: "nowrap" }}>
-                    Updated {formatTime(lastUpdated, tz, true)}
-                  </Text>
-                )}
-                <Select value={refreshSec} onChange={(v) => setRefreshSec(Number(v ?? 0))} aria-label="Auto-refresh">
+                {lastUpdated && <Text textStyle="small">Updated {formatTime(lastUpdated, tz, true)}</Text>}
+                <Select
+                  value={refreshSec}
+                  onChange={(v) => setRefreshSec(Number(v ?? 0))}
+                  aria-label="Auto-refresh"
+                >
                   <Select.Prefix>
                     <RefreshAutoIcon />
                   </Select.Prefix>
@@ -209,10 +205,9 @@ export const ConsolePage = () => {
             loading={isLoading}
             onFilter={(patch) => setFilters({ status: DEFAULT_STATUS, priority: [], assignee: [], ...patch })}
           />
-          {/* Filter row: search + FilterBar on one line. The TimeframeSelector sits with the refresh controls and
-              "last updated" in the title action area (TimeframeSelector "When to refresh": refresh next to the
-              selector). It used to sit between FilterBar and search, where its root's align-self: start floated it
-              20 px above the labelled fields. */}
+          {/* Search first, then FilterBar with the TimeframeSelector as its last pinned item (Strato TimeframeSelector
+              "Where to position" + FilterBar "TimeframeSelector as filter control"). Outside the FilterBar the selector's
+              root has align-self: start and floated 20 px above the labelled fields. */}
           <Flex gap={8} alignItems="flex-end" flexWrap="wrap">
             <SearchInput
               value={filters.q}
@@ -220,7 +215,7 @@ export const ConsolePage = () => {
               placeholder="Search title, ID, entity"
               aria-label="Search incidents"
             />
-            <Flex flexGrow={1} style={{ minWidth: 0 }}>
+            <Flex flexGrow={1} style={{ minWidth: 320 }}>
               <FilterBar
                 onFilterChange={() => undefined}
                 defaultPinnedState={{
@@ -228,9 +223,11 @@ export const ConsolePage = () => {
                   priority: "pinned",
                   team: "pinned",
                   assignee: "pinned",
-                  service: "pinned-optional",
+                  // FilterBar renders pinned items before pinned-optional ones; service is pinned so the timeframe stays last.
+                  service: "pinned",
                   source: "optional",
                   escalation: "optional",
+                  created: "pinned",
                 }}
               >
                 <FilterBar.Item name="status" label="Status">
@@ -315,6 +312,9 @@ export const ConsolePage = () => {
                       <Select.Option value="exhausted">Exhausted</Select.Option>
                     </Select.Content>
                   </Select>
+                </FilterBar.Item>
+                <FilterBar.Item name="created" label="Created">
+                  <TimeframeSelector value={timeframe} onChange={setTimeframe} />
                 </FilterBar.Item>
               </FilterBar>
             </Flex>

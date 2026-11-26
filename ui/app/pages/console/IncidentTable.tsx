@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex, Grid } from "@dynatrace/strato-components/layouts";
@@ -44,20 +44,6 @@ export interface IncidentRow extends Incident {
   assigneeName: string;
   lastNotification?: NotificationRecord;
 }
-
-/** Custom cells must sit in DataTable.DefaultCell, or they lose the cell padding and touch the column edges. */
-const Cell = DataTable.DefaultCell;
-
-/** Single-line text with an ellipsis and, only when it is actually cut, a tooltip with the full text. */
-const EllipsisText = ({ text, textStyle, subdued }: { text: string; textStyle?: "base" | "base-emphasized" | "small"; subdued?: boolean }) => {
-  const [cut, setCut] = useState(false);
-  const el = (
-    <Text textStyle={textStyle} style={{ display: "block", minWidth: 0, ...(subdued ? { color: Colors.Text.Neutral.Subdued } : {}) }}>
-      <TextEllipsis onTextOverflow={setCut}>{text}</TextEllipsis>
-    </Text>
-  );
-  return cut ? <Tooltip text={text}>{el}</Tooltip> : el;
-};
 
 const MoreActions = ({
   incident,
@@ -336,26 +322,20 @@ export const IncidentTable = ({
         accessor: "rank",
         width: 100,
         sortType: "number",
-        cell: ({ rowData }) => (
-          <Cell>
-            <PriorityChip priority={rowData.priority} size="condensed" />
-          </Cell>
-        ),
+        cell: ({ rowData }) => <PriorityChip priority={rowData.priority} size="condensed" />,
       },
       {
         id: "status",
         header: "Status",
         accessor: "status",
-        width: 136,
+        width: 140,
         cell: ({ rowData }) => (
-          <Cell>
-            <Flex flexDirection="column" gap={0}>
-              <StatusIndicator status={rowData.status} />
-              {rowData.status === "snoozed" && rowData.snoozedUntil && (
-                <Text textStyle="small">until {formatTime(rowData.snoozedUntil, tz)}</Text>
-              )}
-            </Flex>
-          </Cell>
+          <Flex flexDirection="column" gap={0}>
+            <StatusIndicator status={rowData.status} />
+            {rowData.status === "snoozed" && rowData.snoozedUntil && (
+              <Text textStyle="small">until {formatTime(rowData.snoozedUntil, tz)}</Text>
+            )}
+          </Flex>
         ),
       },
       {
@@ -363,18 +343,18 @@ export const IncidentTable = ({
         header: "Incident",
         accessor: (r) => r.alert.title,
         width: "1fr",
-        minWidth: 240,
+        minWidth: 260,
         cell: ({ rowData }) => (
-          <Cell>
-            <Flex flexDirection="column" gap={0} style={{ minWidth: 0 }}>
-              <EllipsisText textStyle="base-emphasized" text={rowData.alert.title} />
-              <EllipsisText
-                textStyle="small"
-                subdued
-                text={`#${rowData.alert.displayId ?? rowData.id}${rowData.alert.entities[0] ? ` · ${rowData.alert.entities[0].name ?? rowData.alert.entities[0].id}` : ""}`}
-              />
-            </Flex>
-          </Cell>
+          <Flex flexDirection="column" gap={0} style={{ minWidth: 0 }}>
+            <Text textStyle="base-emphasized">
+              <TextEllipsis>{rowData.alert.title}</TextEllipsis>
+            </Text>
+            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+              <TextEllipsis>
+                {`#${rowData.alert.displayId ?? rowData.id}${rowData.alert.entities[0] ? ` · ${rowData.alert.entities[0].name ?? rowData.alert.entities[0].id}` : ""}`}
+              </TextEllipsis>
+            </Text>
+          </Flex>
         ),
       },
       {
@@ -382,19 +362,14 @@ export const IncidentTable = ({
         header: "Age",
         accessor: "ageMs",
         width: 96,
-        alignment: "right",
         sortType: "number",
         cell: ({ rowData }) => (
-          <Cell>
-            <Flex justifyContent="flex-end">
-              <AgeText
-                since={rowData.createdAt}
-                now={now}
-                timeZone={tz}
-                overdueAfterMs={rowData.status === "triggered" ? ackTargetMs : undefined}
-              />
-            </Flex>
-          </Cell>
+          <AgeText
+            since={rowData.createdAt}
+            now={now}
+            timeZone={tz}
+            overdueAfterMs={rowData.status === "triggered" ? ackTargetMs : undefined}
+          />
         ),
       },
       {
@@ -403,57 +378,31 @@ export const IncidentTable = ({
         accessor: (r) => SOURCE_LABEL[r.alert.source] ?? r.alert.source,
         width: 130,
         cell: ({ rowData }) => (
-          <Cell>
-            <Flex alignItems="center" gap={4}>
-              {rowData.alert.source === "davis-problem" ? <AiIcon size="small" /> : <EventIcon size="small" />}
-              <Text>{SOURCE_LABEL[rowData.alert.source] ?? rowData.alert.source}</Text>
-            </Flex>
-          </Cell>
+          <Flex alignItems="center" gap={4}>
+            {rowData.alert.source === "davis-problem" ? <AiIcon /> : <EventIcon />}
+            <Text>{SOURCE_LABEL[rowData.alert.source] ?? rowData.alert.source}</Text>
+          </Flex>
         ),
       },
-      {
-        id: "service",
-        header: "Service",
-        accessor: "serviceName",
-        width: 140,
-        cell: ({ rowData }) => (
-          <Cell>
-            <EllipsisText text={rowData.serviceName} />
-          </Cell>
-        ),
-      },
-      {
-        id: "team",
-        header: "Team",
-        accessor: "teamName",
-        width: 120,
-        cell: ({ rowData }) => (
-          <Cell>
-            <EllipsisText text={rowData.teamName} />
-          </Cell>
-        ),
-      },
+      { id: "service", header: "Service", accessor: "serviceName", width: 130 },
+      { id: "team", header: "Team", accessor: "teamName", width: 120 },
       {
         id: "assignee",
         header: "Assignee",
         accessor: "assigneeName",
-        width: 160,
-        cell: ({ rowData }) => (
-          <Cell>
-            <AssigneeView assignee={rowData.assignee} />
-          </Cell>
-        ),
+        width: 140,
+        cell: ({ rowData }) => <AssigneeView assignee={rowData.assignee} />,
       },
       {
         id: "escalation",
         header: "Escalation",
         accessor: (r) => (r.escalation.exhausted ? 99 : r.escalation.lastStepIndex),
         sortType: "number",
-        width: 136,
+        width: 130,
         cell: ({ rowData }) => (
-          <Cell>
+          <div style={{ width: "100%", paddingRight: 12, boxSizing: "border-box" }}>
             <EscalationCell incident={rowData} policy={data?.policies.find((p) => p.id === rowData.policyId)} />
-          </Cell>
+          </div>
         ),
       },
       {
@@ -461,29 +410,18 @@ export const IncidentTable = ({
         header: "Last notified",
         accessor: (r) => r.lastNotification?.reportedAt ?? r.lastNotification?.plannedAt ?? 0,
         sortType: "number",
-        width: 128,
+        width: 130,
         cell: ({ rowData }) => {
           const n = rowData.lastNotification;
-          if (!n)
-            return (
-              <Cell>
-                <Text style={{ color: Colors.Text.Neutral.Subdued }}>–</Text>
-              </Cell>
-            );
+          if (!n) return <Text style={{ color: Colors.Text.Neutral.Subdued }}>–</Text>;
           const failed = n.status === "failed" || n.status === "timeout";
           return (
-            <Cell>
-              <Tooltip text={`${CHANNEL_LABEL[n.channel]} to ${n.to.name ?? userName(n.to.uid)} · ${failed ? "failed" : n.status}`}>
-                <Flex alignItems="center" gap={4} style={{ minWidth: 0 }}>
-                  {failed ? (
-                    <CriticalFailedIcon size="small" style={{ color: Colors.Icon.Critical.Default, flexShrink: 0 }} />
-                  ) : (
-                    <ChannelIcon channel={n.channel} size="small" />
-                  )}
-                  <Text style={{ whiteSpace: "nowrap" }}>{formatRelative(n.reportedAt ?? n.plannedAt, now)}</Text>
-                </Flex>
-              </Tooltip>
-            </Cell>
+            <Tooltip text={`${CHANNEL_LABEL[n.channel]} to ${n.to.name ?? userName(n.to.uid)} · ${failed ? "failed" : n.status}`}>
+              <Flex alignItems="center" gap={4} style={{ minWidth: 0 }}>
+                {failed ? <CriticalFailedIcon style={{ color: Colors.Icon.Critical.Default, flexShrink: 0 }} /> : <ChannelIcon channel={n.channel} />}
+                <Text style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{formatRelative(n.reportedAt ?? n.plannedAt, now)}</Text>
+              </Flex>
+            </Tooltip>
           );
         },
       },
@@ -519,8 +457,7 @@ export const IncidentTable = ({
         onActivate(id);
       }}
       loading={loading}
-      // Team is hidden by default (the Service column and the Team filter cover it) so the Incident title keeps room at 1280–1440 px.
-      columnVisibility={{ createdAt: false, source: false, team: false }}
+      columnVisibility={{ createdAt: false, source: false }}
     >
       <DataTable.Toolbar>
         <DataTable.LineWrap />

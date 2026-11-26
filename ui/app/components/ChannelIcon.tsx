@@ -1,5 +1,5 @@
 import React from "react";
-import { CallIcon, ChatIcon, HttpIcon, MobileIcon, type SvgIconProps } from "@dynatrace/strato-icons";
+import { CallIcon, ChatIcon, HttpIcon, MobileIcon } from "@dynatrace/strato-icons";
 import type { Channel } from "../domain/contracts";
 
 export const CHANNEL_LABEL: Record<Channel, string> = {
@@ -14,18 +14,18 @@ export const CHANNEL_LABEL: Record<Channel, string> = {
 };
 
 /** SMS → Mobile, Voice → Call, chat apps → Chat, webhooks → Http (DESIGN §14). */
-export const ChannelIcon = ({ channel, size }: { channel: Channel; size?: SvgIconProps["size"] }) => {
+export const ChannelIcon = ({ channel }: { channel: Channel }) => {
   switch (channel) {
     case "sms":
-      return <MobileIcon size={size} />;
+      return <MobileIcon />;
     case "voice":
-      return <CallIcon size={size} />;
+      return <CallIcon />;
     case "whatsapp":
     case "telegram":
     case "slack":
     case "teams":
-      return <ChatIcon size={size} />;
+      return <ChatIcon />;
     default:
-      return <HttpIcon size={size} />;
+      return <HttpIcon />;
   }
 };
