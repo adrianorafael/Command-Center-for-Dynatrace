@@ -132,3 +132,21 @@ export function errorMessage(e: unknown): string {
 export function plural(n: number, word: string, pluralWord = `${word}s`): string {
   return `${n} ${n === 1 ? word : pluralWord}`;
 }
+
+/** DateTimePicker / TimeframeSelector value → epoch ms (TimeValue.absoluteDate or ISO string). */
+export function pickerToMs(v: unknown): number | undefined {
+  if (!v) return undefined;
+  if (typeof v === "string") {
+    const t = Date.parse(v);
+    return Number.isFinite(t) ? t : undefined;
+  }
+  if (typeof v === "object" && v !== null && "absoluteDate" in v) {
+    const t = Date.parse(String((v as { absoluteDate: unknown }).absoluteDate));
+    return Number.isFinite(t) ? t : undefined;
+  }
+  return undefined;
+}
+
+export function msToIso(ms: number | undefined): string | null {
+  return ms === undefined || !Number.isFinite(ms) ? null : new Date(ms).toISOString();
+}

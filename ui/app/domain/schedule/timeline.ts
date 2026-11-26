@@ -60,8 +60,8 @@ function segmentsFrom(
   const bounds = [from, ...pts, to];
   const out: ShiftSegment[] = [];
   for (let i = 0; i < bounds.length - 1; i++) {
-    const a = bounds[i] as number;
-    const b = bounds[i + 1] as number;
+    const a = bounds[i];
+    const b = bounds[i + 1];
     if (b <= a) continue;
     const v = evaluate(a);
     if (!v) continue;
