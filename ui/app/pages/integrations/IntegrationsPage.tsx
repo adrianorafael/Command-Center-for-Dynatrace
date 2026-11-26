@@ -224,11 +224,11 @@ const ProviderSheet = ({ provider, onClose }: { provider?: ProviderConfig; onClo
           <TextInput
             value={draft.credentialVaultId ?? ""}
             onChange={(v) => setDraft({ ...draft, credentialVaultId: v.trim() || undefined })}
-            placeholder="CREDENTIALS_VAULT-…"
+            placeholder="CREDENTIAL_VAULT_ENTRY-…"
           />
           <FieldHint>
-            Paste the credential vault ID. {VAULT_HINT[draft.kind]}. Turn on "Allow access without app context" for the entry. The app never asks for,
-            stores, or shows the secret itself.
+            Paste the credential vault ID. {VAULT_HINT[draft.kind]}. Create the entry with scope AppEngine, owned by the workflow actor, with "Owner
+            access only" and "Allow access without app context" both on. The app never asks for, stores, or shows the secret itself.
           </FieldHint>
           {err("credentialVaultId") && <Text>{err("credentialVaultId")}</Text>}
         </FormField>
@@ -519,7 +519,7 @@ const WorkflowsTab = () => {
               <Text>In the Workflows app, select Upload and choose the file.</Text>
               <Text>Set the actor to a service user, so edits by other people don't change who runs it.</Text>
               <Text>In Workflows → Settings → Authorization settings, grant the actor the app-engine and app-state permissions the workflow needs.</Text>
-              <Text>Add the provider hosts below to Settings → External requests, and allow vault entries to be used without app context.</Text>
+              <Text>Add the provider hosts below to Settings → External requests. Vault entries: scope AppEngine, owned by the actor, owner access only, access without app context.</Text>
               <Text>Come back here and select Refresh status.</Text>
             </List>
             <Text textStyle="small">

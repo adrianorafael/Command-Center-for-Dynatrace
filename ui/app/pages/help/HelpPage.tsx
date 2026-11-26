@@ -47,7 +47,7 @@ Notifications leave Dynatrace only through the **Command Center · Engine** work
 
 1. In **Integrations → Workflows**, download the workflow JSON and upload it in the Workflows app. Set a **service user** as actor.
 2. In the Workflows app's authorization settings, grant the actor the permissions the workflow needs.
-3. Create one **Credential Vault** entry per provider (Twilio, IFTTT, Slack, Microsoft Teams, Telegram, or your webhook) and allow it to be used without app context.
+3. Create one **Credential Vault** entry per provider (Twilio, IFTTT, Slack, Microsoft Teams, Telegram, or your webhook) with scope **AppEngine**, owned by the workflow actor, with **Owner access only** and **Allow access without app context** both on. Its ID looks like `CREDENTIAL_VAULT_ENTRY-…`.
 4. In **Integrations → Outbound**, paste the credential vault ID, set the sender, enable the provider, and send a test.
 5. Add the provider hosts to **Settings → External requests**.
 
@@ -56,7 +56,7 @@ The app never sees secrets: it only stores vault IDs. Delivery results come back
 
 const TROUBLE = `
 - **No incidents appear**: check that a source is on in Settings and that events arrive (Integrations → Inbound). The engine workflow must be running: a banner on the Console tells you when its heartbeat is older than 3 minutes.
-- **A notification failed**: open the incident's Notifications tab for the provider error. Common causes are a missing host in External requests, a vault entry without "Allow access without app context", or an invalid phone number (use E.164).
+- **A notification failed**: open the incident's Notifications tab for the provider error. Common causes are a missing host in External requests, a vault entry that isn't owned by the workflow actor or lacks "Owner access only" plus "Allow access without app context", or an invalid phone number (use E.164).
 - **The workflow isn't installed or is outdated**: download the JSON again in Integrations → Workflows and upload it over the existing workflow.
 - **Permission errors**: the app needs the scopes listed in Settings → Permissions, and your user needs IAM access to the app.
 - **People can't be found in the user picker**: type at least 3 characters of the email or the first name. Only users of this environment are listed.
