@@ -4,7 +4,7 @@
  * Demo is active when any of:
  *  - getEnvironmentId() === 'dt.missing.environment.id' — documented fallback "if the Dynatrace
  *    JavaScript runtime isn't available" (node_modules/@dynatrace-sdk/app-environment/types/index.d.ts l.80)
- *  - the URL has ?demo=1
+ *  - the URL has ?demo=1 — only when the runtime is missing (offline preview)
  *  - localStorage 'cc.demo' === '1' (set by the Settings → demo mode switch)
  * Settings.demoMode is a stored preference the UI may also honour by calling setDemoPreference(true).
  */
@@ -57,8 +57,19 @@ export function isRuntimeMissing(): boolean {
   return safeEnvironmentId() === MISSING_ENVIRONMENT_ID;
 }
 
+/**
+ * ?demo=1 is only honoured when the platform runtime is missing (offline preview); inside a real
+ * environment a crafted link must not silently switch an operator to fake data. The explicit,
+ * stored preference (Settings → demo mode) still applies.
+ */
 export function isDemo(): boolean {
-  return isRuntimeMissing() || urlDemoFlag() || storageDemoFlag();
+  // Without the runtime the app is always in demo mode, so ?demo=1 only documents intent there.
+  return isRuntimeMissing() || storageDemoFlag();
+}
+
+/** True when the URL asks for demo data (informational; see isDemo). */
+export function demoRequestedByUrl(): boolean {
+  return urlDemoFlag();
 }
 
 /** Persist the user's demo preference for this browser; takes effect on reload. */

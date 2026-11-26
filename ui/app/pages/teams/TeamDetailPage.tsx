@@ -11,7 +11,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { TeamMember, TeamRole } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { newId, onCallAt } from "../../hooks/domain";
-import { CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
+import { Cell, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ShiftGantt } from "../../components/ShiftGantt";
@@ -129,10 +129,12 @@ export const TeamDetailPage = () => {
       width: "1fr",
       minWidth: 240,
       cell: ({ rowData }) => (
-        <Avatar abbreviation={initials(rowData.name)}>
-          <Avatar.Label>{rowData.name}</Avatar.Label>
-          {rowData.email && <Avatar.Subtitle>{rowData.email}</Avatar.Subtitle>}
-        </Avatar>
+        <Cell>
+          <Avatar abbreviation={initials(rowData.name)}>
+            <Avatar.Label>{rowData.name}</Avatar.Label>
+            {rowData.email && <Avatar.Subtitle>{rowData.email}</Avatar.Subtitle>}
+          </Avatar>
+        </Cell>
       ),
     },
     {
@@ -150,9 +152,11 @@ export const TeamDetailPage = () => {
       accessor: "role",
       width: 140,
       cell: ({ rowData }) => (
-        <Chip size="condensed" color={rowData.role === "admin" ? "primary" : "neutral"}>
-          {ROLE_LABEL[rowData.role]}
-        </Chip>
+        <Cell>
+          <Chip size="condensed" color={rowData.role === "admin" ? "primary" : "neutral"}>
+            {ROLE_LABEL[rowData.role]}
+          </Chip>
+        </Cell>
       ),
     },
     {

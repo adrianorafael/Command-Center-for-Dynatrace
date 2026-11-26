@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { Grid, Surface, Flex } from "@dynatrace/strato-components/layouts";
-import { MeterBarChart, MultiMeterBarChart, SingleValue, type Timeseries } from "@dynatrace/strato-components/charts";
-import { Text } from "@dynatrace/strato-components/typography";
-import { AccountIcon, CheckmarkIcon, CriticalIcon } from "@dynatrace/strato-icons";
+import { MeterBarChart, MultiMeterBarChart, Sparkline, type Timeseries } from "@dynatrace/strato-components/charts";
+import { Heading, Text } from "@dynatrace/strato-components/typography";
+import { AccountIcon, BarChartIcon, CheckmarkIcon, ClockIcon, CriticalIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import { PRIORITIES, type Incident, type Priority } from "../../domain/contracts";
 import { PRIORITY_COLOR } from "../../components/PriorityChip";
@@ -32,7 +32,20 @@ function median(values: number[]): number | undefined {
 }
 
 /** Height of the SingleValue area under a tile header; header + gap + value ≈ the 110 px meter tiles. */
-const VALUE_HEIGHT = 84;
+/** Every tile: header (20 px icon + label), one value at the same type size, a fixed-height footer. */
+const FOOTER_HEIGHT = 56;
+
+const TileValue = ({ children, loading, critical }: { children: React.ReactNode; loading?: boolean; critical?: boolean }) => (
+  <Heading level={2} as="h3" style={{ margin: 0, color: critical ? Colors.Text.Critical.Default : undefined, lineHeight: 1.2 }}>
+    {loading ? "…" : children}
+  </Heading>
+);
+
+const TileFooter = ({ children }: { children: React.ReactNode }) => (
+  <Flex alignItems="flex-end" style={{ height: FOOTER_HEIGHT, minWidth: 0, overflow: "hidden" }}>
+    {children}
+  </Flex>
+);
 
 /**
  * Tile title row (icon + label) rendered outside SingleValue: SingleValue sizes a ReactNode `prefixIcon` to 2ch
@@ -63,7 +76,9 @@ const Tile = ({
     </Surface>
   ) : (
     <Surface elevation="raised" padding={16} aria-label={label}>
-      {children}
+      <Flex flexDirection="column" gap={8}>
+        {children}
+      </Flex>
     </Surface>
   );
 
@@ -111,61 +126,70 @@ export const KpiStrip = ({
   return (
     <Grid gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={12}>
       <Tile label="Show triggered incidents" onClick={() => onFilter({ status: ["triggered"] })}>
-        <TileHeader icon={<CriticalIcon size="small" />}>Triggered</TileHeader>
-        <SingleValue data={k.triggered.length} aria-label="Triggered" loading={loading} height={VALUE_HEIGHT}>
-          <SingleValue.Sparkline data={k.spark} variant="area" color={Colors.Charts.Status.Critical.Default} />
-        </SingleValue>
+        <TileHeader icon={<CriticalIcon />}>Triggered</TileHeader>
+        <TileValue loading={loading} critical={k.triggered.length > 0}>{k.triggered.length}</TileValue>
+        <TileFooter>
+          <Sparkline data={k.spark} variant="area" color={Colors.Charts.Status.Critical.Default} height={40} width="100%" />
+        </TileFooter>
       </Tile>
       <Tile label="Show acknowledged incidents" onClick={() => onFilter({ status: ["acknowledged"] })}>
-        <TileHeader icon={<CheckmarkIcon size="small" />}>Acknowledged</TileHeader>
-        <SingleValue data={k.acknowledged.length} aria-label="Acknowledged" loading={loading} height={VALUE_HEIGHT}>
-          <SingleValue.Trend
-            direction={trendDelta > 0 ? "upward" : trendDelta < 0 ? "downward" : "neutral"}
-            value={trendDelta}
-            label="acks vs. previous hour"
-          />
-        </SingleValue>
+        <TileHeader icon={<CheckmarkIcon />}>Acknowledged</TileHeader>
+        <TileValue loading={loading}>{k.acknowledged.length}</TileValue>
+        <TileFooter>
+          <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+            {trendDelta > 0 ? `+${trendDelta}` : trendDelta} acks vs. previous hour
+          </Text>
+        </TileFooter>
       </Tile>
       <Tile label="Show open P1 incidents" onClick={() => onFilter({ status: ["triggered", "acknowledged", "snoozed"], priority: ["P1"] })}>
-        <TileHeader icon={<CriticalIcon size="small" />}>Open P1</TileHeader>
-        <SingleValue
-          data={k.p1.length}
-          aria-label="Open P1"
-          loading={loading}
-          height={VALUE_HEIGHT}
-          applyThresholdBackground
-        >
-          <SingleValue.ColorRule comparator="greater-than" matchValue={0} color={Colors.Charts.Status.Critical.Default} />
-        </SingleValue>
+        <TileHeader icon={<CriticalIcon />}>Open P1</TileHeader>
+        <TileValue loading={loading} critical={k.p1.length > 0}>{k.p1.length}</TileValue>
+        <TileFooter>
+          <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+            {k.p1.length === 0 ? "No open P1" : `${k.p1.filter((i) => i.status === "triggered").length} not acknowledged`}
+          </Text>
+        </TileFooter>
       </Tile>
       <Tile label="MTTA today">
-        <Flex flexDirection="column" gap={8} style={{ minHeight: 110 }}>
-          <MeterBarChart value={mttaValue} min={0} max={ackTargetMs * 2} unit="millisecond" loading={loading}>
-            <MeterBarChart.Label>MTTA today</MeterBarChart.Label>
-            <MeterBarChart.Value>{k.mtta === undefined ? "–" : formatDuration(k.mtta)}</MeterBarChart.Value>
-            <MeterBarChart.ThresholdIndicator value={ackTargetMs} color={Colors.Charts.Threshold.Bad.Default} name="Target" />
-            <MeterBarChart.ColorRule comparator="greater-than" matchValue={ackTargetMs} color={Colors.Charts.Threshold.Bad.Default} />
-            <MeterBarChart.ColorRule comparator="less-or-equal" matchValue={ackTargetMs} color={Colors.Charts.Threshold.Good.Default} />
-          </MeterBarChart>
-          <Text textStyle="small">Target {formatDuration(ackTargetMs)}</Text>
-        </Flex>
+        <TileHeader icon={<ClockIcon />}>MTTA today</TileHeader>
+        <TileValue loading={loading} critical={k.mtta !== undefined && k.mtta > ackTargetMs}>
+          {k.mtta === undefined ? "–" : formatDuration(k.mtta)}
+        </TileValue>
+        <TileFooter>
+          <Flex flexDirection="column" gap={4} style={{ width: "100%" }}>
+            <MeterBarChart value={mttaValue} min={0} max={ackTargetMs * 2} unit="millisecond" loading={loading}>
+              <MeterBarChart.ThresholdIndicator value={ackTargetMs} color={Colors.Charts.Threshold.Bad.Default} name="Target" />
+              <MeterBarChart.ColorRule comparator="greater-than" matchValue={ackTargetMs} color={Colors.Charts.Threshold.Bad.Default} />
+              <MeterBarChart.ColorRule comparator="less-or-equal" matchValue={ackTargetMs} color={Colors.Charts.Threshold.Good.Default} />
+            </MeterBarChart>
+            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>Target {formatDuration(ackTargetMs)}</Text>
+          </Flex>
+        </TileFooter>
       </Tile>
       <Tile label="Show incidents assigned to me" onClick={() => onFilter({ assignee: ["me"] })}>
-        <TileHeader icon={<AccountIcon size="small" />}>Assigned to me</TileHeader>
-        <SingleValue data={k.mine.length} aria-label="Assigned to me" loading={loading} height={VALUE_HEIGHT} />
+        <TileHeader icon={<AccountIcon />}>Assigned to me</TileHeader>
+        <TileValue loading={loading}>{k.mine.length}</TileValue>
+        <TileFooter>
+          <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+            {k.mine.length === 0 ? "Nothing assigned to you" : "Open incidents assigned to you"}
+          </Text>
+        </TileFooter>
       </Tile>
       <Tile label="Open incidents by priority">
-        <Flex flexDirection="column" gap={8} style={{ minHeight: 110 }}>
-          <MultiMeterBarChart loading={loading} max="auto">
-            <MultiMeterBarChart.Label>Open by priority</MultiMeterBarChart.Label>
-            {PRIORITIES.map((p) => (
-              <MultiMeterBarChart.Segment key={p} name={p} value={k.byPriority[p]} color={PRIORITY_COLOR[p]} />
-            ))}
-          </MultiMeterBarChart>
-          <Text textStyle="small">
-            {k.open.length === 0 ? "All clear" : PRIORITIES.map((p) => `${p} ${k.byPriority[p]}`).join(" · ")}
-          </Text>
-        </Flex>
+        <TileHeader icon={<BarChartIcon />}>Open incidents</TileHeader>
+        <TileValue loading={loading}>{k.open.length}</TileValue>
+        <TileFooter>
+          <Flex flexDirection="column" gap={4} style={{ width: "100%" }}>
+            <MultiMeterBarChart loading={loading} max="auto">
+              {PRIORITIES.map((p) => (
+                <MultiMeterBarChart.Segment key={p} name={p} value={k.byPriority[p]} color={PRIORITY_COLOR[p]} />
+              ))}
+            </MultiMeterBarChart>
+            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+              {k.open.length === 0 ? "All clear" : PRIORITIES.map((p) => `${p} ${k.byPriority[p]}`).join(" · ")}
+            </Text>
+          </Flex>
+        </TileFooter>
       </Tile>
     </Grid>
   );

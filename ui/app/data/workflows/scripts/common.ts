@@ -55,6 +55,7 @@ function secretValues(cred) {
 }
 
 // Error text without secrets: never include URLs (several embed the key) or credential values.
+// Redaction happens on the full text, truncation last.
 function safeError(e, secrets) {
   var m = e && e.name === "TimeoutError" ? "request timed out" : String((e && e.message) || e || "error");
   for (var i = 0; i < secrets.length; i++) m = m.split(secrets[i]).join("***");
@@ -62,9 +63,11 @@ function safeError(e, secrets) {
   return m.slice(0, 300);
 }
 
+// The body is NOT truncated here: safeError redacts secrets first and truncates afterwards, so a
+// secret echoed by a provider can never survive as a partial string.
 async function httpError(res) {
   var detail = "";
-  try { detail = (await res.text()).slice(0, 200); } catch (e) { detail = ""; }
+  try { detail = (await res.text()).slice(0, 65536); } catch (e) { detail = ""; }
   return new Error("HTTP " + res.status + (detail ? ": " + detail : ""));
 }
 
@@ -77,6 +80,18 @@ function post(url, init) {
 // Links are only rendered as buttons when absolute (the engine may not know the environment URL).
 function isAbsolute(url) {
   return typeof url === "string" && url.indexOf("https://") === 0;
+}
+
+// Slack mrkdwn: escape the three control characters (Slack's documented escaping), which also
+// neutralises <!channel>, <!here>, <@U…> mentions and <url|text> links in alert text.
+function slackEscape(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Adaptive Card TextBlock markdown: backslash-escape markdown syntax so alert text cannot form links
+// or emphasis. (Backslash escapes in TextBlock markdown: UNVERIFIED rendering; text stays readable.)
+function cardEscape(s) {
+  return String(s).replace(/([\\\\[\\]()*_\\x60~#>!|])/g, "\\\\$1");
 }
 
 function forUser(n) {

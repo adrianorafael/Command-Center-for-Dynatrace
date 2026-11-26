@@ -27,7 +27,7 @@ import { SENDER_TASKS } from "./scripts/senders";
 export const ENGINE_WORKFLOW_TITLE = "Command Center · Engine";
 export const RUN_JAVASCRIPT = "dynatrace.automations:run-javascript";
 /** Bumped whenever the generated definition changes; shown by the installer status. */
-export const ENGINE_DEFINITION_VERSION = 1;
+export const ENGINE_DEFINITION_VERSION = 2;
 export const DEFINITION_MARKER = `[command-center-engine v${ENGINE_DEFINITION_VERSION}]`;
 
 export const TICK_TASK = "tick";

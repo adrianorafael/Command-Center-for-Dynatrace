@@ -234,8 +234,6 @@ describe("delivery-report", () => {
     const rec = (await repo.get<NotificationRecord>(KEY.notification(key)))?.value;
     expect(rec).toMatchObject({ status: "sent", providerRef: "SM-placeholder" });
     const store = createStore(repo);
-    const [inc] = await store.listIncidents();
-    expect(inc.timeline.some((e) => e.type === "notification_sent")).toBe(true);
     expect((await store.listRollups())[0].notificationsSent).toBe(1);
 
     expect((await runDeliveryReport({ results: "x" }, { repo })).ok).toBe(false);
@@ -251,17 +249,19 @@ describe("enrichProblems", () => {
   });
 });
 
-describe("delivery-report race guard", () => {
-  it("updates only the ledger while a tick holds the lease", async () => {
+describe("delivery-report never takes the engine lease", () => {
+  it("updates only the ledger (and a rollup delta) — no lock, no incident writes", async () => {
     const repo = seededRepo();
     const res = await runEngineTick({ reason: "schedule" }, { repo, runQuery: grail(), now: () => NOW });
     const key = res.batches.sms[0].key;
-    await repo.put(KEY.lock, { holder: "tick-other", acquiredAt: NOW + 1000 }, 120_000);
+    const [before] = await createStore(repo).listIncidents();
+    const puts: string[] = [];
+    const put = repo.put.bind(repo);
+    repo.put = ((k: string, v: unknown, t?: number) => (puts.push(k), put(k, v, t))) as typeof repo.put;
     const out = await runDeliveryReport({ results: [{ key, status: "sent", at: NOW + 2000 }] }, { repo, now: () => NOW + 3000 });
-    expect(out.timelineSkipped).toBe(true);
-    expect((await repo.get<NotificationRecord>(KEY.notification(key)))?.value.status).toBe("sent");
-    const [inc] = await createStore(repo).listIncidents();
-    expect(inc.timeline.some((e) => e.type === "notification_sent")).toBe(false);
-    expect((await repo.get<{ holder: string }>(KEY.lock))?.value.holder).toBe("tick-other");
+    expect(out.applied).toBe(1);
+    expect(puts.every((k) => k.startsWith("ntf.") || k.startsWith("rpt."))).toBe(true);
+    expect(puts.some((k) => k === KEY.lock)).toBe(false);
+    expect((await createStore(repo).listIncidents())[0]).toEqual(before);
   });
 });

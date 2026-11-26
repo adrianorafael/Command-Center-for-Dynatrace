@@ -29,9 +29,9 @@ import { describeError, type QueryRunner } from "../../ui/app/data/grail";
 import { MIN_LOCK_TTL_SEC } from "../../ui/app/data/domainPort";
 import { withAttempt } from "../../ui/app/domain/keys";
 import { normalizeRecords } from "../../ui/app/domain/alerts/normalize";
-import { emptyBatches, tick } from "../../ui/app/domain/engine/tick";
+import { archiveResolvedBound, emptyBatches, tick } from "../../ui/app/domain/engine/tick";
 import { acquireLease, releaseLease, type EngineLock } from "./lease";
-import { fetchSources, type SourceRecords } from "./sources";
+import { fetchSources } from "./sources";
 import {
   APP_STATE_LIMIT_BYTES,
   SHED_THRESHOLD_BYTES,
@@ -158,9 +158,6 @@ export function buildTestRequest(
 /** Heartbeat with the optional storage estimate (contract EngineHeartbeat + extra field). */
 export type EngineHeartbeatWithStorage = EngineHeartbeat & { storage?: StorageEstimate };
 
-/** Archives/rollups are listed for the storage estimate at most this often. */
-export const STORAGE_SCAN_INTERVAL_MS = 15 * 60_000;
-
 async function writeHeartbeat(repo: Repository, hb: EngineHeartbeatWithStorage): Promise<void> {
   await repo.put(KEY.heartbeat, hb).catch(() => undefined);
 }
@@ -216,7 +213,7 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
 
     const stillHolder = async () => (await repo.get<EngineLock>(KEY.lock))?.value.holder === holder;
 
-    const [teams, schedules, policies, services, rules, contacts, incidents, pendingActions, ledger, sources] =
+    const [teams, schedules, policies, services, rules, contacts, incidents, pendingActions, ledger, archiveRows, sources] =
       await Promise.all([
         store.listTeams(),
         store.listSchedules(),
@@ -227,6 +224,7 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
         store.listIncidents(),
         store.listActions(),
         store.listNotifications(),
+        repo.list<unknown>(PREFIX.archive),
         fetchSources(settings, deps.runQuery, undefined, now),
       ]);
     errors.push(...sources.errors);
@@ -249,7 +247,8 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
       pendingActions,
       ledger,
       alerts,
-      ...tickExtras(sources),
+      sourceStatus: sources.status,
+      archived: archivedBounds(archiveRows),
       ...(deps.appBaseUrl ? { appBaseUrl: deps.appBaseUrl } : {}),
     });
     errors.push(...out.errors);
@@ -339,7 +338,7 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
     );
 
     // 6) storage estimate (+ shedding of the oldest archives above the threshold)
-    storage = await estimateStorage(repo, now, previous?.storage, {
+    storage = await estimateStorage(repo, now, archiveRows, rollupRows, {
       [PREFIX.incident]: usage(incidents.map((value) => ({ value }))),
       [PREFIX.action]: usage(pendingActions),
       [PREFIX.notification]: usage(ledger.map((value) => ({ value }))),
@@ -376,42 +375,32 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
   }
 }
 
-/**
- * Bytes per prefix from what this tick already loaded; archives and rollups are listed at most
- * every STORAGE_SCAN_INTERVAL_MS (otherwise carried over from the previous estimate).
- */
+/** Bytes per prefix from what this tick loaded; sheds the oldest archives above the threshold. */
 async function estimateStorage(
   repo: Repository,
   now: number,
-  previous: StorageEstimate | undefined,
+  archives: Stored<unknown>[],
+  rollups: Stored<unknown>[],
   loaded: Record<string, PrefixUsage>,
 ): Promise<StorageEstimate> {
-  const byPrefix: Record<string, PrefixUsage> = { ...loaded };
+  const byPrefix: Record<string, PrefixUsage> = { ...loaded, [PREFIX.archive]: usage(archives), [PREFIX.rollup]: usage(rollups) };
   let shed = 0;
-  const scan = !previous || now - previous.at >= STORAGE_SCAN_INTERVAL_MS;
-  let at = previous?.at ?? now;
-  if (scan) {
-    at = now;
-    const [archives, rollups] = await Promise.all([repo.list(PREFIX.archive), repo.list(PREFIX.rollup)]);
-    byPrefix[PREFIX.archive] = usage(archives);
-    byPrefix[PREFIX.rollup] = usage(rollups);
-    const total = Object.values(byPrefix).reduce((n, u) => n + u.bytes, 0);
-    if (total > SHED_THRESHOLD_BYTES) {
-      const r = await shedArchives(repo, archives, total);
-      shed = r.deleted;
-      byPrefix[PREFIX.archive] = { keys: archives.length - r.deleted, bytes: byPrefix[PREFIX.archive].bytes - r.freed };
-    }
-  } else {
-    for (const p of [PREFIX.archive, PREFIX.rollup]) {
-      const u = previous?.byPrefix[p];
-      if (u) byPrefix[p] = u;
-    }
+  const total = Object.values(byPrefix).reduce((n, u) => n + u.bytes, 0);
+  if (total > SHED_THRESHOLD_BYTES) {
+    const r = await shedArchives(repo, archives, total);
+    shed = r.deleted;
+    byPrefix[PREFIX.archive] = { keys: archives.length - r.deleted, bytes: (byPrefix[PREFIX.archive]?.bytes ?? 0) - r.freed };
   }
   const totalBytes = Object.values(byPrefix).reduce((n, u) => n + u.bytes, 0);
-  return { at, totalBytes, limitBytes: APP_STATE_LIMIT_BYTES, byPrefix, ...(shed ? { shed } : {}) };
+  return { at: now, totalBytes, limitBytes: APP_STATE_LIMIT_BYTES, byPrefix, ...(shed ? { shed } : {}) };
 }
 
-/** Optional TickInput fields agent A adds (source health, archived ids) — wired when present. */
-function tickExtras(sources: SourceRecords): Record<string, unknown> {
-  return { sourceStatus: sources.status };
+/** Archived incident ids → upper bound of their resolve time (from the `arc.<yyyymmdd>.<id>` key). */
+export function archivedBounds(rows: readonly { key: string }[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const r of rows) {
+    const b = archiveResolvedBound(r.key);
+    if (b) m.set(b.id, Math.max(m.get(b.id) ?? 0, b.bound));
+  }
+  return m;
 }

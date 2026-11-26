@@ -302,7 +302,7 @@ const SAMPLE: Alert = {
   severity: 3,
   sourceStatus: "ACTIVE",
   startedAt: 0,
-  entities: [{ id: "SERVICE-0000000000000001", name: "checkout", type: "SERVICE" }],
+  entities: [{ id: "SERVICE-0000000000000001", name: "checkout", type: "SERVICE" }], // scan-secrets:allow synthetic placeholder entity id
   tags: ["env:prod"],
   underMaintenance: false,
   muted: false,

@@ -1,28 +1,25 @@
 /**
- * delivery-report: apply the workflow's DeliveryResult[] to the ledger, incident timelines and
- * the daily rollup through the pure domain `applyDeliveryResults`.
+ * delivery-report: apply the workflow's DeliveryResult[] to the notification ledger and the daily
+ * rollup through the pure domain `applyDeliveryResults`.
  *
  * Tolerant by design: unknown keys (e.g. reason 'test' requests, expired records) are counted,
  * never thrown. Only records that are still awaiting a report (status planned/timeout, planned
  * within REPORT_WINDOW_MS) are updated; anything else is ignored.
  *
- * Race guards (no transactions in App State):
- *  - incident timelines are only rewritten while holding the engine lease; when a tick is running
- *    only the ledger is updated (a stale incident write could clobber an ack the tick just folded);
- *  - rollup counts go straight into `rpt.<day>` under the lease, otherwise into a separate delta
- *    key `rpt.<day>.d.<rand>` that the engine folds in later (no lost read-modify-write).
+ * Writes ONLY ledger records and a rollup delta key (`rpt.<day>.d.<rand>`, folded by the engine).
+ * It never takes the engine lease and never rewrites `inc.*`: a report overlapping the next tick
+ * would otherwise make that tick skip (steps fired late) or clobber an ack the tick just folded.
+ * The ledger is the source of truth for delivery state; the incident detail shows it from there.
  */
 
-import type { DeliveryResult, Incident, NotificationRecord } from "../../ui/app/domain/contracts";
+import type { DeliveryResult, NotificationRecord } from "../../ui/app/domain/contracts";
 import { KEY, type Repository } from "../../ui/app/data/repository";
 import { describeError } from "../../ui/app/data/grail";
 import { createStore } from "../../ui/app/data/store";
-import { MIN_LOCK_TTL_SEC } from "../../ui/app/data/domainPort";
 import { applyDeliveryResults } from "../../ui/app/domain/engine/delivery";
 import { isValidKey } from "../../ui/app/domain/keys";
 import { NOTIFICATION_TTL_MS, forEachLimited } from "./engine";
-import { acquireLease, releaseLease } from "./lease";
-import { addRollup, isFinalRecord, slimRecord, writeRollupDelta } from "./storage";
+import { isFinalRecord, slimRecord, writeRollupDelta } from "./storage";
 
 export interface DeliveryReportRequest {
   results: DeliveryResult[];
@@ -34,8 +31,6 @@ export interface DeliveryReportResponse {
   unknown: number;
   /** Results for records that are already final or outside the report window. */
   ignored?: number;
-  /** True when the engine lease was held by a tick, so incident timelines were not updated. */
-  timelineSkipped?: boolean;
   errors: string[];
 }
 
@@ -89,18 +84,8 @@ export async function runDeliveryReport(
   const domainResults = valid.filter((r) => accepted.has(r.key));
   const unknown = new Set(valid.map((r) => r.key).filter((k) => !found.has(k))).size;
 
-  const incidents: Incident[] = [];
-  await forEachLimited(
-    [...new Set(ledger.map((r) => r.incidentId))],
-    8,
-    async (id) => {
-      const inc = await deps.repo.get<Incident>(KEY.incident(id));
-      if (inc) incidents.push(inc.value);
-    },
-    (id, e) => errors.push(`read incident ${id}: ${describeError(e)}`),
-  );
-
-  const out = applyDeliveryResults({ now, results: domainResults, ledger, incidents });
+  // Incidents are not passed: their timelines are not rewritten here (see header).
+  const out = applyDeliveryResults({ now, results: domainResults, ledger, incidents: [] });
 
   const settings = await createStore(deps.repo).getSettings();
   await forEachLimited(
@@ -115,43 +100,14 @@ export async function runDeliveryReport(
     (r, e) => errors.push(`write notification ${r.key}: ${describeError(e)}`),
   );
 
-  let timelineSkipped = false;
-  const holder = `report-${now}-${Math.floor(Math.random() * 1e9).toString(36)}`;
-  const leased = await acquireLease(deps.repo, holder, now, Math.max(settings.engine.lockTtlSec, MIN_LOCK_TTL_SEC)).catch(
-    () => false,
-  );
-  try {
-    if (leased) {
-      if (out.incidentsToWrite.length > 0) {
-        // Re-read under the lease so the timeline append applies to the newest incident.
-        const fresh: Incident[] = [];
-        for (const inc of out.incidentsToWrite) {
-          const cur = (await deps.repo.get<Incident>(KEY.incident(inc.id)))?.value;
-          if (cur) fresh.push(cur);
-        }
-        const again = applyDeliveryResults({ now, results: domainResults, ledger, incidents: fresh });
-        await forEachLimited(
-          again.incidentsToWrite,
-          8,
-          (inc) => deps.repo.put(KEY.incident(inc.id), inc),
-          (inc, e) => errors.push(`write incident ${inc.id}: ${describeError(e)}`),
-        );
-      }
-      await addRollup(deps.repo, out.rollupDelta).catch((e: unknown) => errors.push(`rollup: ${describeError(e)}`));
-    } else {
-      timelineSkipped = out.incidentsToWrite.length > 0;
-      await writeRollupDelta(deps.repo, out.rollupDelta).catch((e: unknown) => errors.push(`rollup: ${describeError(e)}`));
-    }
-  } finally {
-    if (leased) await releaseLease(deps.repo, holder).catch(() => undefined);
-  }
+  // Rollup counts go to a separate delta key; the engine folds them into rpt.<day> under its lease.
+  await writeRollupDelta(deps.repo, out.rollupDelta).catch((e: unknown) => errors.push(`rollup: ${describeError(e)}`));
 
   return {
     ok: errors.length === 0,
     applied: out.notificationsToWrite.length,
     unknown,
     ...(ignored ? { ignored } : {}),
-    ...(timelineSkipped ? { timelineSkipped: true } : {}),
     errors,
   };
 }

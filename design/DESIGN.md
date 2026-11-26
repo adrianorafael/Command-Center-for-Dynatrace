@@ -959,7 +959,7 @@ Bespoke styling is allowed only through tokens imported from `@dynatrace/strato-
 
 ## 15. Demo data requirements (for headless rendering and the demo mode)
 
-Fake but realistic and **non-identifying** (R1): people as "Alex Example", "Sam Sample", emails as `alex@example.invalid`, phone numbers as `+00 000 000 0000` (masked), no tenant URLs.
+Fake but realistic and **non-identifying** (R1): people as "Alex Example", "Sam Sample", emails as `alex@example.invalid`, phone numbers as `+00 000 000 0000` (masked), no tenant URLs. <!-- scan-secrets:allow synthetic placeholders -->
 Include: ~40 incidents across all P-levels and statuses (≥1 P1 triggered, ≥1 escalation exhausted, ≥1 failed SMS delivery, ≥1 snoozed); 4 teams, 12 users, 3 schedules (one with a gap in the
 next 7 days, one with an active override); 3 escalation policies (one with repeat); 6 services with rules; 30 days of report data. All charts must render populated from this set.
 

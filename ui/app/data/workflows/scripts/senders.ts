@@ -148,14 +148,14 @@ async function send(n, provider, cred) {
   var url = cred.token || "";
   if (url.indexOf("https://hooks.slack.com/") !== 0) throw new Error("Slack credential must hold an https://hooks.slack.com/ webhook URL");
   var who = forUser(n);
-  var text = (who ? who + ": " : "") + n.text;
+  var text = slackEscape((who ? who + ": " : "") + n.text);
   var res = await post(url, {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       text: text.slice(0, 3000),
       blocks: [
-        { type: "section", text: { type: "mrkdwn", text: ("*" + n.subject + "*\\n" + text).slice(0, 3000) } },
-        { type: "context", elements: [{ type: "mrkdwn", text: (isAbsolute(n.incidentUrl) ? "<" + n.incidentUrl + "|Open in Command Center> · " : "") + n.priority }] },
+        { type: "section", text: { type: "mrkdwn", text: ("*" + slackEscape(n.subject) + "*\\n" + text).slice(0, 3000) } },
+        { type: "context", elements: [{ type: "mrkdwn", text: (isAbsolute(n.incidentUrl) ? "<" + n.incidentUrl.replace(/[<>|]/g, "") + "|Open in Command Center> · " : "") + slackEscape(n.priority) }] },
       ],
     }),
   });
@@ -177,8 +177,8 @@ async function send(n, provider, cred) {
     $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
     version: "1.4",
     body: [
-      { type: "TextBlock", text: n.subject.slice(0, 300), weight: "Bolder", size: "Medium", wrap: true },
-      { type: "TextBlock", text: ((who ? who + ": " : "") + n.text).slice(0, 4000), wrap: true },
+      { type: "TextBlock", text: cardEscape(n.subject.slice(0, 300)), weight: "Bolder", size: "Medium", wrap: true },
+      { type: "TextBlock", text: cardEscape(((who ? who + ": " : "") + n.text).slice(0, 4000)), wrap: true },
     ],
   };
   if (isAbsolute(n.incidentUrl)) card.actions = [{ type: "Action.OpenUrl", title: "Open in Command Center", url: n.incidentUrl }];
@@ -198,6 +198,7 @@ export const SEND_TELEGRAM = senderScript(
 async function send(n, provider, cred) {
   if (!cred.token) throw new Error("Telegram credential needs a token (bot token)");
   var url = "https://api.telegram.org/bot" + cred.token + "/sendMessage";
+  // Plain text on purpose: no parse_mode, so alert text can never be interpreted as markup.
   var res = await post(url, {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -209,7 +210,7 @@ async function send(n, provider, cred) {
   var json = null;
   try { json = await res.json(); } catch (e) { json = null; }
   if (!res.ok || !json || json.ok !== true) {
-    throw new Error("HTTP " + res.status + (json && json.description ? ": " + String(json.description).slice(0, 200) : ""));
+    throw new Error("HTTP " + res.status + (json && json.description ? ": " + String(json.description) : ""));
   }
   return json.result && json.result.message_id;
 }`,

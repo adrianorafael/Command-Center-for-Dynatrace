@@ -9,7 +9,8 @@ import { SimpleTable } from "@dynatrace/strato-components/tables";
 import { Heading, Link, Paragraph, Text, Code } from "@dynatrace/strato-components/typography";
 import { showToast } from "@dynatrace/strato-components/notifications";
 import { DownloadIcon, UploadIcon, DeleteIcon } from "@dynatrace/strato-icons";
-import { PRIORITIES, SCHEMA_VERSION, type EscalationPolicy, type Priority, type RoutingRules, type Schedule, type Service, type Settings, type Team, type UserContact } from "../../domain/contracts";
+import { PRIORITIES, SCHEMA_VERSION, type Priority, type Settings } from "../../domain/contracts";
+import { importConfig, type ConfigExport, type ImportResult } from "../../data/configImport";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { usePrefsState } from "../../hooks/prefs";
 import { isRuntimeMissing, setDemoPreference, validateSettings } from "../../hooks/domain";
@@ -44,18 +45,6 @@ const SCOPES = [
 const LEGACY_KEY = "problem-ack-states";
 const BUDGET_BYTES = 50 * 1024 * 1024;
 
-interface ConfigExport {
-  kind: "command-center-config";
-  schemaVersion: number;
-  exportedAt: string;
-  settings: Settings;
-  teams: Team[];
-  schedules: Schedule[];
-  policies: EscalationPolicy[];
-  services: Service[];
-  rules: RoutingRules;
-  contacts: UserContact[];
-}
 
 const SectionSurface = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => (
   <Surface padding={16} id={id}>
@@ -168,14 +157,20 @@ export const SettingsPage = () => {
   const runImport = async () => {
     const doc = importDoc;
     if (!doc) return;
+    let outcome: ImportResult | undefined;
     await mutate(async (s) => {
-      await s.saveSettings(doc.settings);
-      for (const t of doc.teams) await s.saveTeam(t);
-      for (const x of doc.schedules ?? []) await s.saveSchedule(x);
-      for (const x of doc.policies ?? []) await s.savePolicy(x);
-      for (const x of doc.services ?? []) await s.saveService(x);
-      if (doc.rules) await s.saveRules(doc.rules);
-      for (const x of doc.contacts ?? []) await s.saveContact(x);
+      outcome = await importConfig(s, doc, data.settings, data);
+      if (outcome.problems.length) {
+        throw new Error(`Nothing was imported: ${outcome.problems.slice(0, 5).map((p) => `${p.path}: ${p.message}`).join("; ")}`);
+      }
+      if (outcome.failed.length) {
+        throw new Error(
+          `Partially imported: ${outcome.written.length} saved, ${outcome.failed.length} failed (${outcome.failed
+            .slice(0, 5)
+            .map((f) => f.key)
+            .join(", ")})`,
+        );
+      }
     }, "Configuration imported").catch(() => undefined);
     setDraft(undefined);
   };

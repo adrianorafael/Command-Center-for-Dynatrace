@@ -268,13 +268,14 @@ interface Normalised {
 }
 
 /**
- * Stored actions are ordered and stale-checked by server time: `at` is clamped to the
- * record's `lastModifiedTime` (set by App State), so a client clock in the future cannot win.
+ * Stored actions are ordered and stale-checked by SERVER time: when App State reports the
+ * record's `lastModifiedTime`, it replaces the client's `at` (a client clock in the future or
+ * past cannot reorder or freeze anything). Without it, `at` is used (clamped to ≤ now later).
  */
 function normalise(a: PendingAction): Normalised {
   if (isStored(a)) {
     const server = a.lastModifiedTime;
-    const action = server !== undefined && Number.isFinite(server) && a.value.at > server ? { ...a.value, at: server } : a.value;
+    const action = server !== undefined && Number.isFinite(server) && a.value.at !== server ? { ...a.value, at: server } : a.value;
     return { key: a.key, action, by: a.lastModifiedBy ?? a.value.by ?? UNKNOWN_ACTOR };
   }
   return { key: `${a.at}.${a.clientId}.${a.type}`, action: a, by: a.by ?? UNKNOWN_ACTOR };

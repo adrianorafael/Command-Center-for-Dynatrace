@@ -334,3 +334,37 @@ describe("tick and report", () => {
     expect(output).toMatchObject({ reported: 0 });
   });
 });
+
+describe("review fixes: injection and redaction", () => {
+  it("#8 Slack escapes mrkdwn control characters (mentions, links)", async () => {
+    const n = { ...req("slack", "slack", "@ana"), subject: "<!channel> down", text: "see <https://evil.example|click> & <@U123>" };
+    const { calls } = await runScript(SEND_SLACK, { tickResult: tick("slack", [n]), credentials, respond: () => ({ status: 200, body: "ok" }) });
+    const body = JSON.parse(calls[0].init.body ?? "{}") as { text: string; blocks: { text?: { text: string } }[] };
+    const all = body.text + JSON.stringify(body.blocks);
+    expect(all).not.toMatch(/<!channel>|<@U123>|<https:\/\/evil/);
+    expect(body.blocks[0].text?.text).toContain("&lt;!channel&gt; down");
+    expect(body.text).toContain("&amp;");
+  });
+
+  it("#8 Teams escapes markdown link syntax in TextBlocks", async () => {
+    const n = { ...req("teams", "teams", "ana"), subject: "x", text: "[click](https://evil.example) *bold* `code`" };
+    const { calls } = await runScript(SEND_TEAMS, { tickResult: tick("teams", [n]), credentials, respond: () => ({ status: 202, body: "" }) });
+    const body = JSON.parse(calls[0].init.body ?? "{}") as { attachments: { content: { body: { text: string }[] } }[] };
+    const t = body.attachments[0].content.body[1].text;
+    expect(t).toContain("\\[click\\]\\(https://evil.example\\)");
+    expect(t).toContain("\\*bold\\*");
+    expect(t).toContain("\\`code\\`");
+  });
+
+  it("#18 secrets echoed deep in a provider response are redacted before truncation", async () => {
+    const { output } = await runScript(SEND_TWILIO_SMS, {
+      tickResult: tick("sms", [req("sms", "twilio", "+15550000002")]),
+      credentials,
+      // the token straddles the old 200-character cut: truncating first would leak a prefix of it
+      respond: () => ({ status: 400, body: "x".repeat(190) + TOKEN }),
+    });
+    assertNoSecrets(output);
+    expect(JSON.stringify(output)).not.toContain(TOKEN.slice(0, 10));
+    expect(JSON.stringify(output)).toContain("***");
+  });
+});

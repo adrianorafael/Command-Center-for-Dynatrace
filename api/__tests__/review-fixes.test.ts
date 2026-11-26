@@ -139,7 +139,7 @@ describe("#3 a failed ledger write is not sent", () => {
 describe("#9 lease", () => {
   it("defaults to a TTL above the longest tick", () => {
     expect(defaultSettings().engine.lockTtlSec).toBeGreaterThanOrEqual(MIN_LOCK_TTL_SEC);
-    expect(DEFAULT_LOCK_TTL_SEC).toBe(150);
+    expect(DEFAULT_LOCK_TTL_SEC).toBe(130);
   });
 
   it("aborts without writing when the lease is lost during the tick", async () => {
@@ -251,5 +251,24 @@ describe("#15/#21 source health", () => {
     expect(young.status["davis-problem"]).toBe("truncated");
     const old = await fetchSources(s, q(new Date(NOW - HOLD_INCOMPLETE_MS - 1).toISOString()), 1000, NOW);
     expect(old.problems).toHaveLength(1);
+  });
+});
+
+describe("archived incidents and source status are wired into the tick", () => {
+  it("does not resurrect an archived incident whose problem is still returned", async () => {
+    const { incidentIdFor } = await import("../../ui/app/domain/ids");
+    const r = repo();
+    const id = incidentIdFor({ source: "davis-problem", sourceId: "P-00001" });
+    await r.put(KEY.archive("20261126", id), { id, status: "resolved" });
+    const res = await runEngineTick({ reason: "schedule" }, { repo: r, runQuery: grail([problem("2026-11-26T09:00:00.000000000Z")]), now: () => NOW });
+    expect(res.counts.incidentsCreated).toBe(0);
+    expect(await createStore(r).listIncidents()).toHaveLength(0);
+  });
+
+  it("archivedBounds maps archive keys to resolve-time bounds", async () => {
+    const { archivedBounds } = await import("../lib/engine");
+    const m = archivedBounds([{ key: "arc.20261125.dp-p-00001" }, { key: "nope" }]);
+    expect([...m.keys()]).toEqual(["dp-p-00001"]);
+    expect(m.get("dp-p-00001")).toBeGreaterThanOrEqual(Date.parse("2026-11-25T00:00:00Z"));
   });
 });

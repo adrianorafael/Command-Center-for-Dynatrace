@@ -141,6 +141,10 @@ export function archiveResolvedBound(archiveKey: string): { id: string; bound: n
   return { id: m[4] ?? "", bound };
 }
 
+function isArchiveMap(a: ReadonlySet<string> | ReadonlyMap<string, number>): a is ReadonlyMap<string, number> {
+  return typeof (a as ReadonlyMap<string, number>).get === "function";
+}
+
 function maxLedgerCycle(ledger: readonly NotificationRecord[], incidentId: string): number {
   let max = 0;
   for (const r of ledger) if (r.incidentId === incidentId && r.cycle > max) max = r.cycle;
@@ -210,7 +214,9 @@ export function tick(input: TickInput): TickOutput {
       let revived = false;
       if (archived?.has(id)) {
         // Archived: only a genuinely newer re-trigger brings it back.
-        const bound = archived instanceof Map ? (archived.get(id) ?? Infinity) : now - settings.retention.resolvedVisibleHours * HOUR_MS;
+        const bound: number = isArchiveMap(archived)
+          ? (archived.get(id) ?? Infinity)
+          : now - settings.retention.resolvedVisibleHours * HOUR_MS;
         if (!(alert.sourceStatus === "ACTIVE" && alert.reopenedAt !== undefined && alert.reopenedAt > bound)) continue;
         revived = true;
       }
