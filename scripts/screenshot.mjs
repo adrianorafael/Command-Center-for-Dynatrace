@@ -42,6 +42,10 @@ for (const route of routes) {
   const page = await context.newPage();
   const errors = [];
   const consoleErrors = [];
+  const failedRequests = [];
+  page.on("response", (r) => {
+    if (r.status() >= 400) failedRequests.push(`${r.status()} ${new URL(r.url()).pathname}`);
+  });
   page.on("pageerror", (e) => errors.push(String(e.message ?? e)));
   page.on("console", (m) => {
     if (m.type() === "error") consoleErrors.push(m.text().slice(0, 300));
@@ -60,7 +64,7 @@ for (const route of routes) {
   await page.screenshot({ path: file, fullPage: true }).catch((e) => errors.push(`screenshot: ${e.message}`));
   const ok = errors.length === 0 && rootInfo.children > 0;
   if (!ok) failed = true;
-  report.push({ route, url, file, ok, rootChildren: rootInfo.children, textSample: rootInfo.text, errors, consoleErrors });
+  report.push({ route, url, file, ok, rootChildren: rootInfo.children, textSample: rootInfo.text, errors, consoleErrors, failedRequests });
   console.log(`${ok ? "OK  " : "FAIL"} ${route} → ${file} (root children: ${rootInfo.children}, errors: ${errors.length})`);
   await page.close();
 }

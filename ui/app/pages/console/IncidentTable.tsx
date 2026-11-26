@@ -346,17 +346,14 @@ export const IncidentTable = ({
         minWidth: 280,
         cell: ({ rowData }) => (
           <Flex flexDirection="column" gap={0} style={{ minWidth: 0 }}>
-            <TextEllipsis>
-              <Text textStyle="base-emphasized">{rowData.alert.title}</Text>
-            </TextEllipsis>
-            <TextEllipsis>
-              <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
-                <Text textStyle="small" fontStyle="code">
-                  #{rowData.alert.displayId ?? rowData.id}
-                </Text>
-                {rowData.alert.entities[0] ? ` · ${rowData.alert.entities[0].name ?? rowData.alert.entities[0].id}` : ""}
-              </Text>
-            </TextEllipsis>
+            <Text textStyle="base-emphasized">
+              <TextEllipsis>{rowData.alert.title}</TextEllipsis>
+            </Text>
+            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+              <TextEllipsis>
+                {`#${rowData.alert.displayId ?? rowData.id}${rowData.alert.entities[0] ? ` · ${rowData.alert.entities[0].name ?? rowData.alert.entities[0].id}` : ""}`}
+              </TextEllipsis>
+            </Text>
           </Flex>
         ),
       },
@@ -453,7 +450,6 @@ export const IncidentTable = ({
       onActiveRowChange={onActivate}
       loading={loading}
       columnVisibility={{ createdAt: false }}
-      height="max(420px, calc(100vh - 470px))"
     >
       <DataTable.Toolbar>
         <DataTable.LineWrap />
@@ -462,19 +458,19 @@ export const IncidentTable = ({
         <DataTable.DownloadData />
       </DataTable.Toolbar>
       <DataTable.SelectedRowsActions>
-        {(sel) => <BulkActions rows={sel.map((s) => s.originalRow)} onModal={onModal} />}
+        {(sel) => <BulkActions rows={sel.map((s) => s.originalRow as IncidentRow)} onModal={onModal} />}
       </DataTable.SelectedRowsActions>
       <DataTable.RowActions>
         {(row, { rowDensity }) => (
-          <RowQuickActions incident={row} size={rowDensity === "comfortable" ? "default" : rowDensity} onModal={onModal} />
+          <RowQuickActions incident={row as IncidentRow} size={rowDensity === "comfortable" ? "default" : rowDensity} onModal={onModal} />
         )}
       </DataTable.RowActions>
       <DataTable.ExpandableRow>
         {({ row }) => (
           <IncidentPreview
-            incident={row}
-            policy={data?.policies.find((p) => p.id === row.policyId)}
-            onOpen={() => onActivate(row.id)}
+            incident={row as IncidentRow}
+            policy={data?.policies.find((p) => p.id === (row as IncidentRow).policyId)}
+            onOpen={() => onActivate((row as IncidentRow).id)}
           />
         )}
       </DataTable.ExpandableRow>

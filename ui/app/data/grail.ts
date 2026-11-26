@@ -66,11 +66,13 @@ export const runQuery: RunQuery = async (query, options = {}) => {
       maxResultRecords: options.maxResultRecords ?? 1000,
     },
   });
+  // Poll responses carry no token; keep the one from queryExecute.
+  const requestToken = r.requestToken;
   while (r.state === "RUNNING" || r.state === "NOT_STARTED") {
-    if (!r.requestToken) throw new GrailQueryError("Query is running but returned no request token", r.state);
+    if (!requestToken) throw new GrailQueryError("Query is running but returned no request token", r.state);
     if (Date.now() >= deadline) throw new GrailQueryError(`Query did not finish within ${timeoutMs} ms`, r.state);
     r = await client.queryPoll({
-      requestToken: r.requestToken,
+      requestToken,
       requestTimeoutMilliseconds: Math.max(1, Math.min(slice, deadline - Date.now())),
     });
   }
