@@ -478,8 +478,10 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
     </div>
     <p class="note">Not requested on purpose: <code>automation:workflows:write</code> (only Dynatrace-provided apps may hold it),
       no Credential Vault scope (only the workflow reads secrets), no ingest scope.</p>
-    <p class="note">User search works for users assigned to the account that owns the environment — no extra IAM policy needed.
-      Scripts using a platform token or OAuth client need the <code>iam:users:read</code> (+ <code>iam:groups:read</code>) scope on that token.</p>
+    <p class="note"><b>Building teams</b> searches tenant users through the IAM API. The user doing it needs the account permission
+      <b>View users and groups</b> (<code>account-idm-read</code>) on one of their groups (Account Management → Group management →
+      Permissions, scope Account). Without it the API returns 403 "User not authorized" — even with a token holding every scope,
+      because a token never exceeds its owner's permissions. Operators who only work the console don't need it.</p>
   </div>
 </section>
 
@@ -550,7 +552,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
           <tr><td>Deploy fails — app must be signed</td>
               <td>The app ID must start with <code>my.</code> for unsigned apps.</td></tr>
           <tr><td>User picker finds nobody, or IAM returns 403 "User not authorized"</td>
-              <td>Type at least 3 characters; only users of this environment are listed. A 403 means the caller is not assigned to the account that owns the environment, or (for scripts) the platform token / OAuth client lacks the <code>iam:users:read</code> (+ <code>iam:groups:read</code>) scope.</td></tr>
+              <td>Type at least 3 characters; only users of this environment are listed. A 403 means your user lacks the account permission <b>View users and groups</b> (<code>account-idm-read</code>): Account Management → Group management → Permissions, scope Account. A token cannot work around it — it never exceeds its owner's permissions.</td></tr>
           <tr><td>Vault entry cannot be saved as "without app context"</td>
               <td>Turn on <b>Owner access only</b>; the platform rejects public entries usable without app context. The owner must be the workflow actor.</td></tr>
           <tr><td>Configuration lost</td>

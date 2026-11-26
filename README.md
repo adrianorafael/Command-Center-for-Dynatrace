@@ -212,8 +212,8 @@ in `ui/app/domain/` and shared by the UI and the app functions.
 - Permission to deploy apps (`npx dt-app deploy`), to create workflows, and — for paging — to manage Credential Vault
   entries and the External requests allowlist (usually an environment admin)
 - Accounts at the notification providers you want to use (Twilio and/or IFTTT by default)
-- People who build teams must be assigned to the Dynatrace account that owns the environment (see
-  [User permissions](#user-permissions-iam-policies))
+- People who build teams need the account permission **View users and groups** (`account-idm-read`) on one of their
+  groups (see [User permissions](#user-permissions-iam-policies)); console-only operators don't
 
 ```bash
 npm install
@@ -324,13 +324,10 @@ Adding a scope after deployment requires every existing user to re-authorize on 
 A declared scope is not enough: the app acts with the **user's** effective permissions, so users also need IAM
 policies granting the underlying permissions (Grail read for the event tables, App State, workflow read/run).
 
-**User search (team members).** Inside the app, the `iam:users:read` scope comes from `app.config.json`; no extra IAM
-policy is needed. Per the `@dynatrace-sdk/client-iam` documentation the user "does not need any permissions" in such an
-environment — the caller only has to be **assigned to the account that owns the environment**.
-
-**Scripts and integrations** that call the IAM API with a **platform token or OAuth client** need that token to carry the
-`iam:users:read` scope (and `iam:groups:read` for groups). A `403 "User not authorized"` means the caller is not assigned
-to the account, or the token lacks the scope — observed with a platform token created without `iam:users:read`.
+**User search (team members).** Building teams searches tenant users through the IAM API. The user doing it needs the account permission
+**View users and groups** (`account-idm-read`) on one of their groups (Account Management → Group management →
+Permissions, scope **Account**). Without it the API returns `403 "User not authorized"` — even with a token holding
+every scope, because a token never exceeds its owner's permissions. Operators who only work the console don't need it.
 
 ## Setting up paging, step by step
 
@@ -746,7 +743,7 @@ fetch dt.davis.events, from: now() - 72h
 | Deploy rejected because of the version | `app.version` must be higher than the version installed in that environment. |
 | "invalid scopes" on `dt-app auth` | The tenant or your user lacks IAM grants for a scope in `app.config.json`. |
 | Deploy fails — app must be signed | The app ID must start with `my.` for unsigned apps. |
-| User picker finds nobody, or IAM returns 403 "User not authorized" | Type at least 3 characters; only users of this environment are listed. A 403 means the caller is not assigned to the account that owns the environment, or (for scripts) the platform token / OAuth client lacks the `iam:users:read` (+ `iam:groups:read`) scope. |
+| User picker finds nobody, or IAM returns 403 "User not authorized" | Type at least 3 characters; only users of this environment are listed. A 403 means your user lacks the account permission **View users and groups** (`account-idm-read`): Account Management → Group management → Permissions, scope Account, on one of your groups. A token cannot work around it — it never exceeds its owner's permissions. |
 | Vault entry cannot be saved as "without app context" | Turn on **Owner access only**; the platform rejects public entries usable without app context. The owner must be the workflow actor. |
 | Configuration lost | An admin cleared App State, or the app was uninstalled. Import your last export (Settings → Export and import). |
 
@@ -788,7 +785,7 @@ Verified in a Dynatrace environment:
 - **end to end:** Events API → Davis problem → engine → routing by `cc.service` (from the Davis event) → schedule
   on-call → **generic webhook** provider via a Credential Vault entry → delivered (status `sent`) → `report` updates
   the ledger;
-- the IAM 403 for a platform token without the `iam:users:read` scope, and the vault rule "owner access only" for
+- the IAM 403 for a user without **View users and groups** (`account-idm-read`), and the vault rule "owner access only" for
   contextless entries.
 
 | Provider | Status |
