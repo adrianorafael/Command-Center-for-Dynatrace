@@ -112,7 +112,7 @@ const InboundTab = () => {
             <Strong>1. Davis problems</Strong> are picked up automatically from Grail. No setup is needed.
           </Paragraph>
           <Paragraph>
-            <Strong>2. Custom events</Strong> from any tool are sent to the Dynatrace Events API and read from Grail by the engine.
+            <Strong>2. Custom events</Strong> from any tool are sent to the Dynatrace Events API v2. They open Davis problems, which the engine reads from Grail.
           </Paragraph>
           <Paragraph>
             <Strong>3. Routing rules</Strong> in Services decide the team, escalation policy and priority of every incident.
@@ -140,7 +140,7 @@ const InboundTab = () => {
       <Flex flexDirection="column" gap={8}>
         <Heading level={3}>Send an event</Heading>
         <Paragraph>
-          Create an access token with the <Code>{TOKEN_SCOPE}</Code> scope and post the event to your environment. Replace{" "}
+          Create a platform token with the <Code>{TOKEN_SCOPE}</Code> permission and post the event to your environment: it becomes a Davis event that opens a Davis problem, and the cc.* properties travel with it for routing. Replace{" "}
           <Code>YOUR-ENVIRONMENT</Code> and <Code>&lt;TOKEN&gt;</Code>. Store the token in your tool's secret store, never in scripts.
         </Paragraph>
         <SendEventSnippets />

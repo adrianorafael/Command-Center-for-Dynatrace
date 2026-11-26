@@ -5,8 +5,19 @@ import type { DirectoryUser } from "../domain/contracts";
 import { searchDirectory } from "../hooks/domain";
 import { useAppData } from "../hooks/AppDataContext";
 import { initials } from "./format";
+import { FieldError } from "./FieldHint";
 
 const MIN_CHARS = 3;
+export const FORBIDDEN =
+  "Your user needs iam:users:read (and iam:groups:read) to search tenant users. Ask an admin to grant it in Account Management → Policies.";
+
+/** IAM returns 403 "User not authorized" without the user-level IAM policy, even with the app scope. */
+function isForbidden(e: unknown): boolean {
+  if (typeof e !== "object" || e === null) return false;
+  const status = (e as { response?: { status?: unknown }; status?: unknown }).response?.status ?? (e as { status?: unknown }).status;
+  const msg = e instanceof Error ? e.message : "";
+  return status === 403 || /\b403\b|not authorized|forbidden/i.test(msg);
+}
 
 /**
  * Tenant IAM user type-ahead (DESIGN §6.5). Server-side search (≥3 chars), debounced 300 ms,
@@ -54,7 +65,7 @@ export const UserPicker = ({
         .catch((e: unknown) => {
           if (mine !== seq.current) return;
           setResults([]);
-          setError(e instanceof Error ? e.message : "Search failed");
+          setError(isForbidden(e) ? FORBIDDEN : e instanceof Error ? e.message : "Search failed");
         })
         .finally(() => mine === seq.current && setLoading(false));
     }, 300);
@@ -67,6 +78,7 @@ export const UserPicker = ({
   const options = selectedKnown ? [selectedKnown, ...visible] : visible;
 
   return (
+    <>
     <Select
       name={name}
       value={value}
@@ -90,8 +102,10 @@ export const UserPicker = ({
         ))}
       </Select.Content>
       <Select.EmptyState>
-        {error ? `Couldn't search users: ${error}` : q.trim().length < MIN_CHARS ? "Type at least 3 characters" : "No users found"}
+        {error === FORBIDDEN ? "No permission to search users" : error ? `Couldn't search users: ${error}` : q.trim().length < MIN_CHARS ? "Type at least 3 characters" : "No users found"}
       </Select.EmptyState>
     </Select>
+    {error === FORBIDDEN && <FieldError>{FORBIDDEN}</FieldError>}
+    </>
   );
 };

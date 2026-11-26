@@ -3,7 +3,7 @@ import { CodeSnippet } from "@dynatrace/strato-components/content";
 import { Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { Paragraph } from "@dynatrace/strato-components/typography";
-import { RESOLVE_NOTE, SNIPPETS } from "./snippets";
+import { EVENT_SOURCE_NOTE, RESOLVE_NOTE, SNIPPETS } from "./snippets";
 
 /** "Send an event" snippets in tabs, one shared constant for Integrations and Help (DESIGN §10.1). */
 export const SendEventSnippets = () => {
@@ -22,6 +22,7 @@ export const SendEventSnippets = () => {
         ))}
       </Tabs>
       <Paragraph>{RESOLVE_NOTE}</Paragraph>
+      <Paragraph>{EVENT_SOURCE_NOTE}</Paragraph>
     </Flex>
   );
 };

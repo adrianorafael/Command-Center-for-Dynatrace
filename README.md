@@ -50,16 +50,17 @@ data model carries over (see [Upgrading from 1.x](#upgrading-from-1x)).
 9. [Required OAuth Scopes](#required-oauth-scopes)
 10. [Setting up paging, step by step](#setting-up-paging-step-by-step)
 11. [Sending events](#sending-events)
-12. [Data model and App State](#data-model-and-app-state)
-13. [Important Behaviors](#important-behaviors)
-14. [Query Cost & Consumption (DPS)](#query-cost--consumption-dps)
-15. [Security and privacy](#security-and-privacy)
-16. [Troubleshooting](#troubleshooting)
-17. [Testing](#testing)
-18. [Limitations and unverified behaviour](#limitations-and-unverified-behaviour)
-19. [Relevant File Structure](#relevant-file-structure)
-20. [Available Scripts](#available-scripts)
-21. [Versioning & Changelog](#versioning--changelog)
+12. [Configuration as code](#configuration-as-code)
+13. [Data model and App State](#data-model-and-app-state)
+14. [Important Behaviors](#important-behaviors)
+15. [Query Cost & Consumption (DPS)](#query-cost--consumption-dps)
+16. [Security and privacy](#security-and-privacy)
+17. [Troubleshooting](#troubleshooting)
+18. [Testing](#testing)
+19. [Limitations and unverified behaviour](#limitations-and-unverified-behaviour)
+20. [Relevant File Structure](#relevant-file-structure)
+21. [Available Scripts](#available-scripts)
+22. [Versioning & Changelog](#versioning--changelog)
 
 Detailed guides: [inbound events](docs/guides/inbound-events.md) ·
 [outbound notifications](docs/guides/outbound-notifications.md) ·
@@ -211,6 +212,8 @@ in `ui/app/domain/` and shared by the UI and the app functions.
 - Permission to deploy apps (`npx dt-app deploy`), to create workflows, and — for paging — to manage Credential Vault
   entries and the External requests allowlist (usually an environment admin)
 - Accounts at the notification providers you want to use (Twilio and/or IFTTT by default)
+- For people who build teams: an IAM policy granting `iam:users:read` and `iam:groups:read` (see
+  [User permissions](#user-permissions-iam-policies))
 
 ```bash
 npm install
@@ -314,9 +317,23 @@ Not requested, on purpose:
 - **No Credential Vault scope** — the app never reads secrets; only the workflow's sender tasks do.
 - **No ingest scope** — the app never writes to Grail.
 
-Adding a scope after deployment requires every existing user to re-authorize on next load. Users also need IAM
-policies that allow them to use the app and grant the underlying permissions (Grail read for the event tables, App
-State, IAM user read, workflow read/run); the exact policy statements depend on how your account is organised.
+Adding a scope after deployment requires every existing user to re-authorize on next load.
+
+### User permissions (IAM policies)
+
+A declared scope is not enough: the app acts with the **user's** effective permissions, so users also need IAM
+policies granting the underlying permissions (Grail read for the event tables, App State, workflow read/run).
+
+**People who build teams need `iam:users:read` (and `iam:groups:read`).** Verified: without an effective grant the IAM
+API answers `403 "User not authorized"` and the user picker stays empty, even though the app declares the scope. Fix:
+**Account Management → Identity & access management → Policies** → create a policy with
+
+```
+ALLOW iam:users:read;
+ALLOW iam:groups:read;
+```
+
+and bind it to the group of the people who manage teams.
 
 ## Setting up paging, step by step
 
@@ -347,9 +364,14 @@ Without this, `tick` fails and nobody is paged — the console shows the "paging
 
 ### Step 3 — Create Credential Vault entries
 
-One entry per provider you use (Credential Vault → Add credential), with the **AppEngine** scope selected,
-**Allow access without app context** turned on (workflow tasks run without app context), and access for the workflow
-actor.
+One entry per provider you use, created in the platform **Credential Vault** (entry IDs look like
+`CREDENTIAL_VAULT_ENTRY-…`; classic `CREDENTIALS_VAULT-…` IDs are also accepted). On each entry:
+
+1. scope **AppEngine** selected;
+2. **Allow access without app context** turned **on** (workflow tasks run without app context);
+3. **Owner access only** turned **on** — required: the platform rejects an entry that is both public and usable
+   without app context;
+4. therefore the entry's **owner must be the workflow actor**, because only the owner can read it.
 
 | Provider | Credential type | Contents |
 | --- | --- | --- |
@@ -360,11 +382,12 @@ actor.
 | Telegram | Token | The bot token (the user's contact address is the chat ID) |
 | Generic webhook | Token (or username and password) | The full `https://` URL of your endpoint; optionally an auth header value |
 
-Command Center stores only the entry ID (`CREDENTIALS_VAULT-…`), never the secret.
+Command Center stores only the entry ID (`CREDENTIAL_VAULT_ENTRY-…` or `CREDENTIALS_VAULT-…`), never the secret.
 
 ### Step 4 — Allow the provider hosts (External requests)
 
-**Settings → General → Environment management → External requests** — add the hosts of the providers you use:
+**Settings → General → Environment management → External requests** (settings schema
+`builtin:dt-javascript-runtime.allowed-outbound-connections`) — add the hosts of the providers you use:
 
 | Provider | Host |
 | --- | --- |
@@ -481,6 +504,33 @@ On this default path the incident **is the Davis problem**: it resolves when Dav
 out or the problem ends), or when an operator resolves it. `cc.dedup_key` and `cc.action` have **no effect** on
 problems. They apply only to the optional Davis-events source and to the generic-events convention — see the
 [inbound events guide](docs/guides/inbound-events.md) for all three paths.
+
+## Configuration as code
+
+The app function `config` exports and imports the whole configuration (settings, teams, schedules, policies,
+services, routing rules, contacts), so you can keep it in Git or seed a new environment from CI.
+
+```bash
+# export
+curl -X POST "https://YOUR-ENVIRONMENT.apps.dynatrace.com/platform/app-engine/app-functions/v1/apps/my.command.center/api/config" \
+  -H "Authorization: Bearer YOUR-PLATFORM-TOKEN" -H "Content-Type: application/json" \
+  -d '{"op":"export"}' > command-center-config.json
+
+# validate an import without writing, then import
+#   body: {"op":"import","bundle":{ "teams":[…], "schedules":[…], … },"dryRun":true}
+```
+
+- **Export** returns `{ ok, bundle: { settings, teams, schedules, policies, services, rules, contacts } }`.
+- **Import** takes `{ op: "import", bundle, dryRun }`. Every entity in the bundle is validated (references are checked
+  against the bundle plus what already exists) before anything is written; on any error nothing is written and
+  `errors[]` lists entity, path and message. `dryRun: true` only validates and returns the counts it would write.
+- Import **upserts by ID** and never deletes: entities not in the bundle stay. Settings in the bundle are merged into
+  the current settings.
+- The function runs with the **caller's** permissions: the token's user needs `app-engine:apps:run` (required for any
+  custom app function) and App State read/write.
+- The bundle contains contact methods (phone numbers) — treat the file as personal data.
+
+The Settings page's **Export and import** writes a file with the same entities.
 
 ## Data model and App State
 
@@ -692,14 +742,15 @@ fetch dt.davis.events, from: now() - 72h
 | `tick` fails with HTTP 404 | The workflow was generated for a different app ID. Download the workflow JSON again from Integrations and re-import it. |
 | No incidents appear | Check Settings → Event sources, then whether the event reached Grail (`fetch dt.davis.events` in a Notebook) and whether Davis opened a problem. Events below the problem-opening types do not open problems: enable the Davis-events source. |
 | Routing ignores `cc.service` | The service name or ID does not match a service in Command Center, or a routing rule with an explicit service matched first. Use **Services → Test a rule**. |
-| A notification shows **failed** | Open the incident's **Notifications** tab for the provider error. Usual causes: host missing in **External requests**, vault entry without **Allow access without app context**, actor without access to the vault entry, wrong vault entry type, phone number not in E.164. |
+| A notification shows **failed** | Open the incident's **Notifications** tab for the provider error. Usual causes: host missing in **External requests**, vault entry without **Allow access without app context**, vault entry not owned by the workflow actor, wrong vault entry type, phone number not in E.164. |
 | A notification shows **timeout** | The `report` task did not run or failed. Check the workflow execution; the engine retries up to 3 attempts. |
 | Run engine now / Send test fail, or "Escalation recorded, but the engine didn't start" | You cannot see the private engine workflow (owner-only), the workflow ID in Settings is wrong (use **Save this ID**), or demo mode is on. An escalation is still sent by the next scheduled run. |
 | "Update available" on the Workflows tab | The app was upgraded. Download the workflow JSON and upload it over the existing workflow (keep the service-user actor). |
 | Deploy rejected because of the version | `app.version` must be higher than the version installed in that environment. |
 | "invalid scopes" on `dt-app auth` | The tenant or your user lacks IAM grants for a scope in `app.config.json`. |
 | Deploy fails — app must be signed | The app ID must start with `my.` for unsigned apps. |
-| User picker finds nobody | Type at least 3 characters. Only users of this environment are listed; you need `iam:users:read`. |
+| User picker finds nobody, or IAM returns 403 "User not authorized" | Type at least 3 characters. Only users of this environment are listed. Your user needs an effective IAM policy `ALLOW iam:users:read; ALLOW iam:groups:read;` — the app's declared scope alone is not enough. |
+| Vault entry cannot be saved as "without app context" | Turn on **Owner access only**; the platform rejects public entries usable without app context. The owner must be the workflow actor. |
 | Configuration lost | An admin cleared App State, or the app was uninstalled. Import your last export (Settings → Export and import). |
 
 More in the [operations runbook](docs/guides/operations-runbook.md).
@@ -731,14 +782,30 @@ Test every channel in your environment with **Send test notification** before re
 
 ## Limitations and unverified behaviour
 
-Verified in a Dynatrace environment: event ingest through both endpoints, Davis opening problems for the five event types
-above, `cc.*` properties on Davis events and their copy onto problems, queries Q1, Q2 and Q4, and the imported engine
-workflow running `tick` → 8 senders → `report` successfully every minute with Workflows authorization settings enabled.
+Verified in a Dynatrace environment:
+
+- event ingest through both endpoints, and Davis opening problems for the five event types above;
+- `cc.*` properties on Davis events and their copy onto problems; queries Q1, Q2 and Q4;
+- the imported engine workflow running `tick` → 8 senders → `report` every minute with Workflows authorization
+  settings enabled;
+- **end to end:** Events API → Davis problem → engine → routing by `cc.service` (from the Davis event) → schedule
+  on-call → **generic webhook** provider via a Credential Vault entry → delivered (status `sent`) → `report` updates
+  the ledger;
+- the IAM 403 without `iam:users:read` / `iam:groups:read` grants, and the vault rule "owner access only" for
+  contextless entries.
+
+| Provider | Status |
+| --- | --- |
+| Generic webhook | ✅ verified live (delivered, ledger updated) |
+| Twilio SMS / voice / WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implemented per vendor documentation, **not exercised live** |
 
 Not verified, or only partly:
 
 - ⚠️ **Q3 (generic events)** parses and runs but was not validated with data; the `events` convention is untested end to end.
-- **Provider APIs** were implemented from vendor documentation; each channel must be tested in your environment.
+- **Twilio, IFTTT, Slack, Teams and Telegram senders** were implemented from vendor documentation and not exercised
+  live; test each channel you enable with **Send test notification**.
+- **Vault entries owned by a service-user actor** — how a service user becomes an entry's owner in your environment
+  was not verified; the live test used a person as actor and owner.
 - **Minimal actor permission set** — the set in Step 1 works; which items are strictly required was not isolated.
 - **Problems open longer than the lookback** (default 72 h) are not returned by Q1; the incident stays open until
   resolved by an operator or a later CLOSED record.
@@ -756,6 +823,7 @@ app.config.json                    app id, version, scopes, environment placehol
 api/
   engine-tick.function.ts          app function called by the workflow's tick task
   delivery-report.function.ts      app function called by the workflow's report task
+  config.function.ts               app function: configuration as code (export / import)
   lib/                             engine run, sources (Q1–Q4), lease, delivery report
 ui/app/
   domain/                          pure TypeScript core (no React, no SDK)
