@@ -1,9 +1,18 @@
 import React, { useMemo } from "react";
 import { Grid, Surface, Flex } from "@dynatrace/strato-components/layouts";
-import { MeterBarChart, MultiMeterBarChart, SingleValue, Sparkline, type Timeseries } from "@dynatrace/strato-components/charts";
+import { MeterBarChart, MultiMeterBarChart, Sparkline, type Timeseries } from "@dynatrace/strato-components/charts";
+import { Skeleton } from "@dynatrace/strato-components/content";
 import { Text } from "@dynatrace/strato-components/typography";
-import { AccountIcon, CheckmarkIcon, ClockIcon, CriticalIcon, NotificationActiveIcon, StackedBarChartIcon } from "@dynatrace/strato-icons";
+import {
+  AccountIcon,
+  CheckmarkIcon,
+  ClockIcon,
+  CriticalIcon,
+  NotificationActiveIcon,
+  StackedBarChartIcon,
+} from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
+import Typography from "@dynatrace/strato-design-tokens/typography";
 import { PRIORITIES, type Incident, type Priority } from "../../domain/contracts";
 import { PRIORITY_COLOR } from "../../components/PriorityChip";
 import { formatDuration } from "../../components/format";
@@ -13,14 +22,21 @@ const HOUR = 3_600_000;
 
 function hourlyCreated(incidents: Incident[], now: number): Timeseries {
   const start = Math.floor(now / HOUR) * HOUR - 23 * HOUR;
-  const buckets = Array.from({ length: 24 }, (_, i) => ({ start: start + i * HOUR, value: 0 }));
+  const buckets = Array.from({ length: 24 }, (_, i) => ({
+    start: start + i * HOUR,
+    value: 0,
+  }));
   incidents.forEach((i) => {
     const idx = Math.floor((i.createdAt - start) / HOUR);
     if (idx >= 0 && idx < 24) buckets[idx].value++;
   });
   return {
     name: "Incidents created",
-    datapoints: buckets.map((b) => ({ start: new Date(b.start), end: new Date(b.start + HOUR), value: b.value })),
+    datapoints: buckets.map((b) => ({
+      start: new Date(b.start),
+      end: new Date(b.start + HOUR),
+      value: b.value,
+    })),
   };
 }
 
@@ -31,8 +47,8 @@ function median(values: number[]): number | undefined {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
-/** Every tile has the same three rows: header (icon + label), value, footer. Same heights → same value font size. */
-const VALUE_HEIGHT = 48;
+/** Every tile has the same three rows: header (icon + label), value, footer. */
+const VALUE_HEIGHT = 40;
 const FOOTER_MIN_HEIGHT = 36;
 
 /**
@@ -52,6 +68,41 @@ const TileFooter = ({ children }: { children: React.ReactNode }) => (
     {children}
   </Flex>
 );
+
+/**
+ * KPI number in the Heading Level 1 type tokens. Not `SingleValue`: its auto-fit sizes each tile's number from that
+ * tile's own box and text length (measured 33/42/60 px side by side), so a strip of tiles never matched.
+ */
+const KpiValue = ({
+  value,
+  label,
+  loading,
+  color,
+}: {
+  value: string | number;
+  label: string;
+  loading: boolean;
+  color?: string;
+}) =>
+  loading ? (
+    <Skeleton width={64} height={VALUE_HEIGHT} />
+  ) : (
+    <Text
+      aria-label={`${label}: ${value}`}
+      style={{
+        display: "block",
+        fontFamily: Typography.Heading.Level1.Family,
+        fontWeight: Typography.Heading.Level1.Weight,
+        fontSize: Typography.Heading.Level1.Size,
+        lineHeight: `${VALUE_HEIGHT}px`,
+        fontVariantNumeric: "tabular-nums",
+        whiteSpace: "nowrap",
+        ...(color ? { color } : {}),
+      }}
+    >
+      {value}
+    </Text>
+  );
 
 const Subdued = ({ children }: { children: React.ReactNode }) => (
   <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
@@ -113,9 +164,7 @@ export const KpiStrip = ({
     const mine = open.filter((i) => i.assignee?.type === "user" && i.assignee.id === me);
     const dayStart = new Date(now).setHours(0, 0, 0, 0);
     const mtta = median(
-      incidents
-        .filter((i) => i.acknowledgedAt && i.acknowledgedAt >= dayStart)
-        .map((i) => (i.acknowledgedAt ?? 0) - i.createdAt),
+      incidents.filter((i) => i.acknowledgedAt && i.acknowledgedAt >= dayStart).map((i) => (i.acknowledgedAt ?? 0) - i.createdAt),
     );
     const ackLastHour = incidents.filter((i) => i.acknowledgedAt && i.acknowledgedAt >= now - HOUR).length;
     const ackPrevHour = incidents.filter(
@@ -125,7 +174,18 @@ export const KpiStrip = ({
       Priority,
       number
     >;
-    return { open, triggered, acknowledged, p1, mine, mtta, ackLastHour, ackPrevHour, byPriority, spark: hourlyCreated(incidents, now) };
+    return {
+      open,
+      triggered,
+      acknowledged,
+      p1,
+      mine,
+      mtta,
+      ackLastHour,
+      ackPrevHour,
+      byPriority,
+      spark: hourlyCreated(incidents, now),
+    };
   }, [incidents, now, me]);
 
   const trendDelta = k.ackLastHour - k.ackPrevHour;
@@ -140,7 +200,7 @@ export const KpiStrip = ({
         label="Show triggered incidents"
         onClick={() => onFilter({ status: ["triggered"] })}
         header={<TileHeader icon={<NotificationActiveIcon size="small" />}>Triggered</TileHeader>}
-        value={<SingleValue data={k.triggered.length} aria-label="Triggered" loading={loading} height={VALUE_HEIGHT} />}
+        value={<KpiValue value={k.triggered.length} label="Triggered" loading={loading} />}
         footer={
           <Sparkline
             data={k.spark}
@@ -156,7 +216,7 @@ export const KpiStrip = ({
         label="Show acknowledged incidents"
         onClick={() => onFilter({ status: ["acknowledged"] })}
         header={<TileHeader icon={<CheckmarkIcon size="small" />}>Acknowledged</TileHeader>}
-        value={<SingleValue data={k.acknowledged.length} aria-label="Acknowledged" loading={loading} height={VALUE_HEIGHT} />}
+        value={<KpiValue value={k.acknowledged.length} label="Acknowledged" loading={loading} />}
         footer={
           <Subdued>
             {trendDelta === 0
@@ -167,32 +227,34 @@ export const KpiStrip = ({
       />
       <Tile
         label="Show open P1 incidents"
-        onClick={() => onFilter({ status: ["triggered", "acknowledged", "snoozed"], priority: ["P1"] })}
+        onClick={() =>
+          onFilter({
+            status: ["triggered", "acknowledged", "snoozed"],
+            priority: ["P1"],
+          })
+        }
         header={
-          <TileHeader icon={<CriticalIcon size="small" style={k.p1.length > 0 ? { color: Colors.Icon.Critical.Default } : undefined} />}>
+          <TileHeader
+            icon={<CriticalIcon size="small" style={k.p1.length > 0 ? { color: Colors.Icon.Critical.Default } : undefined} />}
+          >
             Open P1
           </TileHeader>
         }
-        value={
-          <SingleValue
-            data={k.p1.length}
-            aria-label="Open P1"
-            loading={loading}
-            height={VALUE_HEIGHT}
-            color={k.p1.length > 0 ? critical : undefined}
-          />
+        value={<KpiValue value={k.p1.length} label="Open P1" loading={loading} color={k.p1.length > 0 ? critical : undefined} />}
+        footer={
+          <Subdued>
+            {k.p1.length === 0 ? "All clear" : p1Unacked > 0 ? `${p1Unacked} not acknowledged` : "All acknowledged"}
+          </Subdued>
         }
-        footer={<Subdued>{k.p1.length === 0 ? "All clear" : p1Unacked > 0 ? `${p1Unacked} not acknowledged` : "All acknowledged"}</Subdued>}
       />
       <Tile
         label="MTTA today"
         header={<TileHeader icon={<ClockIcon size="small" />}>MTTA today</TileHeader>}
         value={
-          <SingleValue
-            data={k.mtta === undefined ? "–" : formatDuration(k.mtta)}
-            aria-label="Median time to acknowledge today"
+          <KpiValue
+            value={k.mtta === undefined ? "–" : formatDuration(k.mtta)}
+            label="Median time to acknowledge today"
             loading={loading}
-            height={VALUE_HEIGHT}
             color={mttaOver ? critical : undefined}
           />
         }
@@ -200,8 +262,16 @@ export const KpiStrip = ({
           <>
             <MeterBarChart value={k.mtta ?? 0} min={0} max={ackTargetMs * 2} unit="millisecond" loading={loading} size="size8">
               <MeterBarChart.ThresholdIndicator value={ackTargetMs} color={Colors.Charts.Threshold.Bad.Default} name="Target" />
-              <MeterBarChart.ColorRule comparator="greater-than" matchValue={ackTargetMs} color={Colors.Charts.Threshold.Bad.Default} />
-              <MeterBarChart.ColorRule comparator="less-or-equal" matchValue={ackTargetMs} color={Colors.Charts.Threshold.Good.Default} />
+              <MeterBarChart.ColorRule
+                comparator="greater-than"
+                matchValue={ackTargetMs}
+                color={Colors.Charts.Threshold.Bad.Default}
+              />
+              <MeterBarChart.ColorRule
+                comparator="less-or-equal"
+                matchValue={ackTargetMs}
+                color={Colors.Charts.Threshold.Good.Default}
+              />
             </MeterBarChart>
             <Subdued>Target {formatDuration(ackTargetMs)}</Subdued>
           </>
@@ -211,13 +281,13 @@ export const KpiStrip = ({
         label="Show incidents assigned to me"
         onClick={() => onFilter({ assignee: ["me"] })}
         header={<TileHeader icon={<AccountIcon size="small" />}>Assigned to me</TileHeader>}
-        value={<SingleValue data={k.mine.length} aria-label="Assigned to me" loading={loading} height={VALUE_HEIGHT} />}
+        value={<KpiValue value={k.mine.length} label="Assigned to me" loading={loading} />}
         footer={<Subdued>{k.mine.length === 0 ? "Nothing assigned to you" : `${mineTriggered} not acknowledged`}</Subdued>}
       />
       <Tile
         label="Open incidents by priority"
         header={<TileHeader icon={<StackedBarChartIcon size="small" />}>Open incidents</TileHeader>}
-        value={<SingleValue data={k.open.length} aria-label="Open incidents" loading={loading} height={VALUE_HEIGHT} />}
+        value={<KpiValue value={k.open.length} label="Open incidents" loading={loading} />}
         footer={
           <>
             <MultiMeterBarChart loading={loading} max="auto" size="size8">

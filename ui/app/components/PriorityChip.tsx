@@ -1,6 +1,5 @@
 import React from "react";
 import { Chip } from "@dynatrace/strato-components/content";
-import { SquareFilledIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Priority } from "../domain/contracts";
 
@@ -21,10 +20,18 @@ export const PRIORITY_COLOR: Record<Priority, string> = {
   P5: Colors.Charts.SecurityRiskLevel.None.Default,
 };
 
+const CHIP_COLOR: Record<Priority, "critical" | "warning" | "primary" | "neutral"> = {
+  P1: "critical",
+  P2: "critical",
+  P3: "warning",
+  P4: "primary",
+  P5: "neutral",
+};
+
 /**
- * One chip style for P1–P5 (owner decision, supersedes DESIGN §1.2's solid-P1 ramp): the same neutral emphasized
- * `Chip`, the same size and weight, and the same filled-square prefix colored with the priority's chart token, so a
- * priority reads as the same hue in tables, filters and charts. The text label always carries the meaning.
+ * One chip style for P1–P5 (owner decision, supersedes DESIGN §1.2's solid P1 + icon): the same `emphasized` variant,
+ * size, weight and width for every priority, text centered, no icon. Hue follows the DESIGN ramp; the label always
+ * carries the meaning (P1 and P2 share the red tint and differ by label).
  */
 export const PriorityChip = ({
   priority,
@@ -35,10 +42,13 @@ export const PriorityChip = ({
   size?: "default" | "condensed";
   count?: number;
 }) => (
-  <Chip color="neutral" variant="emphasized" size={size} aria-label={`Priority ${priority}`}>
-    <Chip.Prefix>
-      <SquareFilledIcon size="small" style={{ color: PRIORITY_COLOR[priority] }} />
-    </Chip.Prefix>
+  <Chip
+    color={CHIP_COLOR[priority]}
+    variant="emphasized"
+    size={size}
+    aria-label={`Priority ${priority}`}
+    style={{ minWidth: count === undefined ? 36 : 52, justifyContent: "center" }}
+  >
     {count === undefined ? priority : `${priority} ${count}`}
   </Chip>
 );

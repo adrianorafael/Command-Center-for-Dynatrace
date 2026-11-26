@@ -103,7 +103,7 @@ export const ShellHeader = () => {
       {/* Inside Dynatrace the logo and app name come from the platform automatically; offline the
           runtime reports "dt.missing.app.name", so name the app explicitly there. */}
       <AppHeader.Navigation>
-        {isRuntimeMissing() && <AppHeader.Logo appName="Command Center" />}
+        {isRuntimeMissing() && <AppHeader.Logo appName="Command Center" appIcon="/ui/assets/icons/command-center-icon.svg" />}
         <AppHeader.NavigationItem as={NavLink} to="/" end>
           Console
         </AppHeader.NavigationItem>

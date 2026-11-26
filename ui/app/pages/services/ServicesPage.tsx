@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
-import { Heading, Link, Paragraph, Text } from "@dynatrace/strato-components/typography";
+import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typography";
 import { FormField, Label, Select, Switch, TextArea } from "@dynatrace/strato-components/forms";
 import { PlayIcon, PlusIcon, SuccessIcon, XmarkIcon, LockIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
@@ -12,7 +12,7 @@ import type { Timeseries } from "@dynatrace/strato-components/charts";
 import { PRIORITIES, SCHEMA_VERSION, type Alert, type Priority, type RoutingRule, type Service } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { evaluateCondition, newId, routeAlert, ruleMatches } from "../../hooks/domain";
-import { CellEmpty, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
+import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { PriorityChip } from "../../components/PriorityChip";
@@ -74,11 +74,7 @@ const ServicesTab = ({ onNew }: { onNew: () => void }) => {
       header: "Service",
       accessor: "name",
       width: 200,
-      cell: ({ rowData }) => (
-        <Link as={RouterLink} to={`/services/${rowData.id}`}>
-          {rowData.name}
-        </Link>
-      ),
+      cell: ({ rowData }) => <CellLink to={`/services/${rowData.id}`}>{rowData.name}</CellLink>,
     },
     { id: "team", header: "Team", accessor: "team", width: 150 },
     { id: "policy", header: "Escalation policy", accessor: "policy", width: 200, cell: ({ rowData }) => <CellText>{rowData.policy}</CellText> },

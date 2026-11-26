@@ -1,6 +1,8 @@
 import React from "react";
+import { Link as RouterLink } from "react-router-dom";
+import { DataTable } from "@dynatrace/strato-components/tables";
 import { Tooltip } from "@dynatrace/strato-components/overlays";
-import { Text, TextEllipsis } from "@dynatrace/strato-components/typography";
+import { Link, Text, TextEllipsis } from "@dynatrace/strato-components/typography";
 import { Avatar, AvatarGroup } from "@dynatrace/strato-components/content";
 import { Flex } from "@dynatrace/strato-components/layouts";
 import Colors from "@dynatrace/strato-design-tokens/colors";
@@ -17,7 +19,14 @@ export const LIST_TABLE_VARIANT = {
 } as const;
 
 /** Single-line cell text: truncates with an ellipsis and shows the full text in a tooltip. */
+/**
+ * Custom cells don't get the default cell inset; DataTable.DefaultCell restores it so custom and
+ * plain cells line up with their headers.
+ */
+export const Cell = ({ children }: { children: React.ReactNode }) => <DataTable.DefaultCell>{children}</DataTable.DefaultCell>;
+
 export const CellText = ({ children, subdued, code }: { children: string; subdued?: boolean; code?: boolean }) => (
+  <Cell>
   <Tooltip text={children}>
     <Text
       fontStyle={code ? "code" : undefined}
@@ -26,19 +35,35 @@ export const CellText = ({ children, subdued, code }: { children: string; subdue
       <TextEllipsis>{children}</TextEllipsis>
     </Text>
   </Tooltip>
+  </Cell>
+);
+
+/** In-app link cell (context switch to a detail page), truncated with tooltip. */
+export const CellLink = ({ to, children }: { to: string; children: string }) => (
+  <Cell>
+    <Tooltip text={children}>
+      <Link as={RouterLink} to={to} style={{ display: "block", minWidth: 0, maxWidth: "100%" }}>
+        <TextEllipsis>{children}</TextEllipsis>
+      </Link>
+    </Tooltip>
+  </Cell>
 );
 
 /** Muted placeholder for empty cells ("None", "–"). */
-export const CellEmpty = ({ children = "–" }: { children?: string }) => <Text style={{ color: Colors.Text.Neutral.Subdued }}>{children}</Text>;
+export const CellEmpty = ({ children = "–" }: { children?: string }) => (
+  <Cell>
+    <Text style={{ color: Colors.Text.Neutral.Subdued }}>{children}</Text>
+  </Cell>
+);
 
 /** Small avatar + name, vertically centred, truncated with tooltip. */
 export const CellPerson = ({ name, subtitle }: { name: string; subtitle?: string }) => (
-  <Flex alignItems="center" style={{ minWidth: 0 }}>
+  <Cell>
     <Avatar size="small" abbreviation={initials(name)}>
       <Avatar.Label>{name}</Avatar.Label>
       {subtitle && <Avatar.Subtitle>{subtitle}</Avatar.Subtitle>}
     </Avatar>
-  </Flex>
+  </Cell>
 );
 
 /** Compact avatar group (names in tooltips), at most `max` avatars plus a "+n" count. */
@@ -46,6 +71,7 @@ export const CellPeople = ({ names, max = 5 }: { names: string[]; max?: number }
   if (!names.length) return <CellEmpty>No one</CellEmpty>;
   const shown = names.slice(0, max);
   return (
+    <Cell>
     <Flex alignItems="center" gap={4}>
       <AvatarGroup>
         {shown.map((n, i) => (
@@ -54,5 +80,6 @@ export const CellPeople = ({ names, max = 5 }: { names: string[]; max?: number }
       </AvatarGroup>
       {names.length > max && <Text textStyle="small">+{names.length - max}</Text>}
     </Flex>
+    </Cell>
   );
 };

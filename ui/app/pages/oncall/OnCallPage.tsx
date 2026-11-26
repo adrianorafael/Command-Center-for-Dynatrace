@@ -13,7 +13,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Channel, Schedule, ScheduleOverride } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { newId, onCallAt, onCallNowAndNext } from "../../hooks/domain";
-import { CellEmpty, CellPerson, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
+import { CellEmpty, CellPerson, CellText, LIST_TABLE_VARIANT, CellLink } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ShiftGantt, coverage } from "../../components/ShiftGantt";
@@ -231,11 +231,7 @@ const SchedulesTab = () => {
       header: "Name",
       accessor: "name",
       width: "1fr",
-      cell: ({ rowData }) => (
-        <Link as={RouterLink} to={`/on-call/schedules/${rowData.id}`}>
-          {rowData.name}
-        </Link>
-      ),
+      cell: ({ rowData }) => <CellLink to={`/on-call/schedules/${rowData.id}`}>{rowData.name}</CellLink>,
     },
     { id: "team", header: "Team", accessor: "team", width: 150 },
     { id: "tz", header: "Time zone", accessor: "timeZone", width: 170 },

@@ -188,14 +188,14 @@ export const ConsolePage = () => {
               "last updated" grouped next to it, right above the table they affect. The right group is its own
               Flex: the TimeframeSelector root carries align-self: start, which in the labelled filter row floated
               it 20 px above the fields. */}
-          <Flex gap={8} alignItems="flex-end" flexWrap="wrap">
+          <Flex gap={8} alignItems="flex-end">
             <SearchInput
               value={filters.q}
               onChange={(v) => setFilters({ q: v })}
               placeholder="Search title, ID, entity"
               aria-label="Search incidents"
             />
-            <Flex flexGrow={1} style={{ minWidth: 320 }}>
+            <Flex flexGrow={1} style={{ minWidth: 0 }}>
               <FilterBar
                 onFilterChange={() => undefined}
                 defaultPinnedState={{
@@ -293,7 +293,7 @@ export const ConsolePage = () => {
                 </FilterBar.Item>
               </FilterBar>
             </Flex>
-            <Flex alignItems="center" gap={8} flexWrap="wrap" justifyContent="flex-end" style={{ marginInlineStart: "auto" }}>
+            <Flex alignItems="center" gap={8} flexShrink={0}>
               <TimeframeSelector value={timeframe} onChange={setTimeframe}>
                 <TimeframeSelector.Trigger placeholder="Created: any time" aria-label="Created timeframe" />
               </TimeframeSelector>

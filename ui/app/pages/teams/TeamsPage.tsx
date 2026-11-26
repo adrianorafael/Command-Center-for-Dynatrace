@@ -1,17 +1,17 @@
 import React, { useMemo, useState } from "react";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Flex, PageLayout } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { SearchInput, FormField, Label, TextInput, TextArea, Select } from "@dynatrace/strato-components/forms";
 import { Modal } from "@dynatrace/strato-components/overlays";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
-import { Link, Text } from "@dynatrace/strato-components/typography";
+import { Text } from "@dynatrace/strato-components/typography";
 import { PlusIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import { PRIORITIES, SCHEMA_VERSION, type Priority, type Team } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { newId, onCallAt, validateTeam } from "../../hooks/domain";
-import { CellEmpty, CellPeople, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
+import { CellEmpty, CellPeople, CellText, LIST_TABLE_VARIANT, CellLink } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { PriorityChip } from "../../components/PriorityChip";
@@ -160,11 +160,7 @@ export const TeamsPage = () => {
       header: "Name",
       accessor: "name",
       width: 200,
-      cell: ({ rowData }) => (
-        <Link as={RouterLink} to={`/teams/${rowData.id}`}>
-          {rowData.name}
-        </Link>
-      ),
+      cell: ({ rowData }) => <CellLink to={`/teams/${rowData.id}`}>{rowData.name}</CellLink>,
     },
     {
       id: "members",
@@ -188,13 +184,7 @@ export const TeamsPage = () => {
       accessor: (r) => r.policyName ?? "",
       width: 200,
       cell: ({ rowData }) =>
-        rowData.policyId ? (
-          <Link as={RouterLink} to={`/escalations/${rowData.policyId}`}>
-            {rowData.policyName}
-          </Link>
-        ) : (
-          <CellEmpty>None</CellEmpty>
-        ),
+        rowData.policyId ? <CellLink to={`/escalations/${rowData.policyId}`}>{rowData.policyName ?? ""}</CellLink> : <CellEmpty>None</CellEmpty>,
     },
     { id: "services", header: "Services", accessor: "services", width: 90, sortType: "number" },
     {

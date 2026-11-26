@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from "react";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Flex, PageLayout } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
-import { Link, Text } from "@dynatrace/strato-components/typography";
+import { Text } from "@dynatrace/strato-components/typography";
 import { PlusIcon } from "@dynatrace/strato-icons";
 import type { EscalationPolicy } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { newId } from "../../hooks/domain";
-import { CellEmpty, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
+import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ConfirmModal } from "../../components/ConfirmModal";
@@ -66,11 +66,7 @@ export const PoliciesPage = () => {
       header: "Name",
       accessor: "name",
       width: 220,
-      cell: ({ rowData }) => (
-        <Link as={RouterLink} to={`/escalations/${rowData.id}`}>
-          {rowData.name}
-        </Link>
-      ),
+      cell: ({ rowData }) => <CellLink to={`/escalations/${rowData.id}`}>{rowData.name}</CellLink>,
     },
     { id: "team", header: "Team", accessor: "team", width: 140 },
     {
