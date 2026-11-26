@@ -1,7 +1,7 @@
 {
   "name": "command-center",
-  "version": "0.0.0",
-  "description": "Centralized problems management view for Dynatrace",
+  "version": "2.0.0",
+  "description": "NOC event console with on-call teams and escalation for Dynatrace",
   "scripts": {
     "build": "dt-app build",
     "start": "dt-app dev",
@@ -12,10 +12,13 @@
     "update": "dt-app update",
     "info": "dt-app info",
     "help": "dt-app help",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p ui/tsconfig.json && tsc -p api/tsconfig.json",
+    "check": "npm run lint && npm run typecheck && npm test && dt-app build"
   },
   "engines": {
-    "node": ">=16.13.0"
+    "node": ">=22"
   },
   "author": "",
   "license": "ISC",
@@ -50,6 +53,7 @@
     "eslint-plugin-react-hooks": "^6.1.1",
     "eslint-plugin-security": "^3.0.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.0"
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^5.1.2"
   }
 }
