@@ -58,7 +58,14 @@ const EntitiesTable = ({ entities }: { entities: EntityRef[] }) => {
   return <DataTable data={entities} columns={columns} rowId={(e) => e.id} fullWidth variant={{ rowDensity: "condensed" }} />;
 };
 
-const LedgerTable = ({ records }: { records: NotificationRecord[] }) => {
+/** NotificationRecord.step is an ordinal across passes: pass * steps + stepIndex. */
+function stepLabel(ordinal: number, steps: number | undefined): string {
+  if (!steps) return `${ordinal + 1}`;
+  const pass = Math.floor(ordinal / steps);
+  return pass > 0 ? `${(ordinal % steps) + 1} (repeat ${pass})` : `${(ordinal % steps) + 1}`;
+}
+
+const LedgerTable = ({ records, steps }: { records: NotificationRecord[]; steps?: number }) => {
   const { data, userName } = useAppData();
   const tz = data?.settings.ui.timeZone;
   const columns: DataTableColumnDef<NotificationRecord>[] = [
@@ -75,7 +82,7 @@ const LedgerTable = ({ records }: { records: NotificationRecord[] }) => {
       ),
     },
     { id: "to", header: "Recipient", accessor: (r) => r.to.name ?? userName(r.to.uid), width: 150 },
-    { id: "step", header: "Step", accessor: (r) => `${r.step + 1} (try ${r.attempt})`, width: 90 },
+    { id: "step", header: "Step", accessor: (r) => `${stepLabel(r.step, steps)} · try ${r.attempt}`, width: 150 },
     { id: "status", header: "Status", accessor: "status", width: 140, cell: ({ rowData }) => <DeliveryStatus status={rowData.status} /> },
     { id: "at", header: "Time", accessor: (r) => r.reportedAt ?? r.plannedAt, width: 90, cell: ({ value }) => <Text>{formatTime(Number(value), tz)}</Text> },
     { id: "error", header: "Details", accessor: (r) => r.error ?? r.providerRef ?? "", width: "1fr" },
@@ -275,7 +282,7 @@ export const IncidentDetails = ({ incident, onModal }: { incident: Incident; onM
         </Tab>
         <Tab title={`Notifications (${ledger.length})`} prefixIcon={<NotificationActiveIcon />}>
           <Flex paddingTop={12} flexDirection="column">
-            <LedgerTable records={ledger} />
+            <LedgerTable records={ledger} steps={policy?.steps.length} />
           </Flex>
         </Tab>
         <Tab title={`Entities (${incident.alert.entities.length})`} prefixIcon={<HostsIcon />}>

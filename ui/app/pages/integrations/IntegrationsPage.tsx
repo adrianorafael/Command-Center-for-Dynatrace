@@ -14,7 +14,7 @@ import { DownloadIcon, KeyIcon, PlayIcon, RefreshIcon, FlowIcon } from "@dynatra
 import type { Timeseries } from "@dynatrace/strato-components/charts";
 import type { ProviderConfig, Settings } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
-import { buildWorkflowJson, getEngineStatus, runEngineNow, validateProvider, type EngineWorkflowStatus } from "../../hooks/domain";
+import { exportWorkflowDefinition, getEngineStatus, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
 import { PageTitle } from "../../components/PageTitle";
 import { Health } from "../../components/StatusIndicator";
 import { ChannelIcon, CHANNEL_LABEL } from "../../components/ChannelIcon";
@@ -410,11 +410,11 @@ const WorkflowsTab = () => {
       }
     }
     try {
-      const json = buildWorkflowJson(s);
+      const { json, fileName } = exportWorkflowDefinition(s);
       const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
       const a = document.createElement("a");
       a.href = url;
-      a.download = "command-center-engine.workflow.json";
+      a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -435,7 +435,14 @@ const WorkflowsTab = () => {
   };
 
   const hb = data?.heartbeat;
-  const link = settings?.engine.workflowId ? workflowUrl(settings.engine.workflowId) : undefined;
+  const foundId = status?.workflowId;
+  const link = (foundId ?? settings?.engine.workflowId) ? workflowUrl(foundId ?? settings?.engine.workflowId ?? "") : workflowsAppUrl();
+  const adoptId = () => {
+    if (!settings || !foundId) return;
+    void mutate((st) => st.saveSettings(nextRev({ ...settings, engine: { ...settings.engine, workflowId: foundId } })), "Workflow ID saved")
+      .then(load)
+      .catch(() => undefined);
+  };
   const execs = status?.recentExecutions ?? [];
 
   return (
@@ -467,6 +474,18 @@ const WorkflowsTab = () => {
             </Text>
             <Text textStyle="small">Engine heartbeat: {hb ? `${formatRelative(hb.lastTickAt, now)} (${hb.durationMs} ms)` : "none yet"}</Text>
             {hb?.lastError && <Text textStyle="small">Last error: {hb.lastError}</Text>}
+            {foundId && <Text textStyle="small">Workflow ID: {foundId}</Text>}
+            {status?.foundByTitle && foundId && foundId !== settings?.engine.workflowId && (
+              <MessageContainer variant="warning">
+                <MessageContainer.Title>Found the engine workflow under a different ID</MessageContainer.Title>
+                <MessageContainer.Description>
+                  The uploaded workflow got a new ID. Save it in Settings so "Escalate now" and test notifications run the right workflow.
+                </MessageContainer.Description>
+                <MessageContainer.Actions>
+                  <Button onClick={adoptId}>Save this ID</Button>
+                </MessageContainer.Actions>
+              </MessageContainer>
+            )}
             <Flex gap={8} flexWrap="wrap">
               <Button color="primary" variant="accent" onClick={() => void download()}>
                 <Button.Prefix>
@@ -489,7 +508,7 @@ const WorkflowsTab = () => {
                 Refresh status
               </Button>
             </Flex>
-            {link && <ExternalLink href={link}>Open in Workflows</ExternalLink>}
+            {link && <ExternalLink href={link}>Open Workflows</ExternalLink>}
           </Flex>
         </Surface>
         <Surface padding={16}>

@@ -37,7 +37,8 @@ export interface RefContext {
 /** Entity ids are embedded in dot-delimited keys: `[a-z0-9_-]`, 1…64 chars. */
 export const ENTITY_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 export const E164_RE = /^\+[1-9]\d{6,14}$/;
-export const VAULT_ID_RE = /^CREDENTIALS_VAULT-[0-9A-F]{16}$/;
+/** Classic (CREDENTIALS_VAULT-…) and platform (CREDENTIAL_VAULT_ENTRY-…) entry ids — the latter verified on a tenant. */
+export const VAULT_ID_RE = /^(CREDENTIALS_VAULT|CREDENTIAL_VAULT_ENTRY)-[0-9A-F]{16}$/;
 const MAX_NAME = 120;
 
 const PHONE_CHANNELS: Channel[] = ["sms", "voice", "whatsapp"];
@@ -241,7 +242,7 @@ export function validateProvider(p: ProviderConfig, prefix = ""): ValidationErro
   c.name(`${prefix}name`, p.name);
   if (!CHANNELS.includes(p.channel)) c.add(`${prefix}channel`, "Unknown channel");
   if (p.credentialVaultId && !VAULT_ID_RE.test(p.credentialVaultId)) {
-    c.add(`${prefix}credentialVaultId`, "Use a Credential Vault id (CREDENTIALS_VAULT-…)");
+    c.add(`${prefix}credentialVaultId`, "Use a Credential Vault entry id (CREDENTIAL_VAULT_ENTRY-… or CREDENTIALS_VAULT-…)");
   }
   if (p.enabled && !p.credentialVaultId) c.add(`${prefix}credentialVaultId`, "Required to enable the provider");
   for (const [k, v] of Object.entries(p.params)) {

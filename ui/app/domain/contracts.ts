@@ -425,7 +425,7 @@ export interface ProviderConfig {
   channel: Channel;
   kind: ProviderKind;
   enabled: boolean;
-  /** Credential Vault entry ID (CREDENTIALS_VAULT-…). Never the secret itself. */
+  /** Credential Vault entry ID (CREDENTIAL_VAULT_ENTRY-… or classic CREDENTIALS_VAULT-…). Never the secret itself. */
   credentialVaultId?: string;
   /** Non-secret parameters: from-number, IFTTT event name, Telegram parse mode… */
   params: Record<string, string>;

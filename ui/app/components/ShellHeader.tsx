@@ -7,7 +7,7 @@ import { Menu } from "@dynatrace/strato-components/navigation";
 import { Avatar } from "@dynatrace/strato-components/content";
 import { NotificationActiveIcon, SettingIcon, WarningIcon } from "@dynatrace/strato-icons";
 import { useAppData } from "../hooks/AppDataContext";
-import { onCallAt } from "../hooks/domain";
+import { isRuntimeMissing, onCallAt } from "../hooks/domain";
 import { formatDayTime, initials, zoneAbbr } from "./format";
 
 interface OnCallEntry {
@@ -100,6 +100,9 @@ export const ShellHeader = () => {
   const navigate = useNavigate();
   return (
     <AppHeader>
+      {/* Inside Dynatrace the logo and app name come from the platform automatically; offline the
+          runtime reports "dt.missing.app.name", so name the app explicitly there. */}
+      {isRuntimeMissing() && <AppHeader.Logo appName="Command Center" />}
       <AppHeader.Navigation>
         <AppHeader.NavigationItem as={NavLink} to="/" end>
           Console

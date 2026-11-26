@@ -5,9 +5,8 @@
  */
 import type { Channel, DirectoryUser, EngineTickRequest, Settings } from "../domain/contracts";
 import type { Store } from "../data/repository";
-import { buildEngineWorkflowCreate } from "../data/workflows/definition";
 import { currentAppId, DEMO_ACTOR, getDirectory, getInstaller, getStore, isDemo, isRuntimeMissing, setDemoPreference } from "../data/demoMode";
-import { getCurrentUserDetails } from "@dynatrace-sdk/app-environment";
+import { getCurrentUserDetails, getEnvironmentUrl } from "@dynatrace-sdk/app-environment";
 
 // ─── A: pure domain ───────────────────────────────────────────────────────────
 export { effectiveIncident } from "../domain/incidents/actions";
@@ -54,10 +53,6 @@ export function searchDirectory(query: string): Promise<DirectoryUser[]> {
   return getDirectory().search(query);
 }
 
-export function installEngine(settings: Settings, actor?: string) {
-  return getInstaller().install(settings, actor ? { actor } : undefined);
-}
-
 export function getEngineStatus(settings: Settings) {
   return getInstaller().getStatus(settings);
 }
@@ -96,8 +91,18 @@ export function newId(prefix: string): string {
  * Engine workflow definition as importable JSON (third-party apps can't hold
  * automation:workflows:write, so admins upload it in the Workflows app).
  */
-export function buildWorkflowJson(settings: Settings): string {
-  const def = buildEngineWorkflowCreate({ appId: currentAppId(), settings });
-  return JSON.stringify(def, null, 2);
+export function exportWorkflowDefinition(settings: Settings): { fileName: string; json: string } {
+  return getInstaller().exportDefinition(settings);
+}
+
+/** Absolute link to the Workflows app, or undefined outside the platform. */
+export function workflowsAppUrl(): string | undefined {
+  try {
+    const base = getEnvironmentUrl();
+    if (!base || base.includes("missing")) return undefined;
+    return `${base.replace(/\/$/, "")}${getInstaller().workflowsAppPath()}`;
+  } catch {
+    return undefined;
+  }
 }
 export { currentAppId };
