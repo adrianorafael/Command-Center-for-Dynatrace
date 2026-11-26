@@ -13,7 +13,7 @@ export const DemoModeBanner = () => {
   if (!demo) return null;
   return (
     <Flex paddingX={16} paddingTop={8}>
-      <MessageContainer variant="primary">
+      <MessageContainer variant="primary" style={{ width: "100%" }}>
         <MessageContainer.Title>Demo mode</MessageContainer.Title>
         <MessageContainer.Description>
           You're viewing sample incidents, teams, and schedules. Actions don't send notifications.

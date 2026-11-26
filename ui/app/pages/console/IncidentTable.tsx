@@ -343,7 +343,7 @@ export const IncidentTable = ({
         header: "Incident",
         accessor: (r) => r.alert.title,
         width: "1fr",
-        minWidth: 280,
+        minWidth: 260,
         cell: ({ rowData }) => (
           <Flex flexDirection="column" gap={0} style={{ minWidth: 0 }}>
             <Text textStyle="base-emphasized">
@@ -376,7 +376,7 @@ export const IncidentTable = ({
         id: "source",
         header: "Source",
         accessor: (r) => SOURCE_LABEL[r.alert.source] ?? r.alert.source,
-        width: 140,
+        width: 130,
         cell: ({ rowData }) => (
           <Flex alignItems="center" gap={4}>
             {rowData.alert.source === "davis-problem" ? <AiIcon /> : <EventIcon />}
@@ -384,13 +384,13 @@ export const IncidentTable = ({
           </Flex>
         ),
       },
-      { id: "service", header: "Service", accessor: "serviceName", width: 150 },
-      { id: "team", header: "Team", accessor: "teamName", width: 130 },
+      { id: "service", header: "Service", accessor: "serviceName", width: 140 },
+      { id: "team", header: "Team", accessor: "teamName", width: 120 },
       {
         id: "assignee",
         header: "Assignee",
         accessor: "assigneeName",
-        width: 170,
+        width: 160,
         cell: ({ rowData }) => <AssigneeView assignee={rowData.assignee} />,
       },
       {
@@ -449,7 +449,7 @@ export const IncidentTable = ({
       activeRow={activeId}
       onActiveRowChange={onActivate}
       loading={loading}
-      columnVisibility={{ createdAt: false }}
+      columnVisibility={{ createdAt: false, source: false }}
     >
       <DataTable.Toolbar>
         <DataTable.LineWrap />
