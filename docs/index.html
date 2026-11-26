@@ -254,7 +254,7 @@
         <div class="meta">Built from daily rollups (~2 KB per day)</div></div>
       <div class="card"><span class="ico">⚙️</span><h3>Settings &amp; demo mode</h3>
         <p>Sources, defaults, engine limits, retention, configuration export/import, legacy-data cleanup. Demo mode with synthetic data for training and offline preview.</p>
-        <div class="meta">Settings apply to every user of the app</div></div>
+        <div class="meta">Config as code: the <code>config</code> app function exports and imports (with dry run) the whole configuration</div></div>
     </div>
   </div>
 </section>
@@ -414,6 +414,7 @@ Strato UI ── reads App State, writes configuration + append-only operator ac
 api/
 ├── engine-tick.function.ts     <span class="c"># called by the workflow's tick task</span>
 ├── delivery-report.function.ts <span class="c"># called by the workflow's report task</span>
+├── config.function.ts          <span class="c"># configuration as code: export / import (dry run)</span>
 └── lib/                        <span class="c"># engine run, sources Q1–Q4, lease, delivery</span>
 ui/app/
 ├── domain/                     <span class="c"># pure TS core: routing, schedules, escalation, actions, engine, reports</span>
@@ -477,6 +478,8 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
     </div>
     <p class="note">Not requested on purpose: <code>automation:workflows:write</code> (only Dynatrace-provided apps may hold it),
       no Credential Vault scope (only the workflow reads secrets), no ingest scope.</p>
+    <p class="note">User search works for users assigned to the account that owns the environment — no extra IAM policy needed.
+      Scripts using a platform token or OAuth client need the <code>iam:users:read</code> (+ <code>iam:groups:read</code>) scope on that token.</p>
   </div>
 </section>
 
@@ -489,9 +492,11 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
         <code>automation:workflows:read</code>, <code>credential-vault:entries:read</code>, Grail read (<code>storage:buckets:read</code>,
         <code>storage:events:read</code>) and <code>state:app-states:read/write/delete</code>.</li>
       <li><b>Authorization settings.</b> Workflows app → Settings → Authorization settings: enable those permissions for the user who acts as the workflow actor.</li>
-      <li><b>Credential Vault.</b> One entry per provider, scope <b>AppEngine</b>, <b>Allow access without app context</b> on,
-        accessible to the actor. Twilio: username/password (SID and token). IFTTT, Slack, Teams, Telegram, webhook: token.</li>
-      <li><b>External requests.</b> Allow <code>api.twilio.com</code>, <code>maker.ifttt.com</code>, <code>hooks.slack.com</code>,
+      <li><b>Credential Vault.</b> One platform vault entry per provider (IDs like <code>CREDENTIAL_VAULT_ENTRY-…</code>; classic
+        <code>CREDENTIALS_VAULT-…</code> also accepted): scope <b>AppEngine</b>, <b>Allow access without app context</b> on, and
+        <b>Owner access only</b> on (the platform rejects public + contextless entries) — so the entry owner must be the workflow actor.
+        Twilio: username/password (SID and token). IFTTT, Slack, Teams, Telegram, webhook: token.</li>
+      <li><b>External requests</b> (Settings → General → External requests, schema <code>builtin:dt-javascript-runtime.allowed-outbound-connections</code>). Allow <code>api.twilio.com</code>, <code>maker.ifttt.com</code>, <code>hooks.slack.com</code>,
         <code>api.telegram.org</code>, your Teams Workflows webhook host and your webhook host — only the ones you use.</li>
       <li><b>Import the engine workflow.</b> Integrations → Workflows → <b>Download workflow JSON</b> → upload it in the
         Workflows app, set the service-user actor, keep it private. Or: <code>node scripts/install-workflow.mjs</code>.</li>
@@ -531,7 +536,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
           <tr><td>Routing ignores <code>cc.service</code></td>
               <td>The service name or ID does not match a service in Command Center, or a routing rule with an explicit service matched first. Use <b>Services → Test a rule</b>.</td></tr>
           <tr><td>A notification shows <b>failed</b></td>
-              <td>Open the incident's <b>Notifications</b> tab for the provider error. Usual causes: host missing in <b>External requests</b>, vault entry without <b>Allow access without app context</b>, actor without access to the vault entry, wrong vault entry type, phone number not in E.164.</td></tr>
+              <td>Open the incident's <b>Notifications</b> tab for the provider error. Usual causes: host missing in <b>External requests</b>, vault entry without <b>Allow access without app context</b>, vault entry not owned by the workflow actor, wrong vault entry type, phone number not in E.164.</td></tr>
           <tr><td>A notification shows <b>timeout</b></td>
               <td>The <code>report</code> task did not run or failed. Check the workflow execution; the engine retries up to 3 attempts.</td></tr>
           <tr><td>Run engine now / Send test fail, or "Escalation recorded, but the engine didn't start"</td>
@@ -544,8 +549,10 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
               <td>The tenant or your user lacks IAM grants for a scope in <code>app.config.json</code>.</td></tr>
           <tr><td>Deploy fails — app must be signed</td>
               <td>The app ID must start with <code>my.</code> for unsigned apps.</td></tr>
-          <tr><td>User picker finds nobody</td>
-              <td>Type at least 3 characters. Only users of this environment are listed; you need <code>iam:users:read</code>.</td></tr>
+          <tr><td>User picker finds nobody, or IAM returns 403 "User not authorized"</td>
+              <td>Type at least 3 characters; only users of this environment are listed. A 403 means the caller is not assigned to the account that owns the environment, or (for scripts) the platform token / OAuth client lacks the <code>iam:users:read</code> (+ <code>iam:groups:read</code>) scope.</td></tr>
+          <tr><td>Vault entry cannot be saved as "without app context"</td>
+              <td>Turn on <b>Owner access only</b>; the platform rejects public entries usable without app context. The owner must be the workflow actor.</td></tr>
           <tr><td>Configuration lost</td>
               <td>An admin cleared App State, or the app was uninstalled. Import your last export (Settings → Export and import).</td></tr>
         </tbody>
@@ -554,8 +561,9 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
     <h3 class="sub">Limitations and unverified behaviour</h3>
     <ul class="tick">
       <li>Verified in a Dynatrace environment: event ingest through both endpoints, Davis opening problems for <code>CUSTOM_ALERT</code>, <code>ERROR_EVENT</code>, <code>AVAILABILITY_EVENT</code>, <code>PERFORMANCE_EVENT</code> and <code>RESOURCE_CONTENTION_EVENT</code>, <code>cc.*</code> copied onto problems, queries Q1, Q2 and Q4, and the imported engine workflow running tick → 8 senders → report every minute.</li>
+      <li>✅ Verified end to end: Events API → Davis problem → engine → routing by <code>cc.service</code> → schedule on-call → <b>generic webhook</b> via a vault entry → delivered (<code>sent</code>) → report updates the ledger.</li>
       <li>⚠️ Q3 (generic events) parses and runs but was not validated with data.</li>
-      <li>Provider APIs were implemented from vendor documentation — test every channel you enable.</li>
+      <li>Twilio (SMS, voice, WhatsApp), IFTTT, Slack, Teams and Telegram senders: implemented per vendor documentation, <b>not exercised live</b> — test every channel you enable. Vault entries owned by a service-user actor were not verified.</li>
       <li>The minimal actor permission set was not isolated; billing of workflow executions, app functions and App State was not researched.</li>
       <li>Problems open longer than the lookback (default 72 h) are not re-read; IANA time-zone data in the function runtime is assumed.</li>
       <li>Not implemented: two-way acknowledgement by SMS/chat, a quiet-hours editor (engine supports them; import only), server-side role enforcement.</li>

@@ -447,7 +447,12 @@ export const IncidentTable = ({
       onRowSelectionChange={onSelect}
       interactiveRows
       activeRow={activeId}
-      onActiveRowChange={onActivate}
+      // DataTable reports `null` when the active row id is not among its rows (data still loading, or a deep-linked
+      // incident hidden by the filters); ignore that so /incidents/:id keeps the details panel open.
+      onActiveRowChange={(id) => {
+        if (id === null && activeId && !rows.some((r) => r.id === activeId)) return;
+        onActivate(id);
+      }}
       loading={loading}
       columnVisibility={{ createdAt: false, source: false }}
     >

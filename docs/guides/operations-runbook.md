@@ -32,8 +32,9 @@ backups and cost control.
    incident's **Escalation** tab.
 4. **Are senders failing?** Open the `send_*` task result: each item has `status` and `error`.
    - Host not allowed → add it to **External requests**.
-   - Credential errors → the vault entry is missing **Allow access without app context**, is not accessible to the
-     actor, or has the wrong type (Twilio needs username and password; the others a token).
+   - Credential errors → the vault entry is missing **Allow access without app context**, does not have **Owner access
+     only** on, is **not owned by the workflow actor** (for example after the actor changed), or has the wrong type
+     (Twilio needs username and password; the others a token).
    - Provider 4xx → wrong sender number, unverified recipient on a Twilio trial account, wrong IFTTT event name,
      revoked webhook.
 5. **Is `report` failing?** Notifications stay `planned`, then become `timeout` and are retried (up to 3 attempts).
@@ -63,6 +64,31 @@ service user back as actor, then check that the next run succeeds.
 - **Import** overwrites the settings and every team, schedule, policy, service and contact with the same ID (you are
   asked to confirm). Items that exist only in the environment are kept; incidents are not touched.
 - App State is per environment and can be cleared by an AppEngine admin or lost on uninstall. Export before either.
+
+### Configuration as code (`config` app function)
+
+For Git-versioned configuration or seeding an environment from CI, call the app function directly:
+
+```bash
+URL="https://YOUR-ENVIRONMENT.apps.dynatrace.com/platform/app-engine/app-functions/v1/apps/my.command.center/api/config"
+
+# export the whole configuration
+curl -s -X POST "$URL" -H "Authorization: Bearer YOUR-PLATFORM-TOKEN" \
+  -H "Content-Type: application/json" -d '{"op":"export"}' > command-center-config.json
+
+# validate only (nothing is written)
+curl -s -X POST "$URL" -H "Authorization: Bearer YOUR-PLATFORM-TOKEN" \
+  -H "Content-Type: application/json" -d '{"op":"import","dryRun":true,"bundle":{"teams":[],"services":[]}}'
+```
+
+- Export returns `{ ok, bundle: { settings, teams, schedules, policies, services, rules, contacts } }`.
+- Import (`{ op: "import", bundle, dryRun }`) validates every entity first, with references checked against the bundle
+  plus what already exists. On any error nothing is written and `errors[]` lists entity, path and message.
+  `dryRun: true` returns the counts it would write.
+- Import upserts by ID and never deletes; settings in the bundle are merged into the current settings.
+- The call runs with the token user's permissions: `app-engine:apps:run` (always needed for a custom app's functions)
+  and App State read/write. Keep the token in your CI secret store.
+- Bundles contain contact methods (phone numbers) — store them as personal data, not in a public repository.
 
 ## Data growth
 

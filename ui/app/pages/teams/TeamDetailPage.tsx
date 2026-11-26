@@ -24,6 +24,7 @@ import { OverrideModal } from "../oncall/OverrideModal";
 import { PolicyView } from "../escalations/PolicyView";
 import { TeamFormModal, teamReferences } from "./TeamsPage";
 import { ContactSheet } from "./ContactSheet";
+import { QuietHoursEditor } from "./QuietHoursEditor";
 
 export const ROLE_LABEL: Record<TeamRole, string> = { admin: "Team admin", responder: "Responder", observer: "Observer" };
 const ROLE_HELP = "Team admins edit the team, schedules and policies. Responders receive pages and can acknowledge and resolve. Observers have read-only access and get no pages. Roles are guidance: every app user can technically write app state.";
@@ -284,6 +285,11 @@ export const TeamDetailPage = () => {
                   actions={<Button onClick={() => navigate("/escalations/new")}>New escalation policy</Button>}
                 />
               )}
+            </Flex>
+          </Tab>
+          <Tab title={`Quiet hours (${team.quietHours?.length ?? 0})`}>
+            <Flex flexDirection="column" paddingTop={16}>
+              <QuietHoursEditor team={team} />
             </Flex>
           </Tab>
           <Tab title={`Services (${services.length})`}>

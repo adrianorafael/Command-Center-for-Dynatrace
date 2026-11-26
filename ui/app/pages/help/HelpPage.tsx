@@ -59,7 +59,7 @@ const TROUBLE = `
 - **A notification failed**: open the incident's Notifications tab for the provider error. Common causes are a missing host in External requests, a vault entry that isn't owned by the workflow actor or lacks "Owner access only" plus "Allow access without app context", or an invalid phone number (use E.164).
 - **The workflow isn't installed or is outdated**: download the JSON again in Integrations → Workflows and upload it over the existing workflow.
 - **Permission errors**: the app needs the scopes listed in Settings → Permissions, and your user needs IAM access to the app.
-- **People can't be found in the user picker**: type at least 3 characters of the email or the first name. Only users of this environment are listed. If the picker says you have no permission, your user needs **iam:users:read** (and **iam:groups:read**): an admin grants it in Account Management → Policies. The app scope alone isn't enough; without that policy the IAM API answers 403 "User not authorized".
+- **People can't be found in the user picker**: type at least 3 characters of the email or the first name. Only users of this environment are listed. If the picker says user search is not available, IAM returned 403: your user must be assigned to the Dynatrace account that owns this environment.
 `;
 
 const PRIVACY = `

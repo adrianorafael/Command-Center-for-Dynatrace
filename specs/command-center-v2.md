@@ -5,7 +5,7 @@
 | Status | **Approved** — the owner asked for the full rebuild to be carried to the end without stopping at gates ("work until the end and make the best decisions"). This approval covers the spec gate and the publish gate. No deploy is performed (no tenant connected). |
 | Version | 2.0.0 (major: data model, scopes and UI replaced) |
 | Binding contracts | `ui/app/domain/contracts.ts`, `ui/app/data/repository.ts` (these files win over the abridged types below) |
-| DQL | **⚠️ UNVALIDATED** — no tenant was connected while building; every query must be executed against a tenant before production use (R6) |
+| DQL | Q1, Q2, Q4 executed on a trial tenant; Q3 parsed, no data |
 
 ## Goal
 
@@ -427,7 +427,7 @@ Function names used (`not`, `in`, `array`, `takeLast`, `summarize`, `min`, `max`
 
 ### 10. Demo mode and offline preview
 - `demoMode.ts`: demo is active when `getEnvironmentId() === 'dt.missing.environment.id'` (documented fallback) or `?demo=1` or `Settings.demoMode`. It swaps in `MemoryRepository` seeded from `domain/demo/fixtures.ts`, a fake user directory and a no-op workflow client. A visible "Demo data" indicator is mandatory.
-- Fixtures must be synthetic and pass `scan-secrets.sh` (its regexes catch emails and real-looking entity IDs): `HOST-0000000000000001`, `P-00001`, `user-0001`, addresses on a reserved example domain.
+- Fixtures must be synthetic and pass `scan-secrets.sh` (its regexes catch emails and real-looking entity IDs): `HOST-0000000000000000`, `P-00001`, `user-0001`, addresses on a reserved example domain.
 - Preview harness (spike, agent B): `npx dt-app build`, then `scripts/preview-server.mjs` serves `dist/ui` under `/ui/` with SPA fallback and an empty stub for `/platform/runtime/runtime-loader.js`; screenshots with `/usr/bin/google-chrome --headless`. Whether `AppRoot` renders without the platform runtime is **UNVERIFIED**. Fallback: an esbuild/vite entry that mounts `<App/>` with the same demo adapter. `dt-app dev` needs a tenant login and is not an option here.
 
 ### 11. Testing

@@ -39,6 +39,8 @@ console.
 - **Settings**: sources, defaults, engine limits, retention, export/import of the configuration, demo mode.
 - **Demo mode** with synthetic data, an offline preview server and a screenshot script.
 - `scripts/install-workflow.mjs` for admins to install or update the engine workflow through the Automation API.
+- `config` app function for configuration as code: export, and validated import with dry run.
+- Platform Credential Vault entry IDs (`CREDENTIAL_VAULT_ENTRY-…`) accepted besides classic `CREDENTIALS_VAULT-…`.
 - `workflow-templates/`: the engine workflow and a trial-only alert simulator (`[SIM]` alerts every 7 minutes).
 - Unit tests (vitest), type-check and lint scripts.
 

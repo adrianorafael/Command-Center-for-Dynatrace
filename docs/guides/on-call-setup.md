@@ -27,7 +27,9 @@ of a snooze start a new cycle.
 **Teams → New team.**
 
 - **Members** are users of this Dynatrace environment, picked from the IAM directory (type at least 3 characters of the
-  name or email). Command Center stores only the user ID; names and emails are read live.
+  name or email). Command Center stores only the user ID; names and emails are read live. User search works for people
+  assigned to the account that owns the environment (the app's `iam:users:read` scope does the rest); a
+  `403 "User not authorized"` means the person is not assigned to that account.
 - **Roles**: *admin* (manages the team), *responder* (gets paged), *observer* (watches). Roles guide the UI; they are not
   enforced on the server — anyone who can open the app can edit any team.
 - **Default escalation policy**: used for alerts routed to the team without a more specific policy.

@@ -49,18 +49,23 @@ Every task runs as the workflow **actor**. A person who edits the workflow becom
 - `automation:workflows:read` — `execution()` / `result()` inside the tasks
 - `credential-vault:entries:read` — to read the provider credentials
 - the app's own data permissions used by the app functions (Grail read for `dt.davis.problems`, `dt.davis.events`,
-  `events`; app state read/write/delete) — whether these are checked against the actor is **unverified**; if the engine
-  heartbeat in the console goes stale, check the workflow's execution log first.
+  `events`; app state read/write/delete) — the app functions run with the actor's permissions (verified).
 
-Also enable the needed permissions under Workflows → Settings → **Authorization settings**.
+Also enable the needed permissions under Workflows → Settings → **Authorization settings** (verified: required — without
+it `tick` fails). Verified live: the imported workflow runs `tick` → 8 senders → `report` every minute, all SUCCESS. The
+minimal permission set was not isolated. If the engine heartbeat in the console goes stale, check the workflow's
+execution log first.
 
 ## Credential Vault entries
 
-Create one entry per provider (Credential Vault → Add credential), with:
+Create one entry per provider in the platform Credential Vault (entry ids look like `CREDENTIAL_VAULT_ENTRY-…`; classic
+`CREDENTIALS_VAULT-…` ids are also accepted), with:
 
 - scope **AppEngine** selected,
 - **Allow access without app context** turned on (workflow tasks run without app context),
-- access granted to the workflow actor.
+- **Owner access only** turned on — required: the platform rejects entries that are public and usable without app
+  context (verified),
+- so the entry **owner must be the workflow actor**.
 
 | Provider kind | Credential type | Contents |
 | --- | --- | --- |
@@ -71,12 +76,17 @@ Create one entry per provider (Credential Vault → Add credential), with:
 | `telegram-bot` | Token | the bot token; contact address = chat id |
 | `webhook` | Token (or username/password) | the full `https://` URL; optional `authHeader` param + password sent as that header |
 
-Only the entry **id** (`CREDENTIALS_VAULT-…`) is stored in Command Center settings — never the secret. Scripts never
+Only the entry **id** (`CREDENTIAL_VAULT_ENTRY-…` or `CREDENTIALS_VAULT-…`) is stored in Command Center settings — never the secret. Scripts never
 return secrets or URLs in their results.
 
 ## External requests allowlist
 
-Settings → General → Environment management → **External requests**: allow the hosts of the providers you use.
+Settings → General → Environment management → **External requests** (settings schema
+`builtin:dt-javascript-runtime.allowed-outbound-connections`, verified): allow the hosts of the providers you use.
+
+Delivery status: the **generic webhook** path is verified live end to end (Events API → Davis problem → engine →
+routing by `cc.service` → schedule on-call → webhook via vault entry → `sent` → ledger updated). Twilio, IFTTT, Slack,
+Teams and Telegram are implemented per vendor documentation and not exercised live.
 
 | Provider | Host |
 | --- | --- |

@@ -77,11 +77,15 @@ definition, the Workflows tab shows **Update available** — download and upload
 
 ## 4. Credential Vault
 
-One entry per provider. Required settings on each entry:
+One entry per provider, created in the platform **Credential Vault** (entry IDs look like `CREDENTIAL_VAULT_ENTRY-…`;
+classic `CREDENTIALS_VAULT-…` IDs are also accepted). Required settings on each entry:
 
-- scope **AppEngine**,
-- **Allow access without app context** on (workflow tasks run without app context),
-- accessible to the workflow actor.
+- scope **AppEngine**;
+- **Allow access without app context** on (workflow tasks run without app context);
+- **Owner access only** on — mandatory, because the platform rejects an entry that is both public and usable without
+  app context;
+- consequently the entry's **owner must be the workflow actor** (only the owner can read it). Verified with a person as
+  actor and owner; how to make a service user the owner of an entry was not verified.
 
 | Provider kind | Credential type | Username / token | Password |
 | --- | --- | --- | --- |
@@ -92,12 +96,13 @@ One entry per provider. Required settings on each entry:
 | `telegram-bot` | Token | Bot token | — |
 | `webhook` | Token, or username and password | Full `https://` URL of your endpoint | Optional value for the auth header |
 
-Paste only the **entry ID** (`CREDENTIALS_VAULT-…`) into Command Center. Webhook URLs that embed a key (Slack, Teams,
+Paste only the **entry ID** (`CREDENTIAL_VAULT_ENTRY-…` or `CREDENTIALS_VAULT-…`) into Command Center. Webhook URLs that embed a key (Slack, Teams,
 IFTTT) are secrets — they belong in the vault, not in settings.
 
 ## 5. External requests allowlist
 
-**Settings → General → Environment management → External requests**:
+**Settings → General → Environment management → External requests** (settings schema
+`builtin:dt-javascript-runtime.allowed-outbound-connections`; verified):
 
 | Provider | Host |
 | --- | --- |
@@ -155,8 +160,10 @@ The generic webhook's `notification` object:
 Use `key` as an idempotency key: a duplicate delivery has the identical key; a retry has the same key except the last
 segment (`attempt` + 1). Any 2xx counts as sent.
 
-Provider payloads were implemented from each vendor's documentation and could not all be exercised here — test every
-channel you enable.
+| Provider | Status |
+| --- | --- |
+| Generic webhook | ✅ **verified live** end to end: Events API → Davis problem → engine → routing by `cc.service` → schedule on-call → webhook via vault entry → delivered (`sent`) → `report` updated the ledger |
+| Twilio SMS / voice / WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implemented per vendor documentation, **not exercised live** — test every channel you enable |
 
 ## Delivery, retries and the ledger
 
