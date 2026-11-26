@@ -28,10 +28,11 @@ of a snooze start a new cycle.
 
 - **Members** are users of this Dynatrace environment, picked from the IAM directory (type at least 3 characters of the
   name or email). Command Center stores only the user ID; names and emails are read live.
-- **Permission to build teams:** Building teams searches tenant users through the IAM API. The user doing it needs the account permission
-  **View users and groups** (`account-idm-read`) on one of their groups (Account Management → Group management →
-  Permissions, scope **Account**). Without it the API returns `403 "User not authorized"` — even with a token holding
-  every scope, because a token never exceeds its owner's permissions. Operators who only work the console don't need it.
+- **Permission to build teams:** Team member search calls the IAM API with the signed-in user's session (scope `iam:users:read` declared by the app).
+  Observed on a trial tenant: the same API returned `403 "User not authorized"` when called with a platform token, even
+  for the account owner, while service-user listing worked — so scripts should not rely on platform tokens for user
+  lookup. If the picker shows a 403 inside the app, check that the user belongs to the Dynatrace account that owns the
+  environment and has account permissions to view users.
 - **Roles**: *admin* (manages the team), *responder* (gets paged), *observer* (watches). Roles guide the UI; they are not
   enforced on the server — anyone who can open the app can edit any team.
 - **Default escalation policy**: used for alerts routed to the team without a more specific policy.

@@ -478,10 +478,11 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
     </div>
     <p class="note">Not requested on purpose: <code>automation:workflows:write</code> (only Dynatrace-provided apps may hold it),
       no Credential Vault scope (only the workflow reads secrets), no ingest scope.</p>
-    <p class="note"><b>Building teams</b> searches tenant users through the IAM API. The user doing it needs the account permission
-      <b>View users and groups</b> (<code>account-idm-read</code>) on one of their groups (Account Management → Group management →
-      Permissions, scope Account). Without it the API returns 403 "User not authorized" — even with a token holding every scope,
-      because a token never exceeds its owner's permissions. Operators who only work the console don't need it.</p>
+    <p class="note">Team member search calls the IAM API with the signed-in user's session (scope <code>iam:users:read</code> declared by the app).
+      Observed on a trial tenant: the same API returned 403 "User not authorized" when called with a platform token, even for the
+      account owner, while service-user listing worked — so scripts should not rely on platform tokens for user lookup. If the picker
+      shows a 403 inside the app, check that the user belongs to the Dynatrace account that owns the environment and has account
+      permissions to view users.</p>
   </div>
 </section>
 
@@ -552,7 +553,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
           <tr><td>Deploy fails — app must be signed</td>
               <td>The app ID must start with <code>my.</code> for unsigned apps.</td></tr>
           <tr><td>User picker finds nobody, or IAM returns 403 "User not authorized"</td>
-              <td>Type at least 3 characters; only users of this environment are listed. A 403 means your user lacks the account permission <b>View users and groups</b> (<code>account-idm-read</code>): Account Management → Group management → Permissions, scope Account. A token cannot work around it — it never exceeds its owner's permissions.</td></tr>
+              <td>Type at least 3 characters; only users of this environment are listed. A 403 inside the app: check that the user belongs to the Dynatrace account that owns the environment and has account permissions to view users. Scripts should not rely on platform tokens for user lookup (observed 403 even for the account owner).</td></tr>
           <tr><td>Vault entry cannot be saved as "without app context"</td>
               <td>Turn on <b>Owner access only</b>; the platform rejects public entries usable without app context. The owner must be the workflow actor.</td></tr>
           <tr><td>Configuration lost</td>
