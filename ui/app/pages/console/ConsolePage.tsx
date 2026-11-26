@@ -172,6 +172,32 @@ export const ConsolePage = () => {
           <PageTitle
             title="Console"
             subtitle="Incidents from Davis problems and ingested events, newest first"
+            suffix={
+              <Flex alignItems="center" gap={8} flexWrap="wrap" justifyContent="flex-end">
+                <TimeframeSelector value={timeframe} onChange={setTimeframe}>
+                  <TimeframeSelector.Trigger placeholder="Created: any time" aria-label="Created timeframe" />
+                </TimeframeSelector>
+                {showSpinner && <ProgressCircle size="small" aria-label="Refreshing" />}
+                {lastUpdated && (
+                  <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued, whiteSpace: "nowrap" }}>
+                    Updated {formatTime(lastUpdated, tz, true)}
+                  </Text>
+                )}
+                <Select value={refreshSec} onChange={(v) => setRefreshSec(Number(v ?? 0))} aria-label="Auto-refresh">
+                  <Select.Prefix>
+                    <RefreshAutoIcon />
+                  </Select.Prefix>
+                  <Select.Content>
+                    {REFRESH_OPTIONS.map((o) => (
+                      <Select.Option key={o.value} value={o.value}>
+                        {o.label}
+                      </Select.Option>
+                    ))}
+                  </Select.Content>
+                </Select>
+                <IconButton label="Refresh now" icon={<RefreshIcon />} onClick={() => void refresh()} />
+              </Flex>
+            }
           />
           <EngineHealthBanner />
           {error ? <ErrorMessage title="Couldn't load incidents. Check your connection and select Retry." error={error} onRetry={() => void refresh()} /> : null}
@@ -183,12 +209,11 @@ export const ConsolePage = () => {
             loading={isLoading}
             onFilter={(patch) => setFilters({ status: DEFAULT_STATUS, priority: [], assignee: [], ...patch })}
           />
-          {/* Filter row (Strato filtering standard + TimeframeSelector "Where to position"/"When to refresh"):
-              search, category filters, then the TimeframeSelector at the end with the refresh controls and
-              "last updated" grouped next to it, right above the table they affect. The right group is its own
-              Flex: the TimeframeSelector root carries align-self: start, which in the labelled filter row floated
-              it 20 px above the fields. */}
-          <Flex gap={8} alignItems="flex-end">
+          {/* Filter row: search + FilterBar on one line. The TimeframeSelector sits with the refresh controls and
+              "last updated" in the title action area (TimeframeSelector "When to refresh": refresh next to the
+              selector). It used to sit between FilterBar and search, where its root's align-self: start floated it
+              20 px above the labelled fields. */}
+          <Flex gap={8} alignItems="flex-end" flexWrap="wrap">
             <SearchInput
               value={filters.q}
               onChange={(v) => setFilters({ q: v })}
@@ -292,30 +317,6 @@ export const ConsolePage = () => {
                   </Select>
                 </FilterBar.Item>
               </FilterBar>
-            </Flex>
-            <Flex alignItems="center" gap={8} flexShrink={0}>
-              <TimeframeSelector value={timeframe} onChange={setTimeframe}>
-                <TimeframeSelector.Trigger placeholder="Created: any time" aria-label="Created timeframe" />
-              </TimeframeSelector>
-              {showSpinner && <ProgressCircle size="small" aria-label="Refreshing" />}
-              {lastUpdated && (
-                <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued, whiteSpace: "nowrap" }}>
-                  Updated {formatTime(lastUpdated, tz, true)}
-                </Text>
-              )}
-              <Select value={refreshSec} onChange={(v) => setRefreshSec(Number(v ?? 0))} aria-label="Auto-refresh">
-                <Select.Prefix>
-                  <RefreshAutoIcon />
-                </Select.Prefix>
-                <Select.Content>
-                  {REFRESH_OPTIONS.map((o) => (
-                    <Select.Option key={o.value} value={o.value}>
-                      {o.label}
-                    </Select.Option>
-                  ))}
-                </Select.Content>
-              </Select>
-              <IconButton label="Refresh now" icon={<RefreshIcon />} onClick={() => void refresh()} />
             </Flex>
           </Flex>
           <IncidentTable
