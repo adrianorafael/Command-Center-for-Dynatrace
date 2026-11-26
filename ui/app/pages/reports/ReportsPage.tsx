@@ -19,6 +19,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import { PRIORITIES, type DailyRollup, type Priority } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { onCallHoursByUser, rollupsFromIncidents, summarizeRollups } from "../../hooks/domain";
+import { CellPerson, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { ErrorMessage, SimpleEmpty } from "../../components/QueryState";
 import { PRIORITY_COLOR } from "../../components/PriorityChip";
@@ -181,7 +182,7 @@ export const ReportsPage = () => {
   }, [data, from, to, fromDay, toDay, userName]);
 
   const loadColumns: DataTableColumnDef<LoadRow>[] = [
-    { id: "name", header: "Person", accessor: "name", width: 180 },
+    { id: "name", header: "Person", accessor: "name", width: 200, cell: ({ rowData }) => <CellPerson name={rowData.name} /> },
     { id: "team", header: "Team", accessor: "team", width: 140 },
     {
       id: "hours",
@@ -297,7 +298,7 @@ export const ReportsPage = () => {
             )}
           </Panel>
           <Panel span={12} title="On-call load" question="Who carries the on-call load?">
-            <DataTable data={m?.load ?? []} columns={loadColumns} rowId={(r) => r.uid} fullWidth sortable loading={loading} variant={{ rowDensity: "condensed" }}>
+            <DataTable data={m?.load ?? []} columns={loadColumns} rowId={(r) => r.uid} fullWidth sortable loading={loading} variant={LIST_TABLE_VARIANT}>
               <DataTable.Toolbar>
                 <DataTable.DownloadData />
               </DataTable.Toolbar>

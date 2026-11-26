@@ -9,9 +9,9 @@ import { FieldError } from "./FieldHint";
 
 const MIN_CHARS = 3;
 export const FORBIDDEN =
-  "User search is not available: your user must be assigned to the Dynatrace account that owns this environment (IAM returned 403).";
+  "User search needs the account permission 'View users and groups' (account-idm-read). Ask an account admin to add it to your group in Account Management → Group management → Permissions.";
 
-/** IAM answers 403 "User not authorized" when the user isn't assigned to the owning account. */
+/** IAM answers 403 "User not authorized" without the account permission "View users and groups" (account-idm-read). */
 function isForbidden(e: unknown): boolean {
   if (typeof e !== "object" || e === null) return false;
   const status = (e as { response?: { status?: unknown }; status?: unknown }).response?.status ?? (e as { status?: unknown }).status;
@@ -102,7 +102,7 @@ export const UserPicker = ({
         ))}
       </Select.Content>
       <Select.EmptyState>
-        {error === FORBIDDEN ? "User search is not available (IAM returned 403)" : error ? `Couldn't search users: ${error}` : q.trim().length < MIN_CHARS ? "Type at least 3 characters" : "No users found"}
+        {error === FORBIDDEN ? "No permission to search users (IAM returned 403)" : error ? `Couldn't search users: ${error}` : q.trim().length < MIN_CHARS ? "Type at least 3 characters" : "No users found"}
       </Select.EmptyState>
     </Select>
     {error === FORBIDDEN && <FieldError>{FORBIDDEN}</FieldError>}

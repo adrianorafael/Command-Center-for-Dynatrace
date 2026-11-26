@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { Flex, PageLayout } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
-import { AvatarGroup } from "@dynatrace/strato-components/content";
 import { SearchInput, FormField, Label, TextInput, TextArea, Select } from "@dynatrace/strato-components/forms";
 import { Modal } from "@dynatrace/strato-components/overlays";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
@@ -12,11 +11,11 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import { PRIORITIES, SCHEMA_VERSION, type Priority, type Team } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { newId, onCallAt, validateTeam } from "../../hooks/domain";
+import { CellEmpty, CellPeople, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { PriorityChip } from "../../components/PriorityChip";
 import { ConfirmModal } from "../../components/ConfirmModal";
-import { initials } from "../../components/format";
 
 interface TeamRow {
   id: string;
@@ -173,13 +172,7 @@ export const TeamsPage = () => {
       accessor: "memberCount",
       width: 180,
       sortType: "number",
-      cell: ({ rowData }) => (
-        <AvatarGroup>
-          {rowData.team.members.map((m) => (
-            <AvatarGroup.Item key={m.uid} abbreviation={initials(userName(m.uid))} tooltipText={userName(m.uid)} />
-          ))}
-        </AvatarGroup>
-      ),
+      cell: ({ rowData }) => <CellPeople names={rowData.team.members.map((m) => userName(m.uid))} />,
     },
     {
       id: "oncall",
@@ -187,7 +180,7 @@ export const TeamsPage = () => {
       accessor: (r) => r.onCall.map(userName).join(", "),
       width: 200,
       cell: ({ rowData }) =>
-        rowData.onCall.length ? <Text>{rowData.onCall.map(userName).join(", ")}</Text> : <Text style={{ color: Colors.Text.Neutral.Subdued }}>No one</Text>,
+        rowData.onCall.length ? <CellText>{rowData.onCall.map(userName).join(", ")}</CellText> : <CellEmpty>No one</CellEmpty>,
     },
     {
       id: "policy",
@@ -200,7 +193,7 @@ export const TeamsPage = () => {
             {rowData.policyName}
           </Link>
         ) : (
-          <Text style={{ color: Colors.Text.Neutral.Subdued }}>None</Text>
+          <CellEmpty>None</CellEmpty>
         ),
     },
     { id: "services", header: "Services", accessor: "services", width: 90, sortType: "number" },
@@ -219,7 +212,7 @@ export const TeamsPage = () => {
             ))}
           </Flex>
         ) : (
-          <Text style={{ color: Colors.Text.Neutral.Subdued }}>None</Text>
+          <CellEmpty>None</CellEmpty>
         ),
     },
   ];
@@ -259,7 +252,7 @@ export const TeamsPage = () => {
             />
           }
         >
-          <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={{ rowDensity: "condensed" }}>
+          <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
             <DataTable.TableActions>
               <SearchInput value={q} onChange={setQ} placeholder="Search teams" aria-label="Search teams" />
             </DataTable.TableActions>

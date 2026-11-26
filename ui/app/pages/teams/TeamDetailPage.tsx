@@ -12,6 +12,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { TeamMember, TeamRole } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { newId, onCallAt } from "../../hooks/domain";
+import { CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { UserPicker } from "../../components/UserPicker";
@@ -130,7 +131,7 @@ export const TeamDetailPage = () => {
       accessor: "methods",
       width: 260,
       cell: ({ rowData }) =>
-        rowData.methods ? <Text>{rowData.methods}</Text> : <Text style={{ color: Colors.Text.Critical.Default }}>None: can't be paged</Text>,
+        rowData.methods ? <CellText>{rowData.methods}</CellText> : <Text style={{ color: Colors.Text.Critical.Default }}>None: can't be paged</Text>,
     },
     { id: "oncall", header: "On call now", accessor: (r) => (r.onCall ? "Yes" : "No"), width: 110 },
   ];
@@ -204,7 +205,7 @@ export const TeamDetailPage = () => {
                   Add member
                 </Button>
               </Flex>
-              <DataTable data={rows} columns={columns} rowId={(r) => r.uid} fullWidth sortable variant={{ rowDensity: "condensed" }}>
+              <DataTable data={rows} columns={columns} rowId={(r) => r.uid} fullWidth sortable variant={LIST_TABLE_VARIANT}>
                 <DataTable.RowActions>
                   {(row) => {
                     const r = row as MemberRow;

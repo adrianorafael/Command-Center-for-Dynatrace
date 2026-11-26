@@ -15,6 +15,7 @@ import type { Timeseries } from "@dynatrace/strato-components/charts";
 import type { ProviderConfig, Settings } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { exportWorkflowDefinition, getEngineStatus, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
+import { CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { Health } from "../../components/StatusIndicator";
 import { ChannelIcon, CHANNEL_LABEL } from "../../components/ChannelIcon";
@@ -71,7 +72,7 @@ const InboundTab = () => {
     });
   }, [data, now]);
   const columns: DataTableColumnDef<SourceRow>[] = [
-    { id: "name", header: "Source", accessor: "name", width: 260 },
+    { id: "name", header: "Source", accessor: "name", width: 260, cell: ({ rowData }) => <CellText>{rowData.name}</CellText> },
     {
       id: "status",
       header: "Status",
@@ -127,7 +128,7 @@ const InboundTab = () => {
       )}
       <Flex flexDirection="column" gap={8}>
         <Heading level={3}>Sources</Heading>
-        <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth variant={{ rowDensity: "condensed" }}>
+        <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth variant={LIST_TABLE_VARIANT}>
           <DataTable.RowActions>
             {(row) => (
               <Button size="condensed" onClick={() => navigate(`/?status=triggered,acknowledged,snoozed,resolved&source=${(row as SourceRow).id}`)}>
@@ -534,7 +535,7 @@ const WorkflowsTab = () => {
           data={execs}
           rowId={(e) => e.id}
           fullWidth
-          variant={{ rowDensity: "condensed" }}
+          variant={LIST_TABLE_VARIANT}
           columns={[
             { id: "id", header: "Execution", accessor: "id", width: 280 },
             {

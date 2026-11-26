@@ -4,7 +4,7 @@ import { Flex, Grid, PageLayout, Surface } from "@dynatrace/strato-components/la
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
-import { Heading, Link, Paragraph, Text, TextEllipsis } from "@dynatrace/strato-components/typography";
+import { Heading, Link, Paragraph, Text } from "@dynatrace/strato-components/typography";
 import { FormField, Label, Select, Switch, TextArea } from "@dynatrace/strato-components/forms";
 import { PlayIcon, PlusIcon, SuccessIcon, XmarkIcon, LockIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
@@ -12,6 +12,7 @@ import type { Timeseries } from "@dynatrace/strato-components/charts";
 import { PRIORITIES, SCHEMA_VERSION, type Alert, type Priority, type RoutingRule, type Service } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { evaluateCondition, newId, routeAlert, ruleMatches } from "../../hooks/domain";
+import { CellEmpty, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { PriorityChip } from "../../components/PriorityChip";
@@ -80,7 +81,7 @@ const ServicesTab = ({ onNew }: { onNew: () => void }) => {
       ),
     },
     { id: "team", header: "Team", accessor: "team", width: 150 },
-    { id: "policy", header: "Escalation policy", accessor: "policy", width: 200 },
+    { id: "policy", header: "Escalation policy", accessor: "policy", width: 200, cell: ({ rowData }) => <CellText>{rowData.policy}</CellText> },
     { id: "rules", header: "Rules", accessor: "rules", width: 80, sortType: "number" },
     {
       id: "open",
@@ -96,10 +97,17 @@ const ServicesTab = ({ onNew }: { onNew: () => void }) => {
             ))}
           </Flex>
         ) : (
-          <Text style={{ color: Colors.Text.Neutral.Subdued }}>None</Text>
+          <CellEmpty>None</CellEmpty>
         ),
     },
-    { id: "noise", header: "Noise last 7 days", accessor: "noise", columnType: "sparkline", width: "1fr", minWidth: 180, config: { variant: "bar" } },
+    {
+      id: "noise",
+      header: "Noise last 7 days",
+      accessor: "noise",
+      columnType: "sparkline",
+      width: 200,
+      config: { variant: "bar", yAxis: { min: 0 }, xAxis: { min: "data-min", max: "data-max" } },
+    },
   ];
   if (data && rows.length === 0)
     return (
@@ -115,7 +123,7 @@ const ServicesTab = ({ onNew }: { onNew: () => void }) => {
     );
   return (
     <>
-      <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={{ rowDensity: "condensed" }}>
+      <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
         <DataTable.RowActions>
           {(row) => {
             const r = row as ServiceRow;
@@ -197,13 +205,9 @@ export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
       accessor: "summary",
       width: "1fr",
       minWidth: 260,
-      cell: ({ rowData }) => (
-        <Text fontStyle="code">
-          <TextEllipsis>{rowData.summary}</TextEllipsis>
-        </Text>
-      ),
+      cell: ({ rowData }) => <CellText code>{rowData.summary}</CellText>,
     },
-    { id: "then", header: "Actions", accessor: "thenText", width: 300 },
+    { id: "then", header: "Actions", accessor: "thenText", width: 300, cell: ({ rowData }) => <CellText>{rowData.thenText}</CellText> },
     {
       id: "enabled",
       header: "Enabled",
@@ -229,7 +233,7 @@ export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
         columns={columns}
         rowId={(r) => r.id}
         fullWidth
-        variant={{ rowDensity: "condensed" }}
+        variant={LIST_TABLE_VARIANT}
         rowOrdering={onlyService ? undefined : { enableDragAndDrop: true }}
         rowOrder={onlyService ? undefined : rows.map((r) => r.id)}
         onRowOrderChange={(order) => {

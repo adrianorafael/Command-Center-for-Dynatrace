@@ -5,10 +5,10 @@ import { Button } from "@dynatrace/strato-components/buttons";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Link, Text } from "@dynatrace/strato-components/typography";
 import { PlusIcon } from "@dynatrace/strato-icons";
-import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { EscalationPolicy } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { newId } from "../../hooks/domain";
+import { CellEmpty, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ConfirmModal } from "../../components/ConfirmModal";
@@ -79,11 +79,7 @@ export const PoliciesPage = () => {
       accessor: "steps",
       width: "1fr",
       minWidth: 260,
-      cell: ({ rowData }) => (
-        <Text>
-          {rowData.steps} · {rowData.summary}
-        </Text>
-      ),
+      cell: ({ rowData }) => <CellText>{`${rowData.steps} · ${rowData.summary}`}</CellText>,
     },
     { id: "repeat", header: "Repeat", accessor: (r) => (r.repeat ? `${r.repeat}×` : "No"), width: 90 },
     { id: "used", header: "Used by", accessor: "usedBy", width: 90, sortType: "number" },
@@ -94,7 +90,7 @@ export const PoliciesPage = () => {
       sortType: "number",
       width: 140,
       cell: ({ rowData }) =>
-        rowData.lastTriggered ? <Text>{formatRelative(rowData.lastTriggered, now)}</Text> : <Text style={{ color: Colors.Text.Neutral.Subdued }}>Never</Text>,
+        rowData.lastTriggered ? <Text>{formatRelative(rowData.lastTriggered, now)}</Text> : <CellEmpty>Never</CellEmpty>,
     },
   ];
   return (
@@ -130,7 +126,7 @@ export const PoliciesPage = () => {
             />
           }
         >
-          <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={{ rowDensity: "condensed" }}>
+          <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
             <DataTable.RowActions>
               {(row) => {
                 const r = row as PolicyRow;

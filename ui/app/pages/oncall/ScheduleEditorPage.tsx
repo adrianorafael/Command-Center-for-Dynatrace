@@ -24,6 +24,7 @@ import { PlusIcon, XmarkIcon } from "@dynatrace/strato-icons";
 import { SCHEMA_VERSION, type RotationLayer, type Schedule } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { newId, validateSchedule } from "../../hooks/domain";
+import { LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { UserPicker } from "../../components/UserPicker";
 import { ShiftGantt, coverage } from "../../components/ShiftGantt";
@@ -224,7 +225,7 @@ const LayerEditor = ({
             columns={columns}
             rowId={(x) => x.uid}
             fullWidth
-            variant={{ rowDensity: "condensed" }}
+            variant={LIST_TABLE_VARIANT}
             rowOrdering={{ enableDragAndDrop: true }}
             rowOrder={layer.participants}
             onRowOrderChange={(order) => onChange({ ...layer, participants: order })}

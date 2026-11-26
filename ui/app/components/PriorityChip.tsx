@@ -1,6 +1,6 @@
 import React from "react";
 import { Chip } from "@dynatrace/strato-components/content";
-import { CriticalIcon } from "@dynatrace/strato-icons";
+import { SquareFilledIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Priority } from "../domain/contracts";
 
@@ -21,14 +21,11 @@ export const PRIORITY_COLOR: Record<Priority, string> = {
   P5: Colors.Charts.SecurityRiskLevel.None.Default,
 };
 
-const STYLE: Record<Priority, { color: "critical" | "warning" | "primary" | "neutral"; variant: "accent" | "emphasized" }> = {
-  P1: { color: "critical", variant: "accent" },
-  P2: { color: "critical", variant: "emphasized" },
-  P3: { color: "warning", variant: "emphasized" },
-  P4: { color: "primary", variant: "emphasized" },
-  P5: { color: "neutral", variant: "emphasized" },
-};
-
+/**
+ * One chip style for P1–P5 (owner decision, supersedes DESIGN §1.2's solid-P1 ramp): the same neutral emphasized
+ * `Chip`, the same size and weight, and the same filled-square prefix colored with the priority's chart token, so a
+ * priority reads as the same hue in tables, filters and charts. The text label always carries the meaning.
+ */
 export const PriorityChip = ({
   priority,
   size = "default",
@@ -37,16 +34,11 @@ export const PriorityChip = ({
   priority: Priority;
   size?: "default" | "condensed";
   count?: number;
-}) => {
-  const s = STYLE[priority];
-  return (
-    <Chip color={s.color} variant={s.variant} size={size} aria-label={`Priority ${priority}`}>
-      {priority === "P1" && (
-        <Chip.Prefix>
-          <CriticalIcon />
-        </Chip.Prefix>
-      )}
-      {count === undefined ? priority : `${priority} ${count}`}
-    </Chip>
-  );
-};
+}) => (
+  <Chip color="neutral" variant="emphasized" size={size} aria-label={`Priority ${priority}`}>
+    <Chip.Prefix>
+      <SquareFilledIcon size="small" style={{ color: PRIORITY_COLOR[priority] }} />
+    </Chip.Prefix>
+    {count === undefined ? priority : `${priority} ${count}`}
+  </Chip>
+);

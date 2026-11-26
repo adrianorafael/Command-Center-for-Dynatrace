@@ -4,7 +4,7 @@ import { Flex, Grid, PageLayout, Surface, Container } from "@dynatrace/strato-co
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { Heading, Link, Text } from "@dynatrace/strato-components/typography";
-import { Avatar, AvatarGroup, Chip } from "@dynatrace/strato-components/content";
+import { Avatar, Chip } from "@dynatrace/strato-components/content";
 import { Select, ToggleButtonGroup } from "@dynatrace/strato-components/forms";
 import { Tooltip } from "@dynatrace/strato-components/overlays";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
@@ -13,6 +13,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Channel, Schedule, ScheduleOverride } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { newId, onCallAt, onCallNowAndNext } from "../../hooks/domain";
+import { CellEmpty, CellPerson, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ShiftGantt, coverage } from "../../components/ShiftGantt";
@@ -246,11 +247,7 @@ const SchedulesTab = () => {
       width: 170,
       cell: ({ rowData }) =>
         rowData.onCall.length ? (
-          <AvatarGroup>
-            {rowData.onCall.map((u) => (
-              <AvatarGroup.Item key={u} abbreviation={initials(userName(u))} tooltipText={userName(u)} />
-            ))}
-          </AvatarGroup>
+          <CellPerson name={userName(rowData.onCall[0])} />
         ) : (
           <Text style={{ color: Colors.Text.Critical.Default }}>No one</Text>
         ),
@@ -294,7 +291,7 @@ const SchedulesTab = () => {
     );
   return (
     <>
-      <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={{ rowDensity: "condensed" }}>
+      <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
         <DataTable.RowActions>
           {(row) => {
             const r = row as ScheduleRow;
@@ -363,17 +360,13 @@ const OverridesTab = ({ onNew }: { onNew: () => void }) => {
       header: "Who covers",
       accessor: (r) => userName(r.uid),
       width: 200,
-      cell: ({ rowData }) => (
-        <Avatar size="small" abbreviation={initials(userName(rowData.uid))}>
-          <Avatar.Label>{userName(rowData.uid)}</Avatar.Label>
-        </Avatar>
-      ),
+      cell: ({ rowData }) => <CellPerson name={userName(rowData.uid)} />,
     },
     { id: "for", header: "For", accessor: (r) => (r.coversFor ? userName(r.coversFor) : "Gap"), width: 170 },
     { id: "schedule", header: "Schedule", accessor: "scheduleName", width: 180 },
     { id: "from", header: "From", accessor: "from", width: 210, sortType: "number", cell: ({ rowData }) => <Text>{formatDateTime(rowData.from, rowData.timeZone)}</Text> },
     { id: "to", header: "To", accessor: "to", width: 210, sortType: "number", cell: ({ rowData }) => <Text>{formatDateTime(rowData.to, rowData.timeZone)}</Text> },
-    { id: "note", header: "Reason", accessor: (r) => r.note ?? "", width: "1fr" },
+    { id: "note", header: "Reason", accessor: (r) => r.note ?? "", width: "1fr", cell: ({ rowData }) => (rowData.note ? <CellText>{rowData.note}</CellText> : <CellEmpty />) },
   ];
   const remove = (r: OverrideRow) => {
     const s = data?.schedules.find((x) => x.id === r.scheduleId);
@@ -402,7 +395,7 @@ const OverridesTab = ({ onNew }: { onNew: () => void }) => {
           <ToggleButtonGroup.Item value="past">Past</ToggleButtonGroup.Item>
         </ToggleButtonGroup>
       </Flex>
-      <DataTable data={rows} columns={columns} rowId={(r) => `${r.scheduleId}.${r.id}`} fullWidth sortable variant={{ rowDensity: "condensed" }}>
+      <DataTable data={rows} columns={columns} rowId={(r) => `${r.scheduleId}.${r.id}`} fullWidth sortable variant={LIST_TABLE_VARIANT}>
         <DataTable.RowActions>
           {(row) => <IconButton size="condensed" label="Remove override" icon={<XmarkIcon />} onClick={() => remove(row as OverrideRow)} />}
         </DataTable.RowActions>
