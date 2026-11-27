@@ -11,6 +11,14 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+### Documentation
+- Operations guide (three languages): why the integration workflows start on demand and not on an event trigger, and
+  that a workflow's task is billed as one function call whatever started the workflow. Measured on a trial tenant:
+  the app's notification action and Dynatrace's own *HTTP request* action, one invocation per run each, failed sends
+  included. How to keep an integration on direct sending.
+- README and project page: the cost table lists the invocation per notification of an integration that has its own
+  workflow.
+
 ## [2.2.0] - 2026-11-27
 
 A usability pass over Teams, On-call, Escalations and Services, walked through from an empty app in the offline

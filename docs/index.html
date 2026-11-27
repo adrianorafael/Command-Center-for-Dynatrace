@@ -347,6 +347,7 @@ Strato UI ── reads App State, writes configuration + append-only operator ac
         <thead><tr><th>Item</th><th>1-minute interval</th><th>2 minutes</th><th>5 minutes</th></tr></thead>
         <tbody>
           <tr><td>Engine runs = function invocations / month</td><td>≈ 43,200</td><td>≈ 21,600</td><td>≈ 8,640</td></tr>
+          <tr><td>Integration workflow runs = function invocations</td><td colspan="3">one per notification of an integration that has its own workflow (none when the engine sends directly)</td></tr>
           <tr><td>Workflow hours</td><td><span class="tag green">0</span></td><td><span class="tag green">0</span></td><td><span class="tag green">0</span></td></tr>
           <tr><td>Grail queries per run</td><td>1–8</td><td>1–8</td><td>1–8</td></tr>
         </tbody>

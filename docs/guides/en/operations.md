@@ -55,7 +55,7 @@ code, so what the Console shows right after an action matches what the engine wi
 | Design | Workflow hours | Function invocations | Verdict |
 | --- | --- | --- | --- |
 | Version 2 before this change: a **standard** workflow `tick` → 8 senders → `report` | 1 per hour of the workflow's lifetime, whether or not it does anything | Measured: about 690 per hour (≈ 11.5 per minute) | Replaced |
-| One **simple** workflow per integration, run by the engine per notification (current, in addition) | none | One extra workflow run per notification of that integration | ✅ Each integration switched on gets its own workflow (one confirmation). The engine still reads alerts and escalates; it hands each notification to the integration's workflow and falls back to a direct send when that workflow can't be run. |
+| One **simple** workflow per integration, run by the engine per notification (current, in addition) | none | Measured: **1 per notification** of that integration (the workflow's task), failed sends included | ✅ Each integration switched on gets its own workflow (one confirmation). The engine still reads alerts and escalates; it hands each notification to the integration's workflow and falls back to a direct send when that workflow can't be run. |
 | **One simple workflow, one action, interval trigger** (current) | **none** | Measured: **1 per run** (60 per hour at 1 minute) | ✅ |
 
 Sources: *Create a simple workflow* ("without consuming workflow hours") and *Workflows concepts* (simple workflows "do
@@ -77,6 +77,28 @@ Workflow hours, from the `Automation Workflow` billing events: for the hour 01:0
 (a standard workflow) was billed. The simple-workflow engine, which ran every minute in that hour, produced no workflow
 billing event.
 
+### Why the integration workflows start on demand
+
+The engine workflow has an interval trigger. The integration workflows and the custom workflow have the **On demand**
+trigger: the engine starts them through the Workflows API and passes the notification as run parameters. The
+Dynatrace documentation describes *On demand* as the trigger for a workflow that "should run exclusively via API".
+
+An **event trigger** (*Problem*, *Davis event* or *Event*) starts only when a matching event is ingested. A page is a
+decision of the engine (who is on call, which escalation step, still not acknowledged), not an event that Dynatrace
+produces. With an event trigger the engine would first have to ingest one event per notification, carrying the
+recipient and the text.
+
+The trigger does not change the cost. Each execution runs its task as one function call, whatever started it. The
+Dynatrace licensing documentation gives the example of a simple workflow that notifies on every new problem: no
+workflow hours, one function call per notification. Measured on the trial environment: the app's *Send Command Center
+notification* action and Dynatrace's own *HTTP request* action (the custom workflow example) were each billed one
+invocation per run, failed sends included. The API call that starts a run left no billing event of its own.
+
+An integration without its own workflow is sent directly by the engine, inside the run it is already doing, with no
+extra invocation. Its own workflow adds one invocation per notification. In return, each delivery is an execution you
+can see in the Workflows app, and the sends do not share the time limit of the engine run (100 seconds; what is not
+sent in time waits for a later run).
+
 ## Cost and consumption
 
 > Read this before running the app in production. The engine runs all day, independently of how many people use the
@@ -87,7 +109,10 @@ billing event.
 | Engine runs = function invocations (`ACTION`) | ≈ 43,200 | ≈ 21,600 | ≈ 8,640 |
 | Workflow hours | 0 | 0 | 0 |
 | Grail queries | 1–8 per run (below) | same | same |
-| Integration workflow runs | one per notification of a linked integration | same | same |
+| Integration workflow runs = function invocations (`ACTION`) | one per notification of an integration that has its own workflow, failed sends and retries included | same | same |
+
+One invocation is a function call of up to 60 seconds; a call that runs for 61 to 120 seconds counts as two (Dynatrace
+licensing documentation). The engine runs measured on the trial environment took 3 to 10 seconds.
 
 **Grail queries per run**: Q1 problems (when the Davis problems source is on, the default), Q4 event properties of the problems Q1 returned (one per 100 event IDs, at most
 5), Q2 Davis events and Q3 generic events (only when turned on). The UI runs **no** DQL: open tabs read only App State.
@@ -109,7 +134,10 @@ How to measure in your environment:
   billable capabilities: here the function invocations and the Grail queries.
 
 How to reduce cost: keep Q2 and Q3 off unless you send events that don't open problems; lower the look-back; choose
-a 2- or 5-minute interval if your escalation delays are long.
+a 2- or 5-minute interval if your escalation delays are long. An integration costs no extra invocation while it has
+no workflow of its own: don't create that workflow (close the Workflows app when it opens), or delete it there and
+select *Unlink* in the integration's configuration. While a workflow named *Command Center · <integration>* exists,
+the Outbound tab links it again.
 
 **The queries** (`ui/app/data/dql.ts`, all executed on the trial environment):
 
