@@ -17,7 +17,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Timeframe } from "@dynatrace/strato-components/core";
 import { PRIORITIES } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
-import { readPrefs } from "../../hooks/prefs";
+import { readPrefs, writePrefs } from "../../hooks/prefs";
 import { PageTitle } from "../../components/PageTitle";
 import { PriorityChip } from "../../components/PriorityChip";
 import { EngineHealthBanner } from "../../components/Banners";
@@ -28,6 +28,8 @@ import { KpiStrip } from "./KpiStrip";
 import { IncidentTable } from "./IncidentTable";
 import { IncidentDetails } from "./IncidentDetails";
 import { ActionModals, type ModalRequest } from "./ActionModals";
+import { RowActionsPicker } from "./RowActionsPicker";
+import type { RowActionId } from "./rowActions";
 import {
   applyFilters,
   createdBound,
@@ -80,6 +82,13 @@ export const ConsolePage = () => {
   const [modal, setModal] = useState<ModalRequest>();
   const prefs = useMemo(() => readPrefs(), []);
   const ackTargetMs = prefs.ackTargetMin * 60_000;
+  const [inlineActions, setInlineActions] = useState<RowActionId[]>(prefs.consoleInlineActions);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const saveInlineActions = useCallback((next: RowActionId[]) => {
+    setInlineActions(next);
+    // Re-read so a preference changed elsewhere since this page mounted (e.g. in Settings) isn't overwritten.
+    writePrefs({ ...readPrefs(), consoleInlineActions: next });
+  }, []);
   const cmd = useIncidentCommands();
   const tz = data?.settings.ui.timeZone;
   const showSpinner = useDelayedFlag(isRefreshing && !isLoading);
@@ -119,7 +128,7 @@ export const ConsolePage = () => {
     if (!prefs.keyboardShortcuts) return;
     const onKey = (ev: KeyboardEvent) => {
       const t = ev.target as HTMLElement | null;
-      if (t && (t.closest("input, textarea, select, [contenteditable='true'], [role='combobox'], [role='dialog']") || modal)) return;
+      if (t && (t.closest("input, textarea, select, [contenteditable='true'], [role='combobox'], [role='dialog']") || modal || pickerOpen)) return;
       if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
       const idx = visible.findIndex((i) => i.id === activeId);
       if (ev.key === "j" || ev.key === "k") {
@@ -137,7 +146,7 @@ export const ConsolePage = () => {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [prefs.keyboardShortcuts, visible, activeId, active, cmd, setActive, refresh, modal]);
+  }, [prefs.keyboardShortcuts, visible, activeId, active, cmd, setActive, refresh, modal, pickerOpen]);
 
   const noSources = data && all.length === 0;
   const empty = noSources ? (
@@ -369,7 +378,14 @@ export const ConsolePage = () => {
               </Text>
             )}
           </Flex>
+          {/* DataTable.Toolbar renders only its own slots, so the gear is laid over the right end of the table's toolbar
+              row (the table reserves room for it, see TOOLBAR_GEAR_SPACE) to sit beside the column settings. */}
+          <div style={{ position: "relative" }}>
+            <div style={{ position: "absolute", top: 0, right: 0, zIndex: 1 }}>
+              <RowActionsPicker value={inlineActions} onChange={saveInlineActions} onOpenChange={setPickerOpen} />
+            </div>
           <IncidentTable
+            inlineActions={inlineActions}
             incidents={visible}
             loading={isLoading}
             activeId={activeId}
@@ -381,6 +397,7 @@ export const ConsolePage = () => {
             density={prefs.tableDensity}
             ackTargetMs={ackTargetMs}
           />
+          </div>
         </Flex>
       </PageLayout.Content>
       <PageLayout.Details
