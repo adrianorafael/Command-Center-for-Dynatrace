@@ -13,6 +13,13 @@ import type { ProviderView } from "../lib/engine";
 
 const NOW = Date.parse("2026-11-26T12:00:00Z");
 const SID = `AC${"0".repeat(32)}`;
+// Synthetic values standing in for vault content: the vault is mocked and nothing here is a real credential.
+const FAKE_PW = "secret-token";
+const SLACK_HOOK = "https://hooks.slack.com/services/T/B/X";
+const FOREIGN_HOOK = "https://attacker.example/hook";
+const RECEIVER = "https://receiver.example/in";
+const HEADER_VALUE = "k3y-value";
+const BEARER_VALUE = "Bearer abc";
 
 function note(over: Partial<NotificationRequest> = {}): NotificationRequest {
   return {
@@ -43,7 +50,7 @@ const deps = (fetchFn: ReturnType<typeof okFetch>, cred: Credential, now = () =>
 describe("senders", () => {
   it("Twilio SMS posts form data with Basic auth to the Messages resource", async () => {
     const f = okFetch();
-    const r = await sendAll({ sms: [note()] }, [provider()], NOW + 60_000, deps(f, { user: SID, password: "secret-token" }));
+    const r = await sendAll({ sms: [note()] }, [provider()], NOW + 60_000, deps(f, { user: SID, password: FAKE_PW }));
     expect(r).toEqual([{ key: note().key, status: "sent", providerRef: "SM1", at: NOW }]);
     const [url, init] = f.mock.calls[0];
     expect(String(url)).toBe(`https://api.twilio.com/2010-04-01/Accounts/${SID}/Messages.json`);
@@ -53,7 +60,7 @@ describe("senders", () => {
 
   it("voice call sends XML-escaped TwiML", async () => {
     const f = okFetch();
-    await sendAll({ voice: [note({ channel: "voice", speech: `Alert <Hangup/> & "quotes"` })] }, [provider({ channel: "voice" })], NOW + 60_000, deps(f, { user: SID, password: "secret-token" }));
+    await sendAll({ voice: [note({ channel: "voice", speech: `Alert <Hangup/> & "quotes"` })] }, [provider({ channel: "voice" })], NOW + 60_000, deps(f, { user: SID, password: FAKE_PW }));
     const body = new URLSearchParams(String(f.mock.calls[0][1]?.body));
     expect(body.get("Twiml")).toContain("Alert &lt;Hangup/&gt; &amp; &quot;quotes&quot;");
     expect(String(f.mock.calls[0][0])).toContain("/Calls.json");
@@ -62,10 +69,10 @@ describe("senders", () => {
   it("Slack escapes mentions and links; refuses a non-Slack URL", async () => {
     expect(slackEscape("<!channel> <https://x|y> & z")).toBe("&lt;!channel&gt; &lt;https://x|y&gt; &amp; z");
     const f = okFetch({});
-    await sendAll({ slack: [note({ channel: "slack" })] }, [provider({ channel: "slack", kind: "slack-webhook" })], NOW + 60_000, deps(f, { token: "https://hooks.slack.com/services/T/B/X" }));
+    await sendAll({ slack: [note({ channel: "slack" })] }, [provider({ channel: "slack", kind: "slack-webhook" })], NOW + 60_000, deps(f, { token: SLACK_HOOK }));
     expect(String(f.mock.calls[0][1]?.body)).not.toContain("<!channel>");
     const g = okFetch({});
-    const r = await sendAll({ slack: [note({ channel: "slack" })] }, [provider({ channel: "slack", kind: "slack-webhook" })], NOW + 60_000, deps(g, { token: "https://attacker.example/hook" }));
+    const r = await sendAll({ slack: [note({ channel: "slack" })] }, [provider({ channel: "slack", kind: "slack-webhook" })], NOW + 60_000, deps(g, { token: FOREIGN_HOOK }));
     expect(r[0].status).toBe("failed");
     expect(g).not.toHaveBeenCalled();
   });
@@ -83,7 +90,7 @@ describe("senders", () => {
 
   it("generic webhook posts the full notification with the optional auth header", async () => {
     const f = okFetch({});
-    await sendAll({ webhook: [note({ channel: "webhook" })] }, [provider({ channel: "webhook", kind: "webhook", params: { authHeader: "X-Api-Key" } })], NOW + 60_000, deps(f, { token: "https://receiver.example/in", password: "k3y-value" }));
+    await sendAll({ webhook: [note({ channel: "webhook" })] }, [provider({ channel: "webhook", kind: "webhook", params: { authHeader: "X-Api-Key" } })], NOW + 60_000, deps(f, { token: RECEIVER, password: HEADER_VALUE }));
     const init = f.mock.calls[0][1];
     expect((init?.headers as Record<string, string>)["X-Api-Key"]).toBe("k3y-value");
     expect(JSON.parse(String(init?.body))).toMatchObject({ source: "command-center", version: 1, notification: { key: note().key } });
@@ -91,7 +98,7 @@ describe("senders", () => {
 
   it("generic webhook accepts a username/password entry (username = URL, password = header value)", async () => {
     const f = okFetch({});
-    await sendAll({ webhook: [note({ channel: "webhook" })] }, [provider({ channel: "webhook", kind: "webhook", params: { authHeader: "Authorization" } })], NOW + 60_000, deps(f, { user: "https://receiver.example/in", password: "Bearer abc" }));
+    await sendAll({ webhook: [note({ channel: "webhook" })] }, [provider({ channel: "webhook", kind: "webhook", params: { authHeader: "Authorization" } })], NOW + 60_000, deps(f, { user: RECEIVER, password: BEARER_VALUE }));
     expect(f.mock.calls[0][0]).toBe("https://receiver.example/in");
     expect((f.mock.calls[0][1]?.headers as Record<string, string>)["Authorization"]).toBe("Bearer abc");
   });
@@ -136,14 +143,14 @@ describe("senders", () => {
   it("never leaks secrets or URLs in error text", async () => {
     expect(safeError(new Error("bad token secret-token at https://api.twilio.com/x"), ["secret-token"])).toBe("bad token *** at <url>");
     const f = vi.fn(async () => new Response("echo secret-token", { status: 401 }));
-    const r = await sendAll({ sms: [note()] }, [provider()], NOW + 60_000, { fetch: f as unknown as typeof fetch, readCredential: async () => ({ user: SID, password: "secret-token" }), now: () => NOW });
+    const r = await sendAll({ sms: [note()] }, [provider()], NOW + 60_000, { fetch: f as unknown as typeof fetch, readCredential: async () => ({ user: SID, password: FAKE_PW }), now: () => NOW });
     expect(r[0].status).toBe("failed");
     expect(r[0].error).not.toContain("secret-token");
   });
 
   it("reads each provider credential once and stops before the deadline", async () => {
     const f = okFetch();
-    const d = deps(f, { user: SID, password: "secret-token" });
+    const d = deps(f, { user: SID, password: FAKE_PW });
     let t = NOW;
     d.now = () => (t += 30_000);
     const r = await sendAll({ sms: [note({ key: "a" }), note({ key: "b" }), note({ key: "c" })] }, [provider()], NOW + 75_000, d);
@@ -198,13 +205,13 @@ describe("engine cycle (tick → send → report in one invocation)", () => {
   it("pages the on-call person and records 'sent' in the ledger, all in one run", async () => {
     const r = repo();
     const f = okFetch();
-    const res = await runEngineCycle({ reason: "schedule" }, { repo: r, runQuery: grail, now: () => NOW, fetch: f as unknown as typeof fetch, readCredential: async () => ({ user: SID, password: "secret-token" }) });
+    const res = await runEngineCycle({ reason: "schedule" }, { repo: r, runQuery: grail, now: () => NOW, fetch: f as unknown as typeof fetch, readCredential: async () => ({ user: SID, password: FAKE_PW }) });
     expect(res).toMatchObject({ ok: true, sent: 1, failed: 0, deferred: 0 });
     const ledger = (await r.list<NotificationRecord>(PREFIX.notification)).map((x) => x.value);
     expect(ledger).toHaveLength(1);
     expect(ledger[0]).toMatchObject({ status: "sent", providerRef: "SM1" });
     // A second run plans nothing new (idempotent).
-    const again = await runEngineCycle({ reason: "schedule" }, { repo: r, runQuery: grail, now: () => NOW + 1000, fetch: f as unknown as typeof fetch, readCredential: async () => ({ user: SID, password: "secret-token" }) });
+    const again = await runEngineCycle({ reason: "schedule" }, { repo: r, runQuery: grail, now: () => NOW + 1000, fetch: f as unknown as typeof fetch, readCredential: async () => ({ user: SID, password: FAKE_PW }) });
     expect(again.sent).toBe(0);
     expect(f).toHaveBeenCalledTimes(1);
   });
