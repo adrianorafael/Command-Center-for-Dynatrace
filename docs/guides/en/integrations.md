@@ -169,9 +169,9 @@ error) is shown right away. Test every channel you turn on, end to end, before y
 
 | Provider | Status |
 | --- | --- |
-| Generic webhook | ✅ Verified live on a trial environment: escalations and tests delivered, results written to the ledger |
-| Custom workflow | ✅ Verified live on a trial environment: a test and a scheduled escalation ran the workflow, which delivered the full notification JSON to the receiver |
-| Integration workflows | ✅ Verified live on a trial environment with the generic webhook: the engine ran *Command Center · Generic webhook*, its action read the provider and the vault secret and delivered; a provider error (HTTP 429) failed the workflow execution with the provider's message |
+| Generic webhook | Verified live on a trial environment: escalations and tests delivered, results written to the ledger |
+| Custom workflow | Verified live on a trial environment: a test and a scheduled escalation ran the workflow, which delivered the full notification JSON to the receiver |
+| Integration workflows | Verified live on a trial environment with the generic webhook: the engine ran *Command Center · Generic webhook*, its action read the provider and the vault secret and delivered; a provider error (HTTP 429) failed the workflow execution with the provider's message |
 | Twilio SMS, voice, WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implemented from each vendor's API documentation, **not exercised live** (no accounts in the test environment). Unit tests cover the Twilio SMS and voice, Slack and Telegram requests. Test every provider with *Send test*. |
 
 Two-way replies (acknowledging by answering an SMS or a chat message) are not implemented. Acknowledge in the Console.

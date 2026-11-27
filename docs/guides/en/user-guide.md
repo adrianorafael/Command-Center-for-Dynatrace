@@ -11,9 +11,9 @@ Screenshots were taken in **demo mode** with sample data.
 | Element | What it does |
 | --- | --- |
 | **Console · On-call · Teams · Escalations · Services · Integrations · War rooms · Reports** | Main navigation. **War rooms** shows a red count while rooms are in progress. |
-| 🔔 **Bell** | The last notifications of this session, with an unread count (up to `99+`). Icon states: bell = nothing new, active bell = unread items, crossed-out bell = pop-ups silenced. Selecting an item opens what it refers to. Closing the menu marks everything as read. |
-| 📞 **On-call indicator** | `You're on call` in a green circle when you are on call; otherwise `On call: <name>` (+N for more people), `On call` when nobody covers right now, or `No one on call` when there is no schedule yet. The menu lists who is on call per team until when, and offers **Leave on-call now…** or **Take on-call now…** (below). |
-| ⚙️ **Settings** | Opens [Settings](configuration.md). |
+| :icon[NotificationIcon]: **Bell** | The last notifications of this session, with an unread count (up to `99+`). Icon states: :icon[NotificationIcon]: nothing new, :icon[NotificationActiveIcon]: unread items, :icon[NotificationOffIcon]: pop-ups silenced. Selecting an item opens what it refers to. Closing the menu marks everything as read. |
+| :icon[CallIcon]: **On-call indicator** | `You're on call` in a green circle when you are on call; otherwise `On call: <name>` (+N for more people), `On call` when nobody covers right now, or `No one on call` when there is no schedule yet. The menu lists who is on call per team until when, and offers **Leave on-call now…** or **Take on-call now…** (below). |
+| :icon[SettingIcon]: **Settings** | Opens [Settings](configuration.md). |
 | **?** Help menu | Get started, in-app guide, sending events, keyboard shortcuts, about. |
 
 ### Notifications (bell and pop-ups)
@@ -48,10 +48,10 @@ not shown either.
 
 | Indicator | Status | Meaning |
 | --- | --- | --- |
-| 🔴 Triggered | `triggered` | New or re-triggered. The escalation policy is running. |
-| 🟠 Acknowledged | `acknowledged` | Someone is on it. Escalation stops. |
-| ⚪ Snoozed | `snoozed` | Hidden until a time. Then it triggers again and escalation restarts. |
-| 🟢 Resolved | `resolved` | Closed by the source or by an operator. It stays visible for 24 hours (setting), then it is archived. |
+| :icon[HealthCritical]: Triggered | `triggered` | New or re-triggered. The escalation policy is running. |
+| :icon[HealthWarning]: Acknowledged | `acknowledged` | Someone is on it. Escalation stops. |
+| :icon[HealthNeutral]: Snoozed | `snoozed` | Hidden until a time. Then it triggers again and escalation restarts. |
+| :icon[HealthIdeal]: Resolved | `resolved` | Closed by the source or by an operator. It stays visible for 24 hours (setting), then it is archived. |
 
 **Priority chips**: text only, no icon. **P1** is the only solid red chip, **P2** is red-tinted, **P3** amber, **P4**
 blue and **P5** grey. Meanings: P1 critical (major outage or customer impact), P2 high (a service is degraded), P3
@@ -68,15 +68,31 @@ notification rules ("for priorities P1–P2…") and the quiet-hours behaviour.
 | Failed | The provider refused it, or every attempt failed. The provider's error is shown. |
 | No result | No result arrived in time. The engine retries with a new attempt. |
 
-**Channels**: 📱 SMS · 📞 voice · 💬 chat (WhatsApp, Telegram, Slack, Microsoft Teams) · 🌐 HTTP (IFTTT, webhook). A
-red ✖ in *Last notified* means the last notification failed or got no result.
+**Channels**: :icon[MobileIcon]: SMS · :icon[CallIcon]: voice · :icon[ChatIcon]: chat (WhatsApp, Telegram, Slack, Microsoft Teams) · :icon[HttpIcon]: HTTP (IFTTT, webhook). A
+red :icon[CriticalFailedIcon]: in *Last notified* means the last notification failed or got no result.
 
-**Sources**: the Davis (AI) icon marks a Davis problem; the event icon marks a Davis event or an Events API event.
+**Sources**: :icon[AiIcon]: Davis (AI) marks a Davis problem; :icon[EventIcon]: marks a Davis event or an Events API event.
 
-**Other icons**: ⬆ escalate · ⏸ snooze · 👤 assignee / reassign · ✎ priority or tag change · 📝 note · 👥 war room or
-whole team · 🕒 MTTA or *over the acknowledge target* · 🔇 suppressed · 🔁 the policy repeats · ✔ (green) step done ·
-spinner = current step · ○ pending step · 🔒 default route · ▶ run or send test · 🔑 Credential Vault · workflow icon =
-engine workflow.
+**Other icons**
+
+| Icon | Meaning |
+| --- | --- |
+| :icon[ArrowUpIcon]: | Escalate |
+| :icon[PauseIcon]: | Snooze |
+| :icon[AccountIcon]: | Assignee, reassign |
+| :icon[EditIcon]: | Priority or tag change |
+| :icon[DescriptionIcon]: | Note |
+| :icon[GroupIcon]: | War room, or the whole team |
+| :icon[ClockIcon]: | MTTA, or *over the acknowledge target* |
+| :icon[MuteIcon]: | Suppressed |
+| :icon[RepeatIcon]: | The policy repeats |
+| :icon[SuccessIcon]: | Step done |
+| Spinner | Current step |
+| :icon[CircleIcon]: | Pending step |
+| :icon[LockIcon]: | Default route |
+| :icon[PlayIcon]: | Run, or send a test |
+| :icon[KeyIcon]: | Credential Vault |
+| :icon[FlowIcon]: | Engine workflow |
 
 **Created-item highlight**: anything you create with a button in a list (a war room, a team, a member, a schedule, a
 layer, an override, a policy step, a service, a rule, a note…) pulses once for one second with an outline, so you can
@@ -117,7 +133,7 @@ incident is resolved), Escalation (*Step N of M*, *Not started*, *Exhausted*, *N
 default. Use the column menu to show, hide or reorder columns. The choice is remembered in this browser. Rows can be
 expanded to show the description, the latest activity and the escalation.
 
-**Row actions**: **Acknowledge** (only when triggered), **Resolve**, and **⋮**: *Reassign…*, *Escalate now*,
+**Row actions**: **Acknowledge** (only when triggered), **Resolve**, and **:icon[DotMenuIcon]:**: *Reassign…*, *Escalate now*,
 *Snooze* (15 min, 30 min, 1 h, 4 h, Custom…), *Change priority…*, *Add note*, *Open war room…* / *Join war room*, *Open
 Davis problem*, *Copy link*.
 
@@ -153,7 +169,7 @@ Every action is recorded in the incident timeline with who did it and when.
 Opens beside the table. The header shows priority, status, `#ID`, a copy-link button, title, *Opened … · Service ·
 Team · Source*, *Under maintenance: paging suppressed* when it applies, who it is assigned to and, once acknowledged,
 *Acknowledged by* with the person and the time. Buttons: Acknowledge, Resolve, Reopen,
-Reassign, Open/Join war room, Escalate now, Snooze, and ⋮ (Change priority, Add note, Undo acknowledgement, Copy link).
+Reassign, Open/Join war room, Escalate now, Snooze, and :icon[DotMenuIcon]: (Change priority, Add note, Undo acknowledgement, Copy link).
 Davis problems link to **Open in Problems app**.
 
 | Tab | Content |
@@ -170,7 +186,7 @@ Davis problems link to **Open in Problems app**.
 
 A war room is a meeting link plus the incidents it handles and its notebooks.
 
-- **Open**: from an incident (**Open war room**, or **⋮ → Open war room…** in the Console) or with the **Open war
+- **Open**: from an incident (**Open war room**, or **:icon[DotMenuIcon]: → Open war room…** in the Console) or with the **Open war
   room** button. Paste the meeting link you created in Teams, Zoom, Meet or a Slack huddle (https only). Related open
   incidents are added automatically: those with the same root cause, or the same service and started within 30 minutes.
   Remove any that don't belong.
@@ -292,7 +308,7 @@ environment, with a 1-minute interval, every step of a four-step test policy fir
 | --- | --- |
 | Services | Service, team, escalation policy (or *Team default*), rules, open incidents, noise last 7 days |
 | Routing rules (N) | Ordered rules (drag to reorder). **The first enabled rule that matches wins.** A new rule is placed above the first catch-all rule (a rule without conditions). Columns: #, name, conditions, actions, matched in 24 h, and a switch that turns the rule on or off. The last, fixed row is the default route; it warns when there is no default team. On this tab the page button is **New rule**. |
-| Test a rule | Load a recent alert or an example, edit the JSON, **Run test**: shows the matched rule (or the closest one), each condition ✔/✖, and the resulting service, team, policy and priority with its source |
+| Test a rule | Load a recent alert or an example, edit the JSON, **Run test**: shows the matched rule (or the closest one), each condition :icon[SuccessIcon]:/:icon[XmarkIcon]:, and the resulting service, team, policy and priority with its source |
 | Priority mapping | Priority by Davis category and by severity, plus the fallback |
 
 **Rule editor**: name, enabled, *Match all / any*, conditions (field, operator, value, *Not*), and **Then**: service,

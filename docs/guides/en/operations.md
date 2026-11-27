@@ -58,8 +58,8 @@ code, so what the Console shows right after an action matches what the engine wi
 | Design | Workflow hours | Function invocations | Verdict |
 | --- | --- | --- | --- |
 | Version 2 before this change: a **standard** workflow `tick` → 8 senders → `report` | 1 per hour of the workflow's lifetime, whether or not it does anything | Measured: about 690 per hour (≈ 11.5 per minute) | Replaced |
-| **One simple workflow, one action, interval trigger** (current) | **none** | Measured: **1 per run** (60 per hour at 1 minute) | ✅ The engine also sends, so a notification adds no invocation. |
-| A second simple workflow with a **Problem trigger** and the same action (optional) | none | Measured: **1 per firing**, about 2 per problem (it opens, it closes) | ✅ Optional. The first page does not wait for the interval, so a longer interval becomes practical. See [Running on problems](#running-on-problems). |
+| **One simple workflow, one action, interval trigger** (current) | **none** | Measured: **1 per run** (60 per hour at 1 minute) | The engine also sends, so a notification adds no invocation. |
+| A second simple workflow with a **Problem trigger** and the same action (optional) | none | Measured: **1 per firing**, about 2 per problem (it opens, it closes) | Optional. The first page does not wait for the interval, so a longer interval becomes practical. See [Running on problems](#running-on-problems). |
 | One **simple** workflow per integration, run by the engine per notification (optional, per integration) | none | Measured: **1 per notification** of that integration (the workflow's task), failed sends included | Optional since 2.3.0 (it was the default in 2.1 and 2.2). Each delivery is a workflow execution you can see. The engine falls back to a direct send when that workflow can't be run. |
 
 Sources: *Create a simple workflow* ("without consuming workflow hours") and *Workflows concepts* (simple workflows "do

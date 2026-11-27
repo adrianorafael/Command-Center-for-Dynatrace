@@ -11,9 +11,9 @@ Las capturas de pantalla se tomaron en **modo demo** con datos de ejemplo.
 | Elemento | Qué hace |
 | --- | --- |
 | **Console · On-call · Teams · Escalations · Services · Integrations · War rooms · Reports** | Navegación principal. **War rooms** muestra un contador rojo mientras hay salas en curso. |
-| 🔔 **Campana** | Las últimas notificaciones de esta sesión, con un contador de no leídas (hasta `99+`). Estados del ícono: campana = nada nuevo, campana activa = elementos no leídos, campana tachada = pop-ups silenciados. Seleccionar un elemento abre aquello a lo que se refiere. Cerrar el menú marca todo como leído. |
-| 📞 **Indicador de guardia** | `You're on call` en un círculo verde cuando estás de guardia; si no, `On call: <name>` (+N si hay más personas), `On call` cuando nadie cubre en este momento, o `No one on call` cuando todavía no hay ningún calendario. El menú lista quién está de guardia en cada equipo y hasta cuándo, y ofrece **Leave on-call now…** o **Take on-call now…** (más abajo). |
-| ⚙️ **Settings** | Abre [Settings](configuration.md). |
+| :icon[NotificationIcon]: **Campana** | Las últimas notificaciones de esta sesión, con un contador de no leídas (hasta `99+`). Estados del ícono: :icon[NotificationIcon]: nada nuevo, :icon[NotificationActiveIcon]: elementos no leídos, :icon[NotificationOffIcon]: pop-ups silenciados. Seleccionar un elemento abre aquello a lo que se refiere. Cerrar el menú marca todo como leído. |
+| :icon[CallIcon]: **Indicador de guardia** | `You're on call` en un círculo verde cuando estás de guardia; si no, `On call: <name>` (+N si hay más personas), `On call` cuando nadie cubre en este momento, o `No one on call` cuando todavía no hay ningún calendario. El menú lista quién está de guardia en cada equipo y hasta cuándo, y ofrece **Leave on-call now…** o **Take on-call now…** (más abajo). |
+| :icon[SettingIcon]: **Settings** | Abre [Settings](configuration.md). |
 | Menú de ayuda **?** | Get started (primeros pasos), guía dentro de la app, envío de eventos, atajos de teclado, acerca de. |
 
 ### Notificaciones (campana y pop-ups)
@@ -48,10 +48,10 @@ de las confirmaciones.
 
 | Indicador | Estado | Significado |
 | --- | --- | --- |
-| 🔴 Triggered | `triggered` | Nuevo o disparado de nuevo. La política de escalamiento está en curso. |
-| 🟠 Acknowledged | `acknowledged` | Alguien se está ocupando. El escalamiento se detiene. |
-| ⚪ Snoozed | `snoozed` | Oculto hasta una hora determinada. Luego se dispara de nuevo y el escalamiento se reinicia. |
-| 🟢 Resolved | `resolved` | Cerrado por la fuente o por un operador. Permanece visible durante 24 horas (ajuste) y luego se archiva. |
+| :icon[HealthCritical]: Triggered | `triggered` | Nuevo o disparado de nuevo. La política de escalamiento está en curso. |
+| :icon[HealthWarning]: Acknowledged | `acknowledged` | Alguien se está ocupando. El escalamiento se detiene. |
+| :icon[HealthNeutral]: Snoozed | `snoozed` | Oculto hasta una hora determinada. Luego se dispara de nuevo y el escalamiento se reinicia. |
+| :icon[HealthIdeal]: Resolved | `resolved` | Cerrado por la fuente o por un operador. Permanece visible durante 24 horas (ajuste) y luego se archiva. |
 
 **Chips de prioridad**: solo texto, sin ícono. **P1** es el único chip rojo sólido, **P2** tiene un tono rojizo, **P3**
 ámbar, **P4** azul y **P5** gris. Significados: P1 crítico (caída grave o impacto en clientes), P2 alto (un servicio
@@ -69,16 +69,31 @@ comportamiento de las horas de silencio.
 | Failed | El proveedor la rechazó, o fallaron todos los intentos. Se muestra el error del proveedor. |
 | No result | No llegó ningún resultado a tiempo. El motor reintenta con un nuevo intento. |
 
-**Canales**: 📱 SMS · 📞 voz · 💬 chat (WhatsApp, Telegram, Slack, Microsoft Teams) · 🌐 HTTP (IFTTT, webhook). Una
-✖ roja en *Last notified* significa que la última notificación falló o no obtuvo resultado.
+**Canales**: :icon[MobileIcon]: SMS · :icon[CallIcon]: voz · :icon[ChatIcon]: chat (WhatsApp, Telegram, Slack, Microsoft Teams) · :icon[HttpIcon]: HTTP (IFTTT, webhook). Una
+:icon[CriticalFailedIcon]: roja en *Last notified* significa que la última notificación falló o no obtuvo resultado.
 
-**Fuentes**: el ícono de Davis (IA) marca un problema de Davis; el ícono de evento marca un evento de Davis o un evento
-de la Events API.
+**Fuentes**: :icon[AiIcon]: Davis (IA) marca un problema de Davis; :icon[EventIcon]: marca un evento de Davis o un evento de la Events API.
 
-**Otros íconos**: ⬆ escalar · ⏸ posponer · 👤 responsable / reasignar · ✎ cambio de prioridad o de tag · 📝 nota ·
-👥 war room o equipo completo · 🕒 MTTA o *por encima del objetivo de reconocimiento* · 🔇 suprimido · 🔁 la política
-se repite · ✔ (verde) paso completado · spinner = paso actual · ○ paso pendiente · 🔒 ruta predeterminada · ▶ ejecutar
-o enviar prueba · 🔑 Credential Vault · ícono de workflow = workflow del motor.
+**Otros íconos**
+
+| Ícono | Significado |
+| --- | --- |
+| :icon[ArrowUpIcon]: | Escalar |
+| :icon[PauseIcon]: | Posponer |
+| :icon[AccountIcon]: | Responsable, reasignar |
+| :icon[EditIcon]: | Cambio de prioridad o de tag |
+| :icon[DescriptionIcon]: | Nota |
+| :icon[GroupIcon]: | War room, o el equipo completo |
+| :icon[ClockIcon]: | MTTA, o *por encima del objetivo de reconocimiento* |
+| :icon[MuteIcon]: | Suprimido |
+| :icon[RepeatIcon]: | La política se repite |
+| :icon[SuccessIcon]: | Paso completado |
+| Spinner | Paso actual |
+| :icon[CircleIcon]: | Paso pendiente |
+| :icon[LockIcon]: | Ruta predeterminada |
+| :icon[PlayIcon]: | Ejecutar, o enviar una prueba |
+| :icon[KeyIcon]: | Credential Vault |
+| :icon[FlowIcon]: | Workflow del motor |
 
 **Resaltado de elementos creados**: todo lo que creas con un botón en una lista (una war room, un equipo, un miembro, un
 calendario, una capa, un override, un paso de política, un servicio, una regla, una nota…) pulsa una vez durante un
@@ -122,7 +137,7 @@ Created están ocultas de forma predeterminada. Usa el menú de columnas para mo
 elección se recuerda en este navegador. Las filas se pueden expandir para mostrar la descripción, la actividad más
 reciente y el escalamiento.
 
-**Acciones de fila**: **Acknowledge** (solo cuando está triggered), **Resolve**, y **⋮**: *Reassign…*, *Escalate now*,
+**Acciones de fila**: **Acknowledge** (solo cuando está triggered), **Resolve**, y **:icon[DotMenuIcon]:**: *Reassign…*, *Escalate now*,
 *Snooze* (15 min, 30 min, 1 h, 4 h, Custom…), *Change priority…*, *Add note*, *Open war room…* / *Join war room*,
 *Open Davis problem*, *Copy link*.
 
@@ -159,7 +174,7 @@ Cada acción queda registrada en la línea de tiempo del incidente con quién la
 Se abre junto a la tabla. El encabezado muestra prioridad, estado, `#ID`, un botón para copiar el enlace, título,
 *Opened … · Service · Team · Source*, *Under maintenance: paging suppressed* cuando corresponde, a quién está asignado
 y, una vez reconocido, *Acknowledged by* con la persona y la hora. Botones: Acknowledge,
-Resolve, Reopen, Reassign, Open/Join war room, Escalate now, Snooze, y ⋮ (Change priority, Add note, Undo
+Resolve, Reopen, Reassign, Open/Join war room, Escalate now, Snooze, y :icon[DotMenuIcon]: (Change priority, Add note, Undo
 acknowledgement, Copy link). Los problemas de Davis enlazan a **Open in Problems app**.
 
 | Pestaña | Contenido |
@@ -176,7 +191,7 @@ acknowledgement, Copy link). Los problemas de Davis enlazan a **Open in Problems
 
 Una war room (sala de crisis) es un enlace de reunión más los incidentes que atiende y sus notebooks.
 
-- **Abrir**: desde un incidente (**Open war room**, o **⋮ → Open war room…** en la Console) o con el botón **Open war
+- **Abrir**: desde un incidente (**Open war room**, o **:icon[DotMenuIcon]: → Open war room…** en la Console) o con el botón **Open war
   room**. Pega el enlace de reunión que creaste en Teams, Zoom, Meet o un huddle de Slack (solo https). Los incidentes
   abiertos relacionados se agregan automáticamente: los que tienen la misma causa raíz, o el mismo servicio y
   comenzaron dentro de un lapso de 30 minutos. Quita los que no correspondan.
@@ -313,7 +328,7 @@ se disparó dentro del minuto siguiente a su vencimiento.
 | --- | --- |
 | Services | Servicio, equipo, política de escalamiento (o *Team default*), reglas, incidentes abiertos, ruido de los últimos 7 días |
 | Routing rules (N) | Reglas ordenadas (arrastra para reordenar). **Gana la primera regla habilitada que coincide.** Una regla nueva se coloca encima de la primera regla comodín (una regla sin condiciones). Columnas: #, nombre, condiciones, acciones, coincidencias en 24 h y un interruptor que enciende o apaga la regla. La última fila, fija, es la ruta predeterminada; advierte cuando no hay equipo predeterminado. En esta pestaña, el botón de la página es **New rule**. |
-| Test a rule | Carga una alerta reciente o un ejemplo, edita el JSON, **Run test**: muestra la regla que coincidió (o la más cercana), cada condición ✔/✖, y el servicio, equipo, política y prioridad resultantes con su origen |
+| Test a rule | Carga una alerta reciente o un ejemplo, edita el JSON, **Run test**: muestra la regla que coincidió (o la más cercana), cada condición :icon[SuccessIcon]:/:icon[XmarkIcon]:, y el servicio, equipo, política y prioridad resultantes con su origen |
 | Priority mapping | Prioridad por categoría de Davis y por severidad, más el valor de respaldo |
 
 **Editor de reglas**: nombre, habilitada, *Match all / any*, condiciones (campo, operador, valor, *Not*), y **Then**:

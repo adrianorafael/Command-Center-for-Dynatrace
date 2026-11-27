@@ -161,9 +161,11 @@ const RowQuickActions = ({
           return (
             <Menu key={id}>
               <Menu.Trigger>
-                <Button aria-label={v.label} size={size}>
-                  <Button.Prefix>{v.icon}</Button.Prefix>
-                </Button>
+                <Tooltip text={v.label}>
+                  <Button aria-label={v.label} size={size}>
+                    <Button.Prefix>{v.icon}</Button.Prefix>
+                  </Button>
+                </Tooltip>
               </Menu.Trigger>
               <Menu.Content>
                 <SnoozeItems ids={ids} onModal={onModal} />
@@ -334,8 +336,8 @@ const IncidentPreview = ({
   );
 };
 
-/** Room kept at the right of the table toolbar for the "Row actions" gear ConsolePage lays over it (button 32 + gap 4). */
-export const TOOLBAR_GEAR_SPACE = 36;
+/** Room kept at the right of the table toolbar for the "Row actions" gear ConsolePage lays over it (button 36 + gap 4). */
+export const TOOLBAR_GEAR_SPACE = 40;
 
 const VISIBILITY_KEY = "command-center.console-columns.v1";
 /**

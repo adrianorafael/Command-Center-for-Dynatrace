@@ -173,9 +173,9 @@ provedor) aparece na hora. Teste cada canal que você ativar, de ponta a ponta, 
 
 | Provedor | Status |
 | --- | --- |
-| Webhook genérico | ✅ Verificado ao vivo em um ambiente trial: escalonamentos e testes entregues, resultados gravados no registro (ledger) |
-| Custom workflow | ✅ Verificado ao vivo em um ambiente trial: um teste e um escalonamento agendado executaram o workflow, que entregou o JSON completo da notificação ao receptor |
-| Integration workflows | ✅ Verificado ao vivo em um ambiente trial com o webhook genérico: o motor executou *Command Center · Generic webhook*, a ação dele leu o provedor e o segredo do vault e entregou; um erro do provedor (HTTP 429) fez a execução do workflow falhar com a mensagem do provedor |
+| Webhook genérico | Verificado ao vivo em um ambiente trial: escalonamentos e testes entregues, resultados gravados no registro (ledger) |
+| Custom workflow | Verificado ao vivo em um ambiente trial: um teste e um escalonamento agendado executaram o workflow, que entregou o JSON completo da notificação ao receptor |
+| Integration workflows | Verificado ao vivo em um ambiente trial com o webhook genérico: o motor executou *Command Center · Generic webhook*, a ação dele leu o provedor e o segredo do vault e entregou; um erro do provedor (HTTP 429) fez a execução do workflow falhar com a mensagem do provedor |
 | Twilio SMS, voz, WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implementados a partir da documentação da API de cada fornecedor, **não exercitados ao vivo** (sem contas no ambiente de teste). Testes unitários cobrem as requisições de Twilio SMS e voz, Slack e Telegram. Teste cada provedor com *Send test*. |
 
 Respostas bidirecionais (reconhecer respondendo a um SMS ou a uma mensagem de chat) não estão implementadas. Reconheça

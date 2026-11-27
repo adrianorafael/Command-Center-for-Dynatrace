@@ -174,9 +174,9 @@ el error del proveedor) se muestra de inmediato. Prueba de punta a punta cada ca
 
 | Proveedor | Estado |
 | --- | --- |
-| Webhook genérico | ✅ Verificado en vivo en un entorno trial: escalamientos y pruebas entregados, resultados escritos en el registro de notificaciones |
-| Custom workflow | ✅ Verificado en vivo en un entorno trial: una prueba y un escalamiento programado ejecutaron el workflow, que entregó el JSON completo de la notificación al receptor |
-| Integration workflows | ✅ Verificado en vivo en un entorno trial con el webhook genérico: el motor ejecutó *Command Center · Generic webhook*, su acción leyó el proveedor y el secreto del vault y entregó; un error del proveedor (HTTP 429) hizo fallar la ejecución del workflow con el mensaje del proveedor |
+| Webhook genérico | Verificado en vivo en un entorno trial: escalamientos y pruebas entregados, resultados escritos en el registro de notificaciones |
+| Custom workflow | Verificado en vivo en un entorno trial: una prueba y un escalamiento programado ejecutaron el workflow, que entregó el JSON completo de la notificación al receptor |
+| Integration workflows | Verificado en vivo en un entorno trial con el webhook genérico: el motor ejecutó *Command Center · Generic webhook*, su acción leyó el proveedor y el secreto del vault y entregó; un error del proveedor (HTTP 429) hizo fallar la ejecución del workflow con el mensaje del proveedor |
 | Twilio SMS, voz, WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implementados a partir de la documentación de la API de cada proveedor, **no ejercitados en vivo** (no hay cuentas en el entorno de pruebas). Las pruebas unitarias cubren las solicitudes de Twilio SMS y voz, Slack y Telegram. Prueba cada proveedor con *Send test*. |
 
 Las respuestas bidireccionales (reconocer respondiendo un SMS o un mensaje de chat) no están implementadas. Reconoce en

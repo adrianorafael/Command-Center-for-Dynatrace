@@ -384,19 +384,19 @@ export const ConsolePage = () => {
             <div style={{ position: "absolute", top: 0, right: 0, zIndex: 1 }}>
               <RowActionsPicker value={inlineActions} onChange={saveInlineActions} onOpenChange={setPickerOpen} />
             </div>
-          <IncidentTable
-            inlineActions={inlineActions}
-            incidents={visible}
-            loading={isLoading}
-            activeId={activeId}
-            onActivate={setActive}
-            selected={selected}
-            onSelect={setSelected}
-            onModal={setModal}
-            empty={empty}
-            density={prefs.tableDensity}
-            ackTargetMs={ackTargetMs}
-          />
+            <IncidentTable
+              inlineActions={inlineActions}
+              incidents={visible}
+              loading={isLoading}
+              activeId={activeId}
+              onActivate={setActive}
+              selected={selected}
+              onSelect={setSelected}
+              onModal={setModal}
+              empty={empty}
+              density={prefs.tableDensity}
+              ackTargetMs={ackTargetMs}
+            />
           </div>
         </Flex>
       </PageLayout.Content>
