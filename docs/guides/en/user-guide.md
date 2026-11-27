@@ -12,7 +12,7 @@ Screenshots were taken in **demo mode** with sample data.
 | --- | --- |
 | **Console · On-call · Teams · Escalations · Services · Integrations · War rooms · Reports** | Main navigation. **War rooms** shows a red count while rooms are in progress. |
 | 🔔 **Bell** | The last notifications of this session, with an unread count (up to `99+`). Icon states: bell = nothing new, active bell = unread items, crossed-out bell = pop-ups silenced. Selecting an item opens what it refers to. Closing the menu marks everything as read. |
-| 📞 **On-call indicator** | `You're on call` in a green circle when you are on call; otherwise `On call: <name>` (+N for more people) or `No one on call`. The menu lists who is on call per team until when, and offers **Leave on-call now…** or **Take on-call now…** (below). |
+| 📞 **On-call indicator** | `You're on call` in a green circle when you are on call; otherwise `On call: <name>` (+N for more people), `On call` when nobody covers right now, or `No one on call` when there is no schedule yet. The menu lists who is on call per team until when, and offers **Leave on-call now…** or **Take on-call now…** (below). |
 | ⚙️ **Settings** | Opens [Settings](configuration.md). |
 | **?** Help menu | Get started, in-app guide, sending events, keyboard shortcuts, about. |
 
@@ -25,7 +25,7 @@ Pop-ups appear at the **bottom right** for four categories:
 | New P1/P2 incidents | `P1 · <title>` (critical), `P2 · <title>` (warning). After three, they are grouped as `N more new P1/P2 incidents`. |
 | Confirmations of my actions | `Incident acknowledged` with **Undo** (10 seconds), `Incident resolved` with **Undo**, `Incident snoozed`… |
 | Errors | `Couldn't save your changes`, `Couldn't acknowledge …` with **Retry** |
-| Paging engine health | `Paging engine is not running`: no engine run for two intervals plus one minute |
+| Paging engine health | `Paging engine is not running`: no engine run for two intervals plus one minute (an engine error shows only in the Console banner) |
 
 In the bell menu, **Pop-ups on (click to silence)** switches to *Silenced: only counting*. **Show pop-ups for…**
 chooses the categories, and **Clear all** empties the list. Preferences are kept in this browser. The list itself lives
@@ -99,7 +99,7 @@ The Console is the NOC screen: every open incident, newest first.
 
 **Filters**: search (title, ID, entity, tag), Status (default *Triggered + Acknowledged*), Priority, Team, Assignee
 (*Me*, *Unassigned*, members), Service, Source, Escalation level (*Not started*, *Step N*, *Exhausted*) and Created
-(time frame). Filters are part of the URL, so a NOC view can be bookmarked.
+(time frame). All filters except the time frame are part of the URL, so a NOC view can be bookmarked.
 
 **Columns**: Priority, Status (and *until …* when snoozed), Incident (title, `#display ID · first entity`), Age (red
 with a clock icon when a **triggered** incident is older than the acknowledge target), Service, Team, Assignee,
@@ -218,8 +218,9 @@ Roles are guidance: App State has no per-key permissions, so every user of the a
 configuration.
 
 - **Contact methods** (person → *Edit contact methods*): channel, address and label, plus **Send test** per method.
-  Address formats: phone in E.164 with the country code (SMS, voice, WhatsApp); Telegram chat ID; Slack member ID or
-  channel; Teams user or channel reference; IFTTT routing key; webhook routing key. Phone numbers and chat IDs are
+  Address formats: phone in E.164 with the country code (SMS, voice, WhatsApp); Telegram chat ID; any label for
+  Slack, Teams and IFTTT (their webhook or applet decides the destination, and messages show the person's name); a
+  routing key for the webhook or custom workflow. Phone numbers and chat IDs are
   readable by every user of the app. They are masked in lists. Email is not a separate channel: send email through a
   webhook gateway.
 - **When I'm paged** (notification rules): *method*, *after N minutes* (counted from when the step fires) and *for
@@ -234,14 +235,14 @@ configuration.
 ![Escalations](../../screenshots/escalations.png) ![Policy editor](../../screenshots/policy-editor.png)
 
 - **List**: name, team, steps (`N · summary`), repeat, used by, last triggered. Deleting a policy makes its incidents
-  fall back to the default policy from Settings.
+  fall back to their team's default policy, or else the default policy from Settings.
 - **Editor**: steps run in order until someone acknowledges. Each step waits a number of minutes (0–1440) **counted
   from the previous step**, then notifies its targets: *On-call of schedule*, *Team (all responders)*, which means
   every non-observer, including admins, or a *User*. *Channels* are optional: leave them empty to use each person's
   notification rules (recommended). Channels without a configured provider are disabled.
 - **Repeat**: *Repeat policy if nobody acknowledges* 1–5 times. Each repeat starts after the last step's delay (5
   minutes if that delay is 0). When all repeats are done the policy is **exhausted** and the incident stays triggered.
-- **Simulation**: *If an incident is triggered now* lists, minute by minute, who would be paged on which channels, and
+- **Simulation** (always visible in the editor): *If an incident is triggered now* lists, minute by minute, who would be paged on which channels, and
   warns when a step pages no one (a schedule gap or an empty team).
 
 Timing precision equals the engine interval: a step fires on the first engine run after it is due. On the trial
@@ -254,12 +255,13 @@ environment, with a 1-minute interval, every step of a four-step test policy fir
 | Tab | Content |
 | --- | --- |
 | Services | Service, team, escalation policy (or *Team default*), rules, open incidents, noise last 7 days |
-| Routing rules (N) | Ordered rules (drag to reorder). **The first enabled rule that matches wins.** Columns: #, name, conditions, actions, enabled, matched in 24 h. The last, fixed row is the default route. |
+| Routing rules (N) | Ordered rules (drag to reorder). **The first enabled rule that matches wins.** A new rule is placed above the first catch-all rule (a rule without conditions). Columns: #, name, conditions, actions, enabled, matched in 24 h. The last, fixed row is the default route. |
 | Test a rule | Load a recent alert or an example, edit the JSON, **Run test**: shows the matched rule (or the closest one), each condition ✔/✖, and the resulting service, team, policy and priority with its source |
 | Priority mapping | Priority by Davis category and by severity, plus the fallback |
 
 **Rule editor**: name, enabled, *Match all / any*, conditions (field, operator, value, *Not*), and **Then**: service,
-team, escalation policy, priority (or *Use priority mapping*), add tags, and *Suppress*. Fields, operators and the
+team, escalation policy, priority (or *Use priority mapping*), add tags, and *Suppress (create the incident, page
+nobody)*. Fields, operators and the
 routing order are listed in the [alerts reference](alerts-reference.md#how-an-alert-becomes-an-incident).
 
 **Service**: name (events reference it by name or ID in `cc.service`), description, owning team, escalation policy
@@ -270,7 +272,7 @@ routing order are listed in the [alerts reference](alerts-reference.md#how-an-al
 | Tab | Content |
 | --- | --- |
 | Inbound ![Inbound](../../screenshots/integrations.png) | Each source with its status (*Receiving*, *Quiet > 1 h*, *Turned off*, *Never seen*), last event, incidents in 24 h and **Show events**. Copy-ready snippets (curl, PowerShell, Python, Dynatrace Workflow) and the fields the app reads. |
-| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | The eight providers: *Not configured*, *Configured* or *Last delivery failed*, sent/failed counts, **Configure** (vault entry ID, enabled, parameters) and **Send test**. |
+| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | The nine providers (eight built-in plus **Custom workflow**), each with an **On/Off** switch: *Not configured*, *Off*, *Configured* or *Last delivery failed*, sent/failed counts, **Configure** (vault entry ID or workflow ID, parameters) and **Send test**. One provider per channel can be on. |
 | Workflows ![Workflows](../../screenshots/integrations-workflow.png) | Engine status (*Not installed*, *Installed · simple workflow*, *Update available*, *Installed as a standard workflow…*), the last engine run, **Run every**, **Install in Workflows**, **Download JSON**, **Run engine now**, **Refresh**, the setup steps and the hosts to allow. |
 
 Details: [integrations](integrations.md) and [getting started](getting-started.md).
@@ -279,7 +281,9 @@ Details: [integrations](integrations.md) and [getting started](getting-started.m
 
 ![Reports](../../screenshots/reports.png)
 
-Built from daily rollups (kept 90 days). The time frame defaults to the last 30 days.
+The time frame defaults to the last 30 days. Response, volume, team and noise panels come from daily rollups (kept
+90 days). *Time to acknowledge* and the off-hours, night and acknowledgement columns of *On-call load* use the
+incidents still in the app and the notification ledger (kept 14 days), so they cover at most about 14 days.
 
 | Panel | Question it answers |
 | --- | --- |
@@ -289,7 +293,7 @@ Built from daily rollups (kept 90 days). The time frame defaults to the last 30 
 | Incidents per day | When do incidents arrive, and how urgent are they? |
 | Incidents by team | Which teams get the most incidents? |
 | Noisiest services and sources | Where do incidents come from? (top 10) |
-| Time to acknowledge | Distribution in minutes (0, 1, 2, 5, 10, 15, 30, 60, 120, 240+) |
+| Time to acknowledge | Distribution in minutes (bins from 0, 1, 2, 5, 10, 15, 30, 60 and 120 minutes; the last bin holds everything from 120 up) |
 | Notification delivery | Share of notifications the providers accepted |
 | On-call load | Per person: on-call hours, pages, off-hours pages, night pages (00–06), acknowledgements, average time to acknowledge |
 

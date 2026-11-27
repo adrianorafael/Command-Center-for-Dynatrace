@@ -42,10 +42,10 @@ flowchart LR
    skipped (counted as `skippedLocked` in the heartbeat).
 2. Run the DQL queries of the enabled sources (Q1–Q4), normalise the records into alerts, de-duplicate and route them.
 3. Create or update incidents, apply operator actions in order, end snoozes that are due, evaluate escalation policies
-   against the schedules, and plan notifications in the ledger.
-4. Read each needed provider secret from the Credential Vault and send. Write `sent` or `failed` into the ledger.
-5. Retry notifications without a result (`timeout`), archive old resolved incidents, update the daily rollup, write
-   the heartbeat (`hb.engine`) and release the lease.
+   against the schedules, plan notifications and retries (failed or without a result) in the ledger, archive old
+   resolved incidents and update the daily rollup. Write the heartbeat (`hb.engine`) and release the lease.
+4. Read each needed provider secret from the Credential Vault and send (or run your custom workflow). Write `sent` or
+   `failed` into the ledger.
 
 All routing, schedule, escalation and planning logic is plain TypeScript in `ui/app/domain/`. The UI uses the same
 code, so what the Console shows right after an action matches what the engine will do.
@@ -55,7 +55,7 @@ code, so what the Console shows right after an action matches what the engine wi
 | Design | Workflow hours | Function invocations | Verdict |
 | --- | --- | --- | --- |
 | Version 2 before this change: a **standard** workflow `tick` → 8 senders → `report` | 1 per hour of the workflow's lifetime, whether or not it does anything | Measured: about 690 per hour (≈ 11.5 per minute) | Replaced |
-| One **simple** workflow per integration, triggered by events | none | One invocation per notification, plus an event ingest per notification to trigger it | Rejected: more invocations and more moving parts |
+| One **simple** workflow per built-in integration, triggered by events | none | One invocation per notification, plus an event ingest per notification to trigger it | Not used for the built-in providers: they need no workflow at all, and an integration that is off has nothing to install. Offered as the optional **Custom workflow** integration, run directly by the engine (no event ingest). |
 | **One simple workflow, one action, interval trigger** (current) | **none** | Measured: **1 per run** (60 per hour at 1 minute) | ✅ |
 
 Sources: *Create a simple workflow* ("without consuming workflow hours") and *Workflows concepts* (simple workflows "do
@@ -88,7 +88,7 @@ billing event.
 | Workflow hours | 0 | 0 | 0 |
 | Grail queries | 1–8 per run (below) | same | same |
 
-**Grail queries per run**: Q1 problems (always), Q4 event properties of active problems (one per 100 event IDs, at most
+**Grail queries per run**: Q1 problems (when the Davis problems source is on, the default), Q4 event properties of the problems Q1 returned (one per 100 event IDs, at most
 5), Q2 Davis events and Q3 generic events (only when turned on). The UI runs **no** DQL: open tabs read only App State.
 
 | Factor | Effect |
@@ -158,8 +158,8 @@ fetch dt.davis.events, from: now() - 72h
 
 ## Health and monitoring
 
-- **Console banner** and **bell**: the engine is *late* after two intervals plus one minute without a run (3 minutes
-  at the default interval), or when the last run reported an error.
+- **Console banner**: the engine is *late* after two intervals plus one minute without a run (3 minutes at the default
+  interval), or the last run reported an error. The **bell** notifies only when the engine is late.
 - **Integrations → Workflows**: last run, its duration and counts, the last error, and the install status.
 - **External monitoring**: call the `status` app function. It returns the heartbeat, the lease and the
   open/triggered counts (see [configuration](configuration.md#app-functions-automation-and-scripts)).
@@ -183,8 +183,9 @@ fetch dt.davis.events, from: now() - 72h
   texts mask secrets and URLs.
 - **Contact data is visible to every user of the app.** App State has no per-key permissions. Tell people before they
   enter personal numbers. Emails are not stored; they are read live from IAM.
-- **The engine workflow is not private.** Its executions keep only metadata, and the action returns only counts, so no
-  phone numbers or message texts appear in Workflows.
+- **The engine workflow does not need to be private.** It exposes no personal data: its executions keep only metadata
+  and the action returns only counts, so no phone numbers or message texts appear in Workflows. A custom workflow
+  receives the full notification (including the address) as run params: decide yourself who may see it.
 - **Outbound traffic** is limited by the External requests allowlist: allow only the provider hosts you use.
 - **Inbound tokens**: give your tools a platform token with only `openpipeline:events.davis:ingest` (or
   `openpipeline:events:ingest`), keep it in their secret store and rotate it.
@@ -217,13 +218,15 @@ Verified on a trial environment (latest Dynatrace):
 - Generic events through `/platform/ingest/v1/events`: trigger and resolve by `cc.dedup_key`.
 - The engine as a **simple workflow** with the app's custom action: every run successful, App State, Grail and
   Credential Vault reads, outbound HTTPS. Billing: one `ACTION` invocation per run.
+- The **Custom workflow** integration: a test and a scheduled escalation ran a simple workflow with an HTTP request
+  task, and the expression `{{ execution().params | to_json }}` delivered the full notification JSON.
 - App functions `engine-run`, `config` (export, import, dry run), `status` and `incidents`. War room notebooks created
   through the Document API.
 
 Not verified, or only partly:
 
-- **Twilio, IFTTT, Slack, Microsoft Teams and Telegram** senders: implemented from vendor documentation and unit
-  tested, not exercised live.
+- **Twilio, IFTTT, Slack, Microsoft Teams and Telegram** senders: implemented from vendor documentation, not exercised
+  live. Unit tests cover the Twilio SMS and voice, Slack and Telegram requests.
 - **Install in Workflows** (intent) and the **Upload** of the JSON in the Workflows app: not clicked through by us.
   The API install of the same definition is verified.
 - **Minimal permissions** of the workflow actor: all permissions were enabled on the trial environment.

@@ -37,7 +37,8 @@ environment and was exercised there by the feature in the second column.
 | `storage:events:read` | The engine reads `dt.davis.problems`, `dt.davis.events` and `events` | [Grail permissions](https://docs.dynatrace.com/docs/platform/grail/organize-data/assign-permissions-in-grail) |
 | `state:app-states:read` / `:write` / `:delete` | Configuration, incidents, operator actions, notification ledger (App State) | SDK reference `@dynatrace-sdk/client-state` ("Required scope" of each call), [State management API](https://docs.dynatrace.com/docs/dynatrace-api/platform-api/platform-state-management-v1) |
 | `iam:users:read` | Team member search and display names | [IAM API: get users](https://docs.dynatrace.com/docs/dynatrace-api/platform-api/platform-iam-v1/organizational-levels-level-type-level-id-users-get) |
-| `automation:workflows:read` | Integrations → Workflows: install status of the engine workflow | [Workflows security](https://docs.dynatrace.com/docs/analyze-explore-automate/workflows/security) |
+| `automation:workflows:read` | Integrations → Workflows: install status of the engine workflow; finding your custom workflow | [Workflows security](https://docs.dynatrace.com/docs/analyze-explore-automate/workflows/security) |
+| `automation:workflows:run` | The **Custom workflow** integration: the engine runs your workflow once per notification | [Workflows security](https://docs.dynatrace.com/docs/analyze-explore-automate/workflows/security) |
 | `document:documents:read` | War rooms: list notebooks to attach | [Document SDK](https://developer.dynatrace.com/develop/sdks/client-document/) |
 | `document:documents:write` | War rooms: create the post-mortem notebook | SDK reference `@dynatrace-sdk/client-document` ("Required scope" of `createDocument`) |
 | `credential-vault:entries:read` | The engine reads provider secrets when it sends | [Credential Vault API](https://docs.dynatrace.com/docs/dynatrace-api/platform-api/platform-credential-vault-v1/entries-entry-id-get) |
@@ -49,7 +50,6 @@ environment and was exercised there by the feature in the second column.
   one-click alternative.
 - No ingest scope: the app never writes to Grail. Your tools send events with their own token (see the
   [alerts reference](alerts-reference.md)).
-- `automation:workflows:run`: no longer needed. Manual engine runs call the app's own function `engine-run`.
 
 **User permissions.** An app scope is not enough on its own. The app acts with each **user's** permissions, so users
 also need IAM policies that grant the same permissions (Grail read, App State, documents, IAM user read).
@@ -107,7 +107,7 @@ three options:
 | Option | How | Status |
 | --- | --- | --- |
 | **A. Install in Workflows** | Opens the Workflows app with the workflow filled in (Workflows "create workflow" intent). Review it, save it and deploy it. | The intent payload documented by Dynatrace has title, tasks and trigger, but **no workflow type**. If the new workflow comes out as a *standard* workflow, the Workflows tab shows a warning. Then delete it and use B or C. |
-| **B. Download JSON** | Workflows app → **Upload** → the downloaded file. The file contains `"type": "SIMPLE"`. | It is the same definition that was created through the Automation API and ran on the trial environment. The upload button itself was not exercised. |
+| **B. Download JSON** | Workflows app → **Upload** → the downloaded file. The file contains `"type": "SIMPLE"` and the interval you chose. | It is the same definition that was created through the Automation API and ran on the trial environment. The upload button itself was not exercised. |
 | **C. Admin script** | `DT_ENVIRONMENT=https://YOUR-ENVIRONMENT.apps.dynatrace.com DT_PLATFORM_TOKEN=… node scripts/install-workflow.mjs --interval 1` (token with `automation:workflows:read` and `automation:workflows:write`). Idempotent; `--dry-run` prints the JSON. | Verified on the trial environment: a simple workflow, running every minute, every execution successful. |
 
 Then:
@@ -116,7 +116,8 @@ Then:
    engine's action reads Grail, App State and the Credential Vault with the actor's permissions.
 2. **Authorization settings.** In the Workflows app → **Settings → Authorization settings**, enable for the actor the
    permissions the engine uses: `storage:buckets:read`, `storage:events:read`, `state:app-states:read`,
-   `state:app-states:write`, `state:app-states:delete` and `credential-vault:entries:read`. On the trial environment
+   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` and, if you use the Custom
+   workflow integration, `automation:workflows:run`. On the trial environment
    all permissions were enabled for the actor, so the minimal set was not isolated.
 3. Back in Command Center select **Refresh**. If the workflow was found by its title, select **Save this ID**. The
    status turns green (**Installed · simple workflow**) and **Last engine run** updates within one interval.
@@ -126,8 +127,9 @@ Use it to test without waiting for the schedule.
 
 ## Step 6 — Configure the providers
 
-**Integrations → Outbound** → open a provider. Paste the vault entry ID, fill the non-secret parameters and turn it
-on. Then use **Send test notification** to one address.
+**Integrations → Outbound**: each provider card has an **On/Off** switch, and only providers that are on are used.
+Turning one on the first time opens **Configure**: paste the vault entry ID, fill the non-secret parameters, save.
+Then use **Send test** with one address. One provider per channel can be on.
 
 | Provider | Parameters |
 | --- | --- |
@@ -135,6 +137,7 @@ on. Then use **Send test notification** to one address.
 | IFTTT | *Event name* (default `command_center_alert`) |
 | Slack, Microsoft Teams, Telegram | none |
 | Generic webhook | *Auth header name* (optional). The header value is the password of a username/password entry. |
+| Custom workflow | *Workflow ID* of a workflow you own (see [integrations](integrations.md#custom-workflow)). No vault entry. |
 
 ## Step 7 — People, schedules, policies and routing
 
@@ -143,7 +146,7 @@ on. Then use **Send test notification** to one address.
    for the webhook) and **notification rules**, for example "P1–P2: voice now, SMS after 5 minutes".
 3. **On-call → Schedules** → layers, rotation, handoff time and time zone. The coverage preview shows gaps.
 4. **Escalations** → a policy, for example: step 1 the schedule's on-call person after 0 minutes, step 2 the whole team
-   after 10 minutes, repeat once. **Simulate** shows who is notified when.
+   after 10 minutes, repeat once. The **Simulation** section shows who is notified when.
 5. **Services** → a service with an owning team, a policy and a default priority. Then add **routing rules** and
    **Test a rule**.
 6. **Settings → Routing defaults** → the team and policy used when nothing else decides.

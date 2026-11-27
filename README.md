@@ -35,7 +35,7 @@ and using **Strato**, the Dynatrace design system.
 | **Console** | Live incident table with KPI tiles, filters, bulk actions and keyboard shortcuts; incident details with timeline, escalation progress, notification ledger, entities and notes. |
 | **On-call** | Teams of **Dynatrace users** (picked from IAM), layered rotating schedules with overrides, escalation policies with steps and repeats, personal contact methods, notification rules and team quiet hours. |
 | **War rooms** | A meeting link plus the incidents it handles and its Dynatrace Notebooks, including a generated post-mortem notebook. |
-| **Outbound** | One **simple workflow** (*Command Center · Engine*) runs the app's own action every 1, 2 or 5 minutes. It consumes no workflow hours. |
+| **Outbound** | One **simple workflow** (*Command Center · Engine*) runs the app's own action every 1, 2 or 5 minutes and consumes no workflow hours. Each integration has an On/Off switch; a **Custom workflow** integration hands notifications to a prefilled workflow you own and edit. |
 | **Storage** | Dynatrace App State. No external database. Provider secrets stay in the Credential Vault. |
 | **Demo mode** | Per browser: sample data everywhere, nothing read or written, nothing sent. Off: only real data. |
 
@@ -68,7 +68,7 @@ Also in Portuguese (BR) in [docs/guides/pt-BR](docs/guides/pt-BR/) and Spanish i
 | Maintenance and quiet hours | Davis maintenance windows suppress paging (configurable); team quiet hours hold or downgrade less urgent pages |
 | War rooms / bridges | Meeting link, linked incidents, notebooks, post-mortem template |
 | Reports | MTTA, MTTR, volume, noise, delivery, on-call load |
-| Outbound integrations | Built-in senders plus a generic JSON webhook for anything else |
+| Outbound integrations | Built-in senders, a generic JSON webhook, and a custom workflow you own for anything else |
 
 Not implemented: two-way acknowledgement from SMS or chat replies, a mobile app, status pages, and per-user
 permissions enforced on the server.
@@ -86,7 +86,8 @@ Then, in the app:
 1. **Integrations → Workflows** → choose the interval → **Install in Workflows** (or **Download JSON** and upload it).
    Enable the Workflows **Authorization settings** for the actor.
 2. **Credential Vault** entries for your providers. Add their hosts to **External requests**.
-3. **Integrations → Outbound** → configure a provider → **Send test notification**.
+3. **Integrations → Outbound** → switch on the providers you use (Twilio, IFTTT, Slack, Teams, Telegram, webhook or
+   your own custom workflow) → **Send test**.
 4. **Teams**, **On-call**, **Escalations**, **Services** → people, schedules, a policy, routing.
 5. Send an event (the token needs `openpipeline:events.davis:ingest`):
 
@@ -107,7 +108,8 @@ Every step in detail: [getting started](docs/guides/en/getting-started.md).
 | `storage:events:read` | Read `dt.davis.problems`, `dt.davis.events`, `events` |
 | `state:app-states:read` / `:write` / `:delete` | Configuration, incidents, actions, notification ledger |
 | `iam:users:read` | Team member search and names |
-| `automation:workflows:read` | Engine workflow install status |
+| `automation:workflows:read` | Engine workflow install status; finding your custom workflow |
+| `automation:workflows:run` | Custom workflow integration: run your workflow once per notification |
 | `document:documents:read` / `:write` | War rooms: attach notebooks, create the post-mortem notebook |
 | `credential-vault:entries:read` | The engine reads provider secrets when it sends |
 

@@ -3,8 +3,9 @@
 🌐 **English** · [Português (BR)](../pt-BR/configuration.md) · [Español](../es/configuration.md)
 
 Settings are **app-wide**: a change applies to every user of the app in the environment. The only exceptions are the
-items marked *this browser*. Every section of **Settings** has its own **Save** button. Validation runs before
-saving and points to the field that needs a fix.
+items marked *this browser*, which are saved immediately. The General, Event sources, Routing defaults, Paging engine
+and Data retention sections each have their own **Save** button. Validation runs before saving and names the field
+that needs a fix.
 
 ![Settings](../../screenshots/settings.png)
 
@@ -54,8 +55,8 @@ The priority mapping by severity and category is edited in **Services → Priori
 | Setting | Default | Range | Effect |
 | --- | --- | --- | --- |
 | Engine enabled | On | | Off pauses **all** paging. The engine still runs on schedule but does nothing. |
-| Engine workflow ID | Filled in by Integrations → Workflows | UUID | Lets the Workflows tab find and link the workflow. The interval (1, 2 or 5 minutes) is chosen at install. |
-| Max notifications per run | 100 | 1–1000 | Notifications beyond this are planned again on the next run |
+| Engine workflow ID | Filled in by Integrations → Workflows | UUID | Lets the Workflows tab find and link the workflow. The interval (1, 2 or 5 minutes) is chosen at install; the app reads it back from the installed workflow. |
+| Max notifications per run | 100 | 1–500 | Notifications beyond this are planned again on the next run |
 | Delivery report timeout (seconds) | 180 | 30–3600 | A notification without a delivery result after this is marked *timeout* and retried |
 | Delivery attempts | 3 | 1–10 | Attempts per notification before it is marked failed |
 | Engine lock lease (seconds) | 130 | 30–180 | Prevents two runs from paging twice. The engine always uses a value between 130 and 180. |
@@ -67,17 +68,18 @@ The priority mapping by severity and category is edited in **Services → Priori
 | Keep resolved incidents visible (hours) | 24 | 1–720 | Then the incident is archived and leaves the Console |
 | Archive resolved incidents for (days) | 30 | 1–90 | How long archived incidents are kept. App State allows at most 90 days. |
 
-The section shows the app's estimated App State usage. App State allows 50 MB per app; the engine measures it on
-every run.
+The section shows an estimate of the App State used by the data loaded in this page (archives excluded). App State
+allows 50 MB per app.
 
 ## Export and import
 
 - **Export configuration** downloads settings, teams, schedules, policies, services, routing rules and contacts as
   JSON. Incidents, war rooms and history are not included.
 - **Import configuration** validates the whole file first, including references between the entities. If anything is
-  wrong, nothing is written and you get the list of errors. The import **adds or updates by ID** and never deletes;
-  settings are merged into the current settings.
-- The file contains phone numbers and chat IDs: store it like personal data.
+  wrong, nothing is written and you get the list of errors. Teams, schedules, policies, services and contacts are
+  **added or updated by ID** and never deleted. The routing rules in the file **replace** the current rules, and a
+  provider list in the file replaces the current providers. Other settings are merged.
+- The file contains phone numbers, chat IDs and Credential Vault entry IDs in plain text: store it like personal data.
 - **Legacy data**: version 1 stored acknowledgements in the App State key `problem-ack-states`. Version 2 doesn't read
   it, and this button deletes it.
 

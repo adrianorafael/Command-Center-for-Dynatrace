@@ -3,7 +3,7 @@
 🌐 **English** · [Português (BR)](../pt-BR/integrations.md) · [Español](../es/integrations.md)
 
 Inbound events are covered in the [alerts reference](alerts-reference.md). This page covers the outbound side: the
-eight channels, what each provider receives, and how to test them.
+eight channels, what each provider receives, the custom workflow integration, and how to test them.
 
 ![Integrations — Outbound](../../screenshots/integrations-outbound.png)
 
@@ -12,14 +12,15 @@ eight channels, what each provider receives, and how to test them.
 1. The engine runs on its schedule (simple workflow, one action). It decides who must be notified now: the escalation
    step that is due, the people on call for its targets, and each person's notification rules.
 2. It writes one **ledger entry** (`planned`) per person, step, channel and attempt.
-3. In the same run it reads the provider's secret from the Credential Vault and calls the provider over HTTPS.
+3. Right after planning, the same run reads the provider's secret from the Credential Vault and calls the provider
+   over HTTPS (or runs your custom workflow).
 4. The result is written back: `sent` (with the provider's reference when one is returned) or `failed` (with the
    provider's error; secrets and URLs are masked as `***` and `<url>`).
-5. A notification that has no result after *Delivery report timeout* becomes `timeout` and is retried, up to
-   *Delivery attempts* (default 3).
+5. A notification that failed, or got no result within *Delivery report timeout* (`timeout`), is retried with a new
+   attempt while the incident is still triggered, up to *Delivery attempts* (default 3).
 
-Each HTTP call has a 10-second timeout. A run stops sending after about 100 seconds; what is left is sent on the next
-run. Paging is **at least once**: in rare races (a run that overlaps a slow previous run) a person can be notified
+Each HTTP call has a 10-second timeout. A run starts no new send later than about 90 seconds after it began; what is
+left is sent on the next run. Paging is **at least once**: in rare races (a run that overlaps a slow previous run) a person can be notified
 twice.
 
 ## Channels and providers
@@ -29,13 +30,17 @@ twice.
 | SMS | Twilio SMS (`twilio-sms`) | Phone in E.164, for example `+5511999990000` | Username/password: Account SID (or API key SID) / auth token (or API key secret) |
 | Voice call | Twilio Voice (`twilio-voice`) | Phone in E.164 | same |
 | WhatsApp | Twilio WhatsApp (`twilio-whatsapp`) | Phone in E.164 (the `whatsapp:` prefix is added) | same |
-| IFTTT | IFTTT Webhooks (`ifttt`) | A label (the applet decides where it goes) | Token: your Webhooks key |
-| Slack | Slack (`slack`) | A label or handle, shown in the message | Token: the incoming-webhook URL |
-| Microsoft Teams | Microsoft Teams (`teams`) | A label or handle, shown in the card | Token: the Teams Workflows webhook URL |
+| IFTTT | IFTTT Webhooks (`ifttt`) | Any label: the applet decides where it goes | Token: your Webhooks key |
+| Slack | Slack (`slack`) | Any label: the webhook decides the channel; the message shows the person's name | Token: the incoming-webhook URL |
+| Microsoft Teams | Microsoft Teams (`teams`) | Any label: the webhook decides the chat; the card shows the person's name | Token: the Teams Workflows webhook URL |
 | Telegram | Telegram (`telegram`) | The chat ID | Token: the bot token |
 | Webhook | Generic webhook (`webhook`) | A routing key for your endpoint | Token: the endpoint URL. Or username/password: username = URL, password = auth header value |
+| Webhook | Custom workflow (`custom-workflow`) | A routing key, passed as `notification.to.address` | none: the workflow ID of a workflow you own |
 
-Every provider starts **turned off**. A provider is used only when it is turned on and has a vault entry ID.
+Every provider starts **turned off** and has an **On/Off** switch on its card. A provider is used only while it is on
+and configured (a vault entry ID; for the custom workflow, a workflow ID). One provider per channel can be on: the
+generic webhook and the custom workflow share the *webhook* channel. Providers that are off cost nothing and need no
+workflow: the built-in providers are all sent by the single engine workflow.
 
 ## What each provider receives
 
@@ -60,10 +65,10 @@ webhooks.
   "source": "command-center",
   "version": 1,
   "notification": {
-    "key": "dp-p-26112716.0.0.1a2b3c4d.webhook.1",
+    "key": "dp-p-26112716.1.0.1a2b3c4d.webhook.1",
     "incidentId": "dp-p-26112716",
     "displayId": "P-26112716",
-    "cycle": 0,
+    "cycle": 1,
     "step": 0,
     "attempt": 1,
     "channel": "webhook",
@@ -80,15 +85,39 @@ webhooks.
 | Field | Meaning |
 | --- | --- |
 | `key` | Unique per incident, escalation cycle, step, person, channel and attempt. Use it to de-duplicate on your side. |
-| `cycle` | Escalation cycle, increased by *Escalate now* and by a re-trigger |
-| `step` | Escalation step index (0 = first step) |
+| `cycle` | Escalation cycle, starting at 1. It increases when the incident is re-triggered, reopened, un-snoozed or un-acknowledged; *Escalate now* increases it only after the policy is exhausted. |
+| `step` | Escalation ordinal: pass × number of steps + step index (0 = first step of the first pass) |
 | `attempt` | 1 for the first try, then 2, 3… for retries after a timeout |
 | `to` | The person: IAM user ID, the address from their contact method, display name |
 | `subject`, `text` | Pre-rendered texts (limits below) |
 | `speech` | Only for voice: the text to speak |
 
 This is the way out to any tool without a built-in sender: an ITSM, an email gateway, a chat bot, another paging
-service.
+service. If you prefer to build that call in Dynatrace Workflows, use the custom workflow below.
+
+## Custom workflow
+
+The **Custom workflow** provider hands each notification to a workflow **you own and edit**, so you can reach any
+system with any Workflows action (HTTP request, email, ITSM, chat) without changing Command Center.
+
+1. **Integrations → Outbound → Custom workflow → Configure → Create example workflow.** The Workflows app opens with
+   a simple workflow named *Command Center · Custom integration*: one **HTTP request** task, method POST, an example
+   URL `https://example.com/command-center/notifications`, an example header, and the body
+   `{{ execution().params | to_json }}`. Or select **Download example JSON** and upload it in the Workflows app.
+2. In the Workflows app, replace the URL and headers with your endpoint's, or replace the task with any action. The
+   notification is available in expressions, for example `{{ execution().params.notification.subject }}`,
+   `{{ execution().params.notification.priority }}` or `{{ execution().params.notification.to.address }}`. Save it.
+3. Back in Command Center select **Find my workflow** → **Use** (or paste the workflow ID), **Save**, switch the
+   provider **On** and **Send test**.
+4. Add your endpoint's host to *External requests*. In the Workflows **Authorization settings**, the engine
+   workflow's actor needs `automation:workflows:run`, and your workflow's actor needs the permissions its task uses.
+
+The run params are the same JSON as the generic webhook body: `{"source":"command-center","version":1,
+"notification":{…}}`. *Sent* means the workflow run was accepted. What your workflow does afterwards is not tracked
+by Command Center: check its executions in the Workflows app. Each notification is one workflow run. As a simple
+workflow it consumes no workflow hours; its task is billed like any workflow task. The example has no trigger of its
+own (on demand), and the same caveat as for the engine applies: if the intent creates it as a *standard* workflow,
+**Find my workflow** says so, and the uploaded JSON creates a simple one.
 
 ## Message texts
 
@@ -114,7 +143,7 @@ voice and WhatsApp are skipped.
 
 ## Testing a provider
 
-**Integrations → Outbound → provider → Send test notification** sends one message to the address you type, through
+**Integrations → Outbound → provider → Send test** sends one message to the address you type, through
 the same code the engine uses (app function `engine-run` with `reason: "test"`). The result (sent or the provider
 error) is shown right away. Test every channel you turn on, end to end, before you rely on it.
 
@@ -123,6 +152,7 @@ error) is shown right away. Test every channel you turn on, end to end, before y
 | Provider | Status |
 | --- | --- |
 | Generic webhook | ✅ Verified live on a trial environment: escalations and tests delivered, results written to the ledger |
-| Twilio SMS, voice, WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implemented from each vendor's API documentation and covered by unit tests, **not exercised live** (no accounts in the test environment). Test them with *Send test notification*. |
+| Custom workflow | ✅ Verified live on a trial environment: a test and a scheduled escalation ran the workflow, which delivered the full notification JSON to the receiver |
+| Twilio SMS, voice, WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implemented from each vendor's API documentation, **not exercised live** (no accounts in the test environment). Unit tests cover the Twilio SMS and voice, Slack and Telegram requests. Test every provider with *Send test*. |
 
 Two-way replies (acknowledging by answering an SMS or a chat message) are not implemented. Acknowledge in the Console.
