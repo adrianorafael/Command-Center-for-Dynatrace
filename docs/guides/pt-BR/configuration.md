@@ -100,7 +100,7 @@ que a função acessa.
 | Função | Corpo | Retorno | Verificado |
 | --- | --- | --- | --- |
 | `config` | `{"op":"export"}` ou `{"op":"import","bundle":{…},"dryRun":true}` | Export: `{ok, bundle}`. Import: contagens, ou `errors[]` com entidade, caminho e mensagem. | Sim (export, import, dry run) |
-| `engine-run` | `{"reason":"manual"}` ou `{"reason":"test","testRequest":{"providerId","channel","address"}}` | `{ok, sent, failed, deferred, counts, errors, skipped?}`. Se uma execução agendada estiver com o lease, ela espera até cerca de 20 segundos. | Sim |
+| `engine-run` | `{"reason":"manual"}` ou `{"reason":"test","testRequest":{"providerId","channel","address"}}` | `{ok, sent, failed, deferred, counts, errors, skipped?}`. Se uma execução agendada estiver com o lease, a função espera até cerca de 20 segundos. | Sim |
 | `status` | `{}` | `{heartbeat, lease, openIncidents, triggered}` — para verificações de saúde externas | Sim |
 | `incidents` | `{}` ou `{"status":"triggered"}` | Os 200 resumos de incidentes mais recentes, sem dados de contato nem linha do tempo | Sim |
 | `directory` | `{"query":"ana"}` ou `{"uids":[…]}` | Usuários do IAM | Com um platform token, a API do IAM respondeu *User not authorized* (também quando chamada diretamente, mesmo para o dono da conta). Ela responde na sessão de um usuário conectado. |

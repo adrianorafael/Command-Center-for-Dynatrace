@@ -74,6 +74,10 @@ Medido no ambiente trial, a partir dos eventos de billing em `dt.system.events` 
 As invocações restantes na coluna nova são do simulador de alertas só para trial (um workflow standard executando
 JavaScript) e das nossas próprias chamadas de teste às funções do app.
 
+Workflow hours, a partir dos eventos de billing `Automation Workflow`: na hora 01:00–02:00 UTC, somente o simulador de
+alertas (um workflow standard) foi cobrado. O motor baseado em simple workflow, que rodou a cada minuto nessa hora, não
+produziu nenhum evento de billing de workflow.
+
 ## Custo e consumo
 
 > Leia isto antes de rodar o app em produção. O motor roda o dia inteiro, independentemente de quantas pessoas usam o
@@ -86,8 +90,8 @@ JavaScript) e das nossas próprias chamadas de teste às funções do app.
 | Consultas ao Grail | 1–8 por execução (abaixo) | igual | igual |
 
 **Consultas ao Grail por execução**: Q1 problems (sempre), Q4 propriedades de eventos dos problems ativos (uma a cada
-100 IDs de eventos, no máximo 5), Q2 Davis events e Q3 eventos genéricos (somente quando ativados). A UI executa
-**nenhuma** DQL: as abas abertas leem apenas o App State.
+100 IDs de eventos, no máximo 5), Q2 Davis events e Q3 eventos genéricos (somente quando ativados). A UI **não**
+executa DQL: as abas abertas leem apenas o App State.
 
 | Fator | Efeito |
 | --- | --- |
