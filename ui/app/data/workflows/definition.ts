@@ -101,7 +101,7 @@ export const ON_PROBLEM_MARKER = `[command-center-engine-on-problem v${ON_PROBLE
  * stays: escalation steps, snooze ends and retries need a clock.
  *
  * Verified on a trial tenant (2026-11-27): the platform accepted this body as a simple workflow; the trigger fired
- * 1–11 s after the problem event, once when the problem opened and once when it closed, and every execution was
+ * 1–12 s after the problem event, once when the problem opened and once when it closed, and every execution was
  * one billed invocation of the action. Trigger shape: DavisProblemTriggerConfig in
  * node_modules/@dynatrace-sdk/client-automation/types/index.d.ts (triggerOn, categories, analysisReady).
  */

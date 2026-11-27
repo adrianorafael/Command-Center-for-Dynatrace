@@ -136,6 +136,7 @@ const PROBLEM_ID_RE = /^[A-Za-z0-9_-]{1,80}$/;
  * that the Problem trigger starts, to wait until the problem can be read (the trigger fires before the record
  * is queryable). Returns undefined for anything that is not a plain problem id.
  * ✅ executed on a trial tenant (2026-11-27): an active problem → ACTIVE, a closed one → CLOSED, an unknown id → no record.
+ * Duplicates are left out, as in Q1: a duplicate never becomes an incident, so the run must not wait for one.
  */
 export function buildProblemStatusQuery(problemId: string): string | undefined {
   const id = problemId.trim();
@@ -143,6 +144,7 @@ export function buildProblemStatusQuery(problemId: string): string | undefined {
   return [
     `fetch dt.davis.problems, from: now() - 2h`,
     `| filter event.id == ${dqlString(id)}`,
+    `| filter not(dt.davis.is_duplicate)`,
     `| sort timestamp desc`,
     `| limit 1`,
     `| fields event.id, event.status, dt.davis.event_ids`,

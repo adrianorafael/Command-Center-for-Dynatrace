@@ -9,7 +9,7 @@ import { defaultSettings } from "../../ui/app/data/domainPort";
 import type { RunQuery } from "../../ui/app/data/grail";
 import { incidentIdFor } from "../../ui/app/domain/ids";
 import { CYCLE_BUDGET_MS, type CycleResult } from "../lib/cycle";
-import { PROBLEM_POLL_MS, PROBLEM_WAIT_MS, runProblemTriggeredCycle } from "../lib/problemTrigger";
+import { PROBLEM_MAX_CYCLES, PROBLEM_POLL_MS, PROBLEM_RETRY_MS, PROBLEM_WAIT_MS, runProblemTriggeredCycle } from "../lib/problemTrigger";
 
 const T0 = Date.parse("2026-11-27T14:00:00Z");
 const PROBLEM = "P-00042";
@@ -119,6 +119,32 @@ describe("engine run started by the Problem trigger", () => {
     });
     await runProblemTriggeredCycle({ problemId: PROBLEM, problemStatus: "ACTIVE" }, h.deps);
     expect(h.cycles()).toBe(2);
+  });
+
+  it("never repeats full cycles on every poll: a problem that does not become an incident costs two cycles at most", async () => {
+    // Readable at once, but no cycle ever creates the incident (a held problem, a close without an incident…).
+    const h = harness();
+    const res = await runProblemTriggeredCycle({ problemId: PROBLEM, problemStatus: "ACTIVE" }, h.deps);
+    expect(h.cycles()).toBe(PROBLEM_MAX_CYCLES);
+    expect(res).toMatchObject({ ok: true });
+    // The second cycle came after the retry pause, and the run ended right after it, well inside the wait budget.
+    expect(h.elapsed()).toBe(PROBLEM_RETRY_MS);
+    expect(h.elapsed()).toBeLessThan(PROBLEM_WAIT_MS);
+    // The status query is not repeated while waiting for the retry.
+    expect(h.queries).toHaveLength(2);
+  });
+
+  it("locked attempts do not use up the two cycles", async () => {
+    const h = harness({
+      cycle: async (n, repo) => {
+        if (n <= 3) return { ...ran, skipped: "locked", sent: 0 };
+        await repo.put(INCIDENT_KEY, incident("triggered"));
+        return ran;
+      },
+    });
+    const res = await runProblemTriggeredCycle({ problemId: PROBLEM, problemStatus: "ACTIVE" }, h.deps);
+    expect(h.cycles()).toBe(4);
+    expect(res.skipped).toBeUndefined();
   });
 
   it("a closed problem waits for the CLOSED record and for the incident to be resolved", async () => {

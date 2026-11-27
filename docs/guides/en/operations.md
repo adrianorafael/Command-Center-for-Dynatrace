@@ -119,18 +119,20 @@ Measured on the trial environment with test problems (2026-11-27):
 | --- | --- |
 | The trigger fires after the problem event | 1–4 s for a close or a first-seen update, 11–12 s for a new problem |
 | The problem record can be queried in Grail | About 30–40 s after its timestamp. Runs 24 s and 29 s after it did not find the record yet. |
-| Incident created by the problem-triggered run | 34 s after the problem's timestamp. The scheduled run (1-minute interval) would have created it 50 s later. |
+| Incident created by the problem-triggered run | 34 s and 40 s after the problem's timestamp, in two tests. The scheduled run (1-minute interval) would have created them 50 s and 34 s later. |
 | Incident resolved after the problem closed | Within 30 s of the close event |
 | Routing | The incident got its service's team from `cc.service`: the problem's Davis event was readable by then |
 | Billing | One `ACTION` invocation per firing (runs of 24–30 s). The trigger fired once when the problem opened and once when it closed, not on the update in between. |
 
 Because the trigger fires before the record can be queried, the run **waits**. Every 5 seconds it checks the incident
-in App State and one small query (the problem's newest status), for up to 45 seconds. As soon as the problem can be
-read it runs a normal cycle. If another run was faster, it ends without a cycle. If the problem is not readable in
-time, it ends too, and the scheduled run picks the problem up as before. The wait is inside the same invocation, and
+in App State and one small query (the problem's newest status), for up to 40 seconds. As soon as the problem can be
+read it runs a normal cycle, and at most one more if the incident is still not there. If another run was faster, it
+ends without a cycle. If the problem is not readable in time, it ends too, and the scheduled run picks the problem up
+as before. The wait is inside the same invocation, and
 a function call of up to 60 seconds is one billed invocation.
 
-What it gives you: the first page goes out about half a minute after the problem opens, whatever the interval. That
+What it gives you: the incident no longer waits for the next scheduled run. It is created about half a minute after
+the problem opens, whatever the interval, and its first notifications are planned and sent in that same cycle. That
 makes a 5-minute interval practical: about 8,640 scheduled runs a month instead of 43,200, plus about two runs per
 problem. It does not replace the engine workflow. Escalation steps, snooze ends, retries and the other sources
 (Davis events, generic events) are handled on the interval.
@@ -234,6 +236,7 @@ fetch dt.davis.events, from: now() - 72h
 // Q5 — one problem's newest status (only the run started by the Problem trigger: one per 5-second check)
 fetch dt.davis.problems, from: now() - 2h
 | filter event.id == "<problem id>"
+| filter not(dt.davis.is_duplicate)
 | sort timestamp desc
 | limit 1
 | fields event.id, event.status, dt.davis.event_ids
@@ -326,6 +329,8 @@ Not verified, or only partly:
   definitions is verified.
 - **Configure → Delivery** (the choice between the engine and an integration's own workflow) was exercised in the
   offline preview only.
+- **A notification sent by a problem-triggered run**: no provider was switched on during those tests. The runs
+  created and resolved incidents; nothing was sent. Sending uses the same cycle code as the scheduled run.
 - **Minimal permissions** of the workflow actor: all permissions were enabled on the trial environment.
 - **User search** returned nobody for users who had just been invited. A search for active users in a signed-in
   session was not confirmed on the trial environment. With a platform token, IAM answered *User not authorized*.

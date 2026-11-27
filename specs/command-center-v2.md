@@ -94,8 +94,8 @@ default and what this spec says about how notifications are handed to workflows.
   escalation steps, snooze ends, retries and the other sources need the clock.
 - **Problem-triggered run** (`api/lib/problemTrigger.ts`): one success test, "the incident of this problem is in the
   state the trigger reported". The run checks it, polls one small query (Q5, the problem's newest status) every 5 s
-  for up to 45 s, runs a normal cycle once the problem is readable, and ends when the test passes or the wait runs
-  out (the scheduled run then takes over). Sending is bound to the start of the invocation (`deadlineAt`).
+  for up to 40 s, runs a normal cycle once the problem is readable (at most two, 10 s apart), and ends when the test
+  passes or the wait runs out (the scheduled run then takes over). Sending is bound to the start of the invocation (`deadlineAt`).
   Reason: on the trial tenant the trigger fired 1–12 s after the problem event, but the record was queryable only
   30–40 s after its timestamp.
 - **Sources:** a problem younger than 90 s none of whose Davis events is readable yet is held back
@@ -103,8 +103,10 @@ default and what this spec says about how notifications are handed to workflows.
 - **Q5** (`buildProblemStatusQuery`) executed on the trial tenant: ACTIVE, CLOSED and unknown-id cases.
 - No new scope. `contracts.ts` unchanged (`reason: "problem-trigger"` was already part of `EngineTickRequest`).
 - **Verified on the trial tenant:** the trigger, the wait, incident creation with the right team, resolution on
-  close, one billed invocation per firing (workflow created through the Automation API). **Not verified:** installing
-  this workflow through the intent or the JSON upload; the Delivery choice in a signed-in session.
+  close, one billed invocation per firing (workflow created through the Automation API and updated with
+  `scripts/install-workflow.mjs --on-problem`). **Not verified:** installing this workflow through the intent or the
+  JSON upload; the Delivery choice in a signed-in session; a notification sent by a problem-triggered run (no provider
+  was switched on in those tests).
 
 ## Goal
 

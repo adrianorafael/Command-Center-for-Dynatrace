@@ -123,20 +123,21 @@ Medido en el entorno trial con problemas de prueba (2026-11-27):
 | --- | --- |
 | El disparador se activa después del evento del problema | 1–4 s para un cierre o una actualización vista por primera vez, 11–12 s para un problema nuevo |
 | El registro del problema se puede consultar en Grail | Unos 30–40 s después de su timestamp. Ejecuciones 24 s y 29 s después todavía no encontraron el registro. |
-| Incidente creado por la ejecución iniciada por el problema | 34 s después del timestamp del problema. La ejecución programada (intervalo de 1 minuto) lo habría creado 50 s más tarde. |
+| Incidente creado por la ejecución iniciada por el problema | 34 s y 40 s después del timestamp del problema, en dos pruebas. La ejecución programada (intervalo de 1 minuto) los habría creado 50 s y 34 s más tarde. |
 | Incidente resuelto después de que el problema se cerró | Dentro de los 30 s del evento de cierre |
 | Enrutamiento | El incidente recibió el equipo de su servicio a partir de `cc.service`: el evento de Davis del problema ya se podía leer |
 | Facturación | Una invocación `ACTION` por disparo (ejecuciones de 24–30 s). El disparador se activó una vez cuando el problema se abrió y una vez cuando se cerró, y no en la actualización intermedia. |
 
 Como el disparador se activa antes de que el registro se pueda consultar, la ejecución **espera**. Cada 5 segundos
 revisa el incidente en App State y una consulta pequeña (el estado más reciente del problema), durante un máximo de
-45 segundos. En cuanto el problema se puede leer, ejecuta un ciclo normal. Si otra ejecución fue más rápida, termina
-sin ciclo. Si el problema no se puede leer a tiempo, también termina, y la ejecución programada toma el problema como
-antes. La espera queda dentro de la misma invocación, y una llamada de función de hasta 60 segundos es una invocación
+40 segundos. En cuanto el problema se puede leer, ejecuta un ciclo normal, y como máximo uno más si el incidente
+todavía no existe. Si otra ejecución fue más rápida, termina sin ciclo. Si el problema no se puede leer a tiempo,
+también termina, y la ejecución programada toma el problema como antes. La espera queda dentro de la misma invocación, y una llamada de función de hasta 60 segundos es una invocación
 facturada.
 
-Qué te da: el primer aviso sale cerca de medio minuto después de que el problema se abre, sea cual sea el intervalo.
-Eso vuelve práctico un intervalo de 5 minutos: unas 8,640 ejecuciones programadas al mes en lugar de 43,200, más
+Qué te da: el incidente deja de esperar a la siguiente ejecución programada. Se crea cerca de medio minuto después
+de que el problema se abre, sea cual sea el intervalo, y sus primeras notificaciones se planifican y se envían en ese
+mismo ciclo. Eso vuelve práctico un intervalo de 5 minutos: unas 8,640 ejecuciones programadas al mes en lugar de 43,200, más
 unas dos ejecuciones por problema. No reemplaza al workflow del motor. Los pasos de escalamiento, el fin de las
 posposiciones, los reintentos y las otras fuentes (eventos de Davis, eventos genéricos) se atienden en el intervalo.
 
@@ -243,6 +244,7 @@ fetch dt.davis.events, from: now() - 72h
 // Q5 — one problem's newest status (only the run started by the Problem trigger: one per 5-second check)
 fetch dt.davis.problems, from: now() - 2h
 | filter event.id == "<problem id>"
+| filter not(dt.davis.is_duplicate)
 | sort timestamp desc
 | limit 1
 | fields event.id, event.status, dt.davis.event_ids
@@ -346,6 +348,9 @@ No verificado, o solo en parte:
   instalación por API de las mismas definiciones está verificada.
 - **Configure → Delivery** (la elección entre el motor y el workflow propio de una integración) se ejercitó solo en la
   vista previa sin conexión.
+- **Una notificación enviada por una ejecución iniciada por un problema**: ningún proveedor estaba encendido durante
+  esas pruebas. Las ejecuciones crearon y resolvieron incidentes; no se envió nada. El envío usa el mismo código de
+  ciclo que la ejecución programada.
 - **Permisos mínimos** del actor del workflow: en el entorno trial se habilitaron todos los permisos.
 - La **búsqueda de usuarios** no devolvió a nadie para usuarios que acababan de ser invitados. Una búsqueda de usuarios
   activos en una sesión iniciada no se confirmó en el entorno trial. Con un platform token, IAM respondió *User not

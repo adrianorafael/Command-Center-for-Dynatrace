@@ -122,19 +122,21 @@ Medido no ambiente trial com problemas de teste (2026-11-27):
 | --- | --- |
 | O gatilho dispara depois do evento do problema | 1–4 s para um fechamento ou uma atualização vista pela primeira vez, 11–12 s para um problema novo |
 | O registro do problema pode ser consultado no Grail | Cerca de 30–40 s depois do timestamp dele. Execuções 24 s e 29 s depois ainda não encontraram o registro. |
-| Incidente criado pela execução acionada pelo problema | 34 s depois do timestamp do problema. A execução agendada (intervalo de 1 minuto) o teria criado 50 s mais tarde. |
+| Incidente criado pela execução acionada pelo problema | 34 s e 40 s depois do timestamp do problema, em dois testes. A execução agendada (intervalo de 1 minuto) os teria criado 50 s e 34 s mais tarde. |
 | Incidente resolvido depois que o problema fechou | Em até 30 s do evento de fechamento |
 | Roteamento | O incidente recebeu a equipe do serviço a partir de `cc.service`: o evento do Davis do problema já podia ser lido |
 | Billing | Uma invocação `ACTION` por disparo (execuções de 24–30 s). O gatilho disparou uma vez quando o problema abriu e uma vez quando fechou, e não na atualização entre os dois. |
 
 Como o gatilho dispara antes de o registro poder ser consultado, a execução **espera**. A cada 5 segundos ela confere
-o incidente no App State e uma consulta pequena (o estado mais recente do problema), por até 45 segundos. Assim que o
-problema pode ser lido, ela roda um ciclo normal. Se outra execução foi mais rápida, ela termina sem ciclo. Se o
-problema não fica legível a tempo, ela também termina, e a execução agendada pega o problema como antes. A espera
+o incidente no App State e uma consulta pequena (o estado mais recente do problema), por até 40 segundos. Assim que o
+problema pode ser lido, ela roda um ciclo normal, e no máximo mais um se o incidente ainda não existir. Se outra
+execução foi mais rápida, ela termina sem ciclo. Se o problema não fica legível a tempo, ela também termina, e a
+execução agendada pega o problema como antes. A espera
 fica dentro da mesma invocação, e uma chamada de função de até 60 segundos é uma invocação cobrada.
 
-O que isso entrega: o primeiro acionamento sai cerca de meio minuto depois que o problema abre, seja qual for o
-intervalo. Isso torna viável um intervalo de 5 minutos: cerca de 8.640 execuções agendadas por mês em vez de 43.200,
+O que isso entrega: o incidente deixa de esperar a próxima execução agendada. Ele é criado cerca de meio minuto
+depois que o problema abre, seja qual for o intervalo, e as primeiras notificações dele são planejadas e enviadas
+nesse mesmo ciclo. Isso torna viável um intervalo de 5 minutos: cerca de 8.640 execuções agendadas por mês em vez de 43.200,
 mais cerca de duas execuções por problema. Ele não substitui o workflow do motor. Passos de escalonamento, fim de
 snooze, novas tentativas e as outras origens (eventos do Davis, eventos genéricos) são tratados no intervalo.
 
@@ -241,6 +243,7 @@ fetch dt.davis.events, from: now() - 72h
 // Q5 — one problem's newest status (only the run started by the Problem trigger: one per 5-second check)
 fetch dt.davis.problems, from: now() - 2h
 | filter event.id == "<problem id>"
+| filter not(dt.davis.is_duplicate)
 | sort timestamp desc
 | limit 1
 | fields event.id, event.status, dt.davis.event_ids
@@ -341,6 +344,9 @@ Não verificado, ou apenas parcialmente:
   pela API das mesmas definições está verificada.
 - **Configure → Delivery** (a escolha entre o motor e o workflow próprio de uma integração) foi exercitada somente na
   prévia offline.
+- **Uma notificação enviada por uma execução acionada por problema**: nenhum provedor estava ligado durante esses
+  testes. As execuções criaram e resolveram incidentes; nada foi enviado. O envio usa o mesmo código de ciclo da
+  execução agendada.
 - **Permissões mínimas** do ator do workflow: todas as permissões estavam habilitadas no ambiente trial.
 - A **busca de usuários** não retornou ninguém para usuários que tinham acabado de ser convidados. Uma busca por
   usuários ativos em uma sessão conectada não foi confirmada no ambiente trial. Com um platform token, o IAM respondeu
