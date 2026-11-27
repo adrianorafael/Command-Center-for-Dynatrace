@@ -31,7 +31,7 @@ import { withAttempt } from "../../ui/app/domain/keys";
 import { normalizeRecords } from "../../ui/app/domain/alerts/normalize";
 import { archiveResolvedBound, emptyBatches, tick } from "../../ui/app/domain/engine/tick";
 import { acquireLease, leaseLost, releaseLease } from "./lease";
-import { fetchSources } from "./sources";
+import { fetchSources, type SourceRecords } from "./sources";
 import {
   APP_STATE_LIMIT_BYTES,
   SHED_THRESHOLD_BYTES,
@@ -167,7 +167,21 @@ export type EngineHeartbeatWithStorage = EngineHeartbeat & {
   lastSkippedAt?: number;
   /** A lease release that could not be verified (the next tick overwrites it once expired). */
   releaseFailedAt?: number;
+  /**
+   * Grail cost of the last run (Settings → Event sources shows it): queries run, bytes scanned as Grail reported them
+   * (metadata.grail.scannedBytes), the per-query scan limit in force and the sources whose result was cut short.
+   */
+  grail?: GrailUsage;
 };
+
+/** See EngineHeartbeatWithStorage.grail. */
+export interface GrailUsage {
+  queries: number;
+  scannedBytes: number;
+  scanLimitGBytes: number;
+  /** Sources that were "truncated" (limits, scan limit, sampling) or "failed" in that run. */
+  incomplete?: string[];
+}
 
 /** Writes the heartbeat, carrying the skip counters of the stored one (re-read just before writing). */
 async function writeHeartbeat(repo: Repository, hb: EngineHeartbeatWithStorage): Promise<void> {
@@ -193,12 +207,53 @@ async function recordLockedSkip(repo: Repository, now: number): Promise<void> {
     .catch(() => undefined);
 }
 
-/** Effective lease TTL: above the longest tick, but short enough that a crashed tick blocks ≤ 2 runs. */
-export function effectiveLockTtlSec(configured: number): number {
-  return Math.min(MAX_LOCK_TTL_SEC, Math.max(MIN_LOCK_TTL_SEC, Number.isFinite(configured) ? configured : MIN_LOCK_TTL_SEC));
+/**
+ * Slack kept between the lease's expiry and the next scheduled run, for start jitter: the crashed tick may have taken
+ * its lease a few seconds after its own slot and the next run may start a few seconds early. Not measured; an
+ * assumed margin, small against every interval.
+ */
+export const LOCK_START_JITTER_SEC = 15;
+
+/** Interval (minutes) the cap is computed for: the recorded one, else 1 (the shortest, so the strictest cap). */
+function intervalSec(intervalMinutes: number | undefined): number {
+  return typeof intervalMinutes === "number" && Number.isFinite(intervalMinutes) && intervalMinutes >= 1
+    ? Math.floor(intervalMinutes) * 60
+    : 60;
 }
-/** Upper clamp for `settings.engine.lockTtlSec`. */
-export const MAX_LOCK_TTL_SEC = 180;
+
+/** Absolute ceiling of the lease TTL, any interval (documented range 130–180 s; a live tick needs ≤ 120 s anyway). */
+export const LOCK_TTL_CEILING_SEC = 180;
+
+/**
+ * Upper clamp of the lease TTL for an engine interval: just below the first scheduled run at or after the floor
+ * (MIN_LOCK_TTL_SEC), i.e. ceil(MIN / interval) × interval − LOCK_START_JITTER_SEC, and never above
+ * LOCK_TTL_CEILING_SEC. 1 min → 165 s, 2 min → 180 s, 5 min → 180 s.
+ */
+export function maxLockTtlSec(intervalMinutes?: number): number {
+  const i = intervalSec(intervalMinutes);
+  const beforeNextRun = Math.ceil(MIN_LOCK_TTL_SEC / i) * i - LOCK_START_JITTER_SEC;
+  return Math.max(MIN_LOCK_TTL_SEC, Math.min(LOCK_TTL_CEILING_SEC, beforeNextRun));
+}
+
+/**
+ * Effective lease TTL, from `settings.engine.lockTtlSec` and the engine interval (`settings.engine.intervalMinutes`).
+ *
+ * - Floor MIN_LOCK_TTL_SEC (130 s): above the 120 s limit of one action / function invocation, so a tick that is
+ *   still alive never loses its lease to the next run.
+ * - Cap maxLockTtlSec(interval): a lease is held while `now − acquiredAt < ttl` (api/lib/lease.ts), so the cap stays
+ *   short of the first scheduled run after the floor. A tick that crashes without releasing its lease therefore
+ *   blocks exactly the scheduled runs that the floor forces it to block, never one more: 2 runs at a 1-minute
+ *   interval, 1 at 2 minutes, 0 at 5 minutes (for any configured value). A lease taken off schedule (a manual
+ *   "Run engine now", an "Engine on problem" run) shortly before a scheduled run can block one run more.
+ * - Without a recorded interval the 1-minute cap applies. A recorded interval that is longer than the real one
+ *   (workflow edited by hand) lets a configured TTL above the 1-minute cap block more runs.
+ */
+export function effectiveLockTtlSec(configured: number, intervalMinutes?: number): number {
+  const ttl = Number.isFinite(configured) ? configured : MIN_LOCK_TTL_SEC;
+  return Math.min(maxLockTtlSec(intervalMinutes), Math.max(MIN_LOCK_TTL_SEC, ttl));
+}
+/** Upper clamp of `settings.engine.lockTtlSec` at the default (1-minute) interval. */
+export const MAX_LOCK_TTL_SEC = maxLockTtlSec(1);
 
 /**
  * One tick under the engine lease: load state and sources, run the pure `tick`, write its output in the order given
@@ -245,11 +300,12 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
   if (!settings.engine.enabled) return { ...fail(), ok: true, skipped: "disabled" };
 
   const holder = deps.holder ?? `tick-${now}-${randomId()}`;
-  const lockTtlSec = effectiveLockTtlSec(settings.engine.lockTtlSec);
+  const lockTtlSec = effectiveLockTtlSec(settings.engine.lockTtlSec, settings.engine.intervalMinutes);
   let leased = false;
   let skipped = false;
   let previous: EngineHeartbeatWithStorage | undefined;
   let storage: StorageEstimate | undefined;
+  let fetched: SourceRecords | undefined;
   try {
     leased = await acquireLease(repo, holder, now, lockTtlSec);
     if (!leased) {
@@ -275,6 +331,7 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
         repo.list<unknown>(PREFIX.archive),
         fetchSources(settings, deps.runQuery, undefined, now),
       ]);
+    fetched = sources;
     errors.push(...sources.errors);
 
     const alerts = normalizeRecords(
@@ -423,9 +480,18 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
         ...(errors.length ? { lastError: errors[0]?.slice(0, 500) } : {}),
         ...(storage ? { storage } : previous?.storage ? { storage: previous.storage } : {}),
         ...(released ? {} : { releaseFailedAt: now }),
+        ...(fetched ? { grail: grailUsage(fetched) } : {}),
       });
     }
   }
+}
+
+/** The heartbeat's Grail cost summary of one fetch. */
+export function grailUsage(s: SourceRecords): GrailUsage {
+  const incomplete = Object.entries(s.status)
+    .filter(([, h]) => h !== "ok")
+    .map(([src, h]) => `${src}:${h}`);
+  return { ...s.grail, ...(incomplete.length ? { incomplete } : {}) };
 }
 
 /** Bytes per prefix from what this tick loaded; sheds the oldest archives above the threshold. */

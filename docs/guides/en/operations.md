@@ -172,7 +172,15 @@ licensing documentation). The engine runs measured on the trial environment took
 | Enabled sources | Q2 and Q3 add one query each per run |
 | Problem look-back (72 h) | A wider window scans more data |
 | Data volume | More problems and events, more bytes scanned |
-| Open browser tabs | No Grail cost. Each tab reads App State every 30 s by default. |
+| Open browser tabs | No Grail cost. Each tab reads App State every minute by default. |
+
+**Scan limit (cost guard).** Every engine query carries a scan limit, *Grail scan limit per query* in Settings →
+Event sources (default 1 GB, 1–100 whole GB; Grail accepts no smaller value). On the trial environment one engine
+query scanned at most 1.4 MB and a whole run about 2 MB, so 1 GB never cuts a normal run; it caps what a run can cost
+if the data grows unexpectedly. The limit is per query: a run's worst case is its number of queries (1–8) times the
+limit. A query that reaches it counts as cut short: its source is incomplete for that run (nothing of it is archived)
+and the engine's last error says so. Settings → Event sources shows what the last run scanned and the daily estimate at
+the current interval.
 
 How to measure in your environment:
 
@@ -255,6 +263,14 @@ fetch dt.davis.problems, from: now() - 2h
 
 - **Never resolved by absence.** A failed or empty query never resolves anything. Only a CLOSED record,
   `cc.action: "resolve"` or an operator resolves an incident.
+- **An incomplete result is not proof of absence.** When Grail cuts a query result short (record limit, scan limit,
+  sampling), the engine still uses the records it got but treats that source as incomplete for the run: no resolved
+  incident of that source is archived, and the heartbeat's last error names the query and Grail's notice, for example
+  `Q1 problems: result truncated (…)`.
+- **A crashed run blocks few runs.** The engine lease lasts 130–180 seconds, longer than one run can take (120 s). If
+  a run dies without releasing it, the next scheduled runs are skipped until it expires: at most 2 at a 1-minute
+  interval, 1 at 2 minutes, none at 5 minutes. A *Run engine now* or *Engine on problem* run that dies just before a
+  scheduled run can cost one more.
 - **At-least-once paging.** The ledger prevents duplicates in normal operation. In rare races (a run that overlaps a
   slow previous run, a result that arrives after the timeout) a person can be notified twice.
 - **Timing precision = interval.** A step fires on the first run after it is due. The same applies to snooze ends.

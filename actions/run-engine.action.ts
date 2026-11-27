@@ -12,7 +12,7 @@
  *    status, and the run waits until that problem can be read before its cycle (api/lib/problemTrigger.ts).
  */
 import { AppStateRepository } from "../ui/app/data/appStateRepository";
-import { runQuery } from "../ui/app/data/grail";
+import { runGrailQuery } from "../ui/app/data/grail";
 import { appBaseUrl, runEngineCycle, type CycleResult } from "../api/lib/cycle";
 import { runProblemTriggeredCycle, type ProblemTriggerInput } from "../api/lib/problemTrigger";
 import { vaultReader } from "../api/lib/senders";
@@ -20,7 +20,9 @@ import { vaultReader } from "../api/lib/senders";
 export default async (payload?: ProblemTriggerInput): Promise<CycleResult> => {
   const deps = {
     repo: new AppStateRepository(),
-    runQuery,
+    // The full result (records + truncation notices), not records only: a scan-limited or sampled source must be
+    // marked "truncated" so it never counts as proof that an incident is gone (api/lib/sources.ts).
+    runQuery: runGrailQuery,
     appBaseUrl: appBaseUrl(),
     fetch,
     readCredential: vaultReader(fetch),

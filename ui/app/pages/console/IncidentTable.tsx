@@ -36,7 +36,7 @@ import { AssigneeView } from "../../components/UserAvatar";
 import { EscalationCell, EscalationSteps } from "../../components/EscalationProgress";
 import { ChannelIcon, CHANNEL_LABEL } from "../../components/ChannelIcon";
 import { IconButton } from "../../components/IconButton";
-import { formatRelative, formatTime, initials } from "../../components/format";
+import { formatDateTime, formatRelative, formatTime, initials } from "../../components/format";
 import { PRIORITY_RANK, SOURCE_LABEL } from "./filters";
 import { SNOOZE_PRESETS, useIncidentCommands } from "./useIncidentCommands";
 import type { ModalRequest } from "./ActionModals";
@@ -49,6 +49,8 @@ export interface IncidentRow extends Incident {
   serviceName: string;
   teamName: string;
   assigneeName: string;
+  /** Display name of who acknowledged; "" when not acknowledged (sorts first, downloads as an empty cell). */
+  ackByName: string;
   lastNotification?: NotificationRecord;
 }
 
@@ -299,6 +301,10 @@ const IncidentPreview = ({
 };
 
 const VISIBILITY_KEY = "command-center.console-columns.v1";
+/**
+ * Columns hidden until the person shows them. A column missing here and in the stored choice is visible, so new
+ * columns (e.g. "Acknowledged by") appear for people who saved a choice before they existed.
+ */
 const DEFAULT_VISIBILITY: Record<string, boolean> = { createdAt: false, source: false };
 
 /** Column visibility chosen in the table's column settings, kept per browser (survives refresh and reloads). */
@@ -376,6 +382,8 @@ export const IncidentTable = ({
       serviceName: data?.services.find((s) => s.id === i.serviceId)?.name ?? "–",
       teamName: data?.teams.find((t) => t.id === i.teamId)?.name ?? "–",
       assigneeName: i.assignee ? (i.assignee.type === "team" ? (data?.teams.find((t) => t.id === i.assignee?.id)?.name ?? "") : userName(i.assignee.id)) : "Unassigned",
+      // Guard: userName(undefined) answers "Unassigned", which is wrong here.
+      ackByName: i.acknowledgedBy ? userName(i.acknowledgedBy) : "",
       lastNotification: lastNtf.get(i.id),
     }));
   }, [incidents, data, now, userName]);
@@ -473,6 +481,33 @@ export const IncidentTable = ({
             <Cell>
               <AssigneeView assignee={undefined} />
             </Cell>
+          ),
+      },
+      {
+        // Kept after resolve (domain clears it only on unack/reopen), so resolved rows still show who took them.
+        id: "acknowledgedBy",
+        header: "Acknowledged by",
+        accessor: "ackByName",
+        width: 140,
+        cell: ({ rowData }) =>
+          rowData.acknowledgedBy ? (
+            <Tooltip
+              text={`${rowData.ackByName}${rowData.acknowledgedAt ? ` · ${formatDateTime(rowData.acknowledgedAt, tz)}` : ""}`}
+            >
+              <Flex flexDirection="column" gap={0} style={{ minWidth: 0, width: "100%" }}>
+                <Text>
+                  <TextEllipsis>{rowData.ackByName}</TextEllipsis>
+                </Text>
+                {rowData.acknowledgedAt && (
+                  <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+                    {formatTime(rowData.acknowledgedAt, tz)}
+                  </Text>
+                )}
+              </Flex>
+            </Tooltip>
+          ) : (
+            // Empty on purpose: a dash in every unacknowledged row would be noise. DataTable cells must return an element.
+            <></>
           ),
       },
       {

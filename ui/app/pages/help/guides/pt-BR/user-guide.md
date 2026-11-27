@@ -88,7 +88,9 @@ sem pulsar.
 
 ## Console
 
-O Console é a tela do NOC: todos os incidentes abertos, os mais recentes primeiro.
+O Console é a tela do NOC: todos os incidentes abertos, os mais recentes primeiro. O cabeçalho mostra quando os dados
+foram atualizados, **Auto-refresh** (Off, 15 s, 30 s, 1 min, 5 min; começa no padrão de Settings → General, 1 min se não
+for alterado) e **Refresh now**.
 
 **Tiles de KPI** (os sparklines são contagens por hora, nas últimas 24 horas):
 
@@ -102,16 +104,21 @@ O Console é a tela do NOC: todos os incidentes abertos, os mais recentes primei
 | Open incidents | Todos os incidentes abertos, divididos por prioridade | — |
 
 **Show** (abas acima da tabela): *Open* (Triggered + Acknowledged, o padrão), *Triggered*, *Acknowledged*,
-*Snoozed*, *Resolved* e *All*. Cada aba mostra uma contagem que acompanha os outros filtros.
+*Snoozed*, *Resolved* e *All*. Cada aba mostra uma contagem que acompanha os outros filtros. *Resolved* e *All* mostram
+só incidentes criados hoje (desde a meia-noite local no fuso horário do app) e aparecem como *Resolved today* / *All
+today*, com a dica *Today · pick a timeframe in Created to see older incidents*; um intervalo escolhido em **Created**
+substitui esse limite. As outras abas não são limitadas.
 
-**Filtros**: busca (título, ID, entidade, tag), Priority, Team, Assignee (*Me*, *Unassigned*, membros), Service,
-Source, Escalation level (*Not started*, *Step N*, *Exhausted*) e Created (intervalo de tempo). Todos os filtros, exceto
-o intervalo de tempo, fazem parte da URL, assim como a aba **Show** (`status=…`), então uma visão de NOC pode ser salva
+**Filtros**: busca (título, ID, entidade, tag), Priority, Team, Assignee (*Me*, *Unassigned*, membros), Acknowledged by
+(*Me* e todas as pessoas que reconheceram um incidente nos dados carregados, em ordem de nome), Service, Source,
+Escalation level (*Not started*, *Step N*, *Exhausted*) e Created (intervalo de tempo). Todos os filtros, exceto o
+intervalo de tempo, fazem parte da URL (Acknowledged by é `ackby=…`), assim como a aba **Show** (`status=…`), então uma visão de NOC pode ser salva
 nos favoritos.
 
 **Colunas**: Priority, Status (e *until …* quando em snooze), Incident (título, `#display ID · first entity`), Age
 (vermelho com um ícone de relógio quando um incidente **triggered** é mais antigo que a meta de reconhecimento),
-Service, Team, Assignee, Escalation (*Step N of M*, *Not started*, *Exhausted*, *No policy*), Last notified. Source e
+Service, Team, Assignee, Acknowledged by (nome, com o horário embaixo e a data completa ao passar o mouse; vazio quando
+não reconhecido, e mantido depois que o incidente é resolvido), Escalation (*Step N of M*, *Not started*, *Exhausted*, *No policy*), Last notified. Source e
 Created ficam ocultas por padrão. Use o menu de colunas para mostrar, ocultar ou reordenar colunas. A escolha é
 lembrada neste navegador. As linhas podem ser expandidas para mostrar a descrição, a atividade mais recente e o
 escalonamento.
@@ -151,7 +158,8 @@ Cada ação é registrada na linha do tempo do incidente, com quem a fez e quand
 ![Incident](../../screenshots/incident.png)
 
 Abre ao lado da tabela. O cabeçalho mostra prioridade, status, `#ID`, um botão de copiar link, título, *Opened … ·
-Service · Team · Source* e *Under maintenance: paging suppressed* quando se aplica. Botões: Acknowledge, Resolve,
+Service · Team · Source*, *Under maintenance: paging suppressed* quando se aplica, a quem está atribuído e, depois do
+reconhecimento, *Acknowledged by* com a pessoa e o horário. Botões: Acknowledge, Resolve,
 Reopen, Reassign, Open/Join war room, Escalate now, Snooze e ⋮ (Change priority, Add note, Undo acknowledgement, Copy
 link). Davis problems têm o link **Open in Problems app**.
 
@@ -190,7 +198,7 @@ Uma war room é um link de reunião mais os incidentes que ela trata e os seus n
 
 | Aba | Conteúdo |
 | --- | --- |
-| Now | Um card por equipe: quem está de plantão e até quando, os seus métodos de contato (em cinza quando não configurados), quem é o próximo e cada camada. *No one is on call* vem com **Add override**. Enquanto ainda não existe nenhuma equipe, a página diz *Start with a team* (comece por uma equipe). Abaixo: *Upcoming shifts* (Gantt: turnos em verde, substituições em outra cor, lacunas em âmbar, um marcador *Now*). Filtros: Team, Range (24 h, 7 dias, 14 dias). |
+| Now | Um card por equipe: quem está de plantão e até quando, os seus métodos de contato (em cinza quando não configurados), quem é o próximo e cada camada. *No one is on call* vem com **Add override**. Enquanto ainda não existe nenhuma equipe, a página diz *Start with a team* (comece por uma equipe). Abaixo: *Shifts* (turnos), uma semana do calendário (domingo → sábado, uma coluna por dia) no *Tenant time zone* definido em Settings (mostrado ao lado das datas), com uma linha *Now* e a coluna de hoje destacada. Uma linha por equipe mostra a escala final com o nome de quem está de plantão em cada barra; substituições (overrides) têm contorno tracejado e *· override*, lacunas *No one on call* aparecem listradas em âmbar. Expanda uma equipe (ou use **Show people**) para ver uma linha por pessoa com os horários dos seus turnos e as horas de plantão na semana; passe o mouse sobre uma barra para ver os horários exatos. Navegue com as setas de semana anterior / seguinte, **This week** ou *Week of* (um seletor de data que vai para a semana que contém essa data). A semana fica no link (`?week=2026-11-22`), então pode ser compartilhada; **Workdays only** mostra segunda → sexta e fica lembrado neste navegador. Filtro: Team. |
 | Schedules | Nome, equipe, fuso horário, camadas, de plantão agora, próxima passagem de plantão, cobertura para os próximos 7 dias (em %). Edit, Duplicate, Delete. |
 | Overrides | Quem cobre, para quem, escala, de, até, motivo. Futuras ou passadas. Remove. |
 

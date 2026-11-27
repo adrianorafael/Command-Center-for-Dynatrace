@@ -179,7 +179,16 @@ La UI **no** ejecuta DQL: las pestañas abiertas solo leen App State.
 | Fuentes habilitadas | Q2 y Q3 agregan una consulta cada una por ejecución |
 | Look-back de problemas (72 h) | Una ventana más amplia escanea más datos |
 | Volumen de datos | Más problemas y eventos, más bytes escaneados |
-| Pestañas abiertas del navegador | Sin costo de Grail. Cada pestaña lee App State cada 30 s de forma predeterminada. |
+| Pestañas abiertas del navegador | Sin costo de Grail. Cada pestaña lee App State cada minuto de forma predeterminada. |
+
+**Límite de escaneo (protección de costo).** Cada consulta del motor lleva un límite de escaneo, *Grail scan limit per
+query* en Settings → Event sources (predeterminado 1 GB, de 1 a 100 GB enteros; Grail no acepta un valor menor). En el
+entorno trial, una consulta del motor escaneó como máximo 1,4 MB y una ejecución completa unos 2 MB, así que 1 GB nunca
+recorta una ejecución normal; limita lo que puede costar una ejecución si los datos crecen de forma inesperada. El
+límite es por consulta: el peor caso de una ejecución es su número de consultas (1 a 8) por el límite. Una consulta que
+lo alcanza cuenta como recortada: su fuente queda incompleta en esa ejecución (no se archiva nada de ella) y el último
+error del motor lo indica. Settings → Event sources muestra lo que escaneó la última ejecución y la estimación diaria
+con el intervalo actual.
 
 Cómo medir en tu entorno:
 
@@ -264,6 +273,15 @@ fetch dt.davis.problems, from: now() - 2h
 
 - **Nunca se resuelve por ausencia.** Una consulta fallida o vacía nunca resuelve nada. Solo un registro CLOSED,
   `cc.action: "resolve"` o un operador resuelven un incidente.
+- **Un resultado incompleto no prueba ausencia.** Cuando Grail recorta el resultado de una consulta (límite de
+  registros, límite de escaneo, muestreo), el motor sigue usando los registros recibidos, pero trata esa fuente como
+  incompleta en la ejecución: ningún incidente resuelto de esa fuente se archiva, y el último error del heartbeat
+  indica la consulta y el aviso de Grail, por ejemplo `Q1 problems: result truncated (…)`.
+- **Una ejecución que se cae bloquea pocas ejecuciones.** El lease del motor dura de 130 a 180 segundos, más de lo
+  que puede tardar una ejecución (120 s). Si una ejecución muere sin liberarlo, las siguientes ejecuciones programadas
+  se omiten hasta que expire: como máximo 2 con un intervalo de 1 minuto, 1 con 2 minutos, ninguna con 5 minutos. Una
+  ejecución de *Run engine now* o *Engine on problem* que muere justo antes de una ejecución programada puede costar
+  una más.
 - **Avisos al menos una vez.** El registro de notificaciones evita duplicados en la operación normal. En carreras poco
   frecuentes (una ejecución que se superpone con una ejecución anterior lenta, un resultado que llega después del
   timeout) una persona puede ser notificada dos veces.

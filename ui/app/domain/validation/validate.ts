@@ -292,6 +292,11 @@ export function validateSettings(s: Settings, ctx: RefContext = {}): ValidationE
   if (!(e.reportTimeoutSec >= 30 && e.reportTimeoutSec <= 3600)) c.add("engine.reportTimeoutSec", "Between 30 and 3600 seconds");
   if (!(Number.isInteger(e.maxAttempts) && e.maxAttempts >= 1 && e.maxAttempts <= 10)) c.add("engine.maxAttempts", "Between 1 and 10");
   if (!(e.lockTtlSec >= 30 && e.lockTtlSec <= 600)) c.add("engine.lockTtlSec", "Between 30 and 600 seconds");
+  // Whole GB: Grail reads the scan limit as an integer and rejects 0 (verified on a trial tenant). 100 GB per query
+  // is already far beyond what the engine's queries need; above that the limit no longer guards cost.
+  if (e.scanLimitGBytes !== undefined && !(Number.isInteger(e.scanLimitGBytes) && e.scanLimitGBytes >= 1 && e.scanLimitGBytes <= 100)) {
+    c.add("engine.scanLimitGBytes", "Whole gigabytes between 1 and 100");
+  }
   if (e.workflowId && !/^[0-9a-f-]{36}$/i.test(e.workflowId)) c.add("engine.workflowId", "Must be a workflow UUID");
   if (!(s.retention.resolvedVisibleHours >= 1 && s.retention.resolvedVisibleHours <= 24 * 30)) {
     c.add("retention.resolvedVisibleHours", "Between 1 and 720 hours");

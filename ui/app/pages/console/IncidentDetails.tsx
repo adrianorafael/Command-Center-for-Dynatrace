@@ -273,6 +273,19 @@ export const IncidentDetails = ({ incident, onModal }: { incident: Incident; onM
           </Avatar>
         </Flex>
       )}
+      {incident.acknowledgedBy && (
+        <Flex alignItems="center" gap={8}>
+          <Text textStyle="small">Acknowledged by</Text>
+          <Avatar size="small" abbreviation={initials(userName(incident.acknowledgedBy))}>
+            <Avatar.Label>{userName(incident.acknowledgedBy)}</Avatar.Label>
+          </Avatar>
+          {incident.acknowledgedAt && (
+            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+              {formatDateTime(incident.acknowledgedAt, tz)}
+            </Text>
+          )}
+        </Flex>
+      )}
       {incident.alert.description && <Markdown>{incident.alert.description}</Markdown>}
       {incident.tags.length > 0 && (
         <ChipGroup>

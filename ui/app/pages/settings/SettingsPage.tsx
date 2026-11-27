@@ -54,9 +54,9 @@ const LEGACY_KEY = "problem-ack-states";
 function appVersion(): string {
   try {
     const v = getAppVersion();
-    return v && !v.startsWith("dt.missing") ? v : "2.4.0";
+    return v && !v.startsWith("dt.missing") ? v : "2.5.0";
   } catch {
-    return "2.4.0";
+    return "2.5.0";
   }
 }
 const BUDGET_BYTES = 50 * 1024 * 1024;
@@ -80,6 +80,30 @@ const SaveRow = ({ dirty, busy, onSave, onReset }: { dirty: boolean; busy: boole
     {dirty && <Text textStyle="small">Unsaved changes</Text>}
   </Flex>
 );
+
+/** Heartbeat extra written by the engine (api/lib/engine.ts GrailUsage); read defensively, it is optional. */
+interface HeartbeatGrailUsage {
+  queries?: number;
+  scannedBytes?: number;
+  scanLimitGBytes?: number;
+  incomplete?: string[];
+}
+
+function formatScanned(bytes: number): string {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
+  return `${Math.round(bytes / 1e3)} kB`;
+}
+
+/** "Last engine run: 5 queries scanned 1.8 MB (about 2.6 GB a day at a 1-minute interval)." */
+function grailUsageText(heartbeat: unknown, settings: Settings): string {
+  const g = (heartbeat as { grail?: HeartbeatGrailUsage } | undefined)?.grail;
+  if (!g || typeof g.scannedBytes !== "number") return "The engine has not reported what it scanned yet.";
+  const interval = settings.engine.intervalMinutes ?? 1;
+  const perDay = (g.scannedBytes * 24 * 60) / interval;
+  const incomplete = g.incomplete?.length ? ` Incomplete: ${g.incomplete.join(", ")}.` : "";
+  return `Last engine run: ${g.queries ?? 0} queries scanned ${formatScanned(g.scannedBytes)} (about ${formatScanned(perDay)} a day at a ${interval}-minute interval).${incomplete}`;
+}
 
 export const SettingsPage = () => {
   const { data, isLoading, error, refresh, mutate, store, demo } = useAppData();
@@ -328,6 +352,21 @@ export const SettingsPage = () => {
                 value={draft.sources.genericEvents.eventType}
                 onChange={(v) => set({ sources: { ...draft.sources, genericEvents: { ...draft.sources.genericEvents, eventType: v } } })}
               />
+            </FormField>
+            <FormField>
+              <Label>Grail scan limit per query (GB)</Label>
+              <NumberInput
+                value={draft.engine.scanLimitGBytes ?? 1}
+                min={1}
+                max={100}
+                onChange={(v) => set({ engine: { ...draft.engine, scanLimitGBytes: Math.max(1, Math.round(v ?? 1)) } })}
+              />
+              <FieldHint>
+                Cost guard: Grail query cost grows with the data a query scans. Each engine query may scan at most this much
+                (whole gigabytes, 1 is the smallest Grail accepts); a query that reaches it marks its source incomplete in the
+                engine&apos;s last error instead of looking all clear.
+              </FieldHint>
+              <Text textStyle="small">{grailUsageText(data.heartbeat, draft)}</Text>
             </FormField>
             {saveRow}
           </SectionSurface>

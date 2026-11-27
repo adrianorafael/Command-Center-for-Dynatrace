@@ -490,6 +490,11 @@ export interface Settings {
     lockTtlSec: number;
     /** Run interval of the installed engine workflow in minutes (1, 2 or 5); recorded at install. */
     intervalMinutes?: number;
+    /**
+     * Cost guard: the most data one engine Grail query may scan, in whole GB (1–100, default 1). Sent as the query
+     * request's defaultScanLimitGbytes (ui/app/data/grail.ts). Optional so settings stored before it read as default.
+     */
+    scanLimitGBytes?: number;
   };
   /** Resolved incidents stay live this many hours, then move to `arc.*` kept for archiveDays (≤ 90). */
   retention: { resolvedVisibleHours: number; archiveDays: number };

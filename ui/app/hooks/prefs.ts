@@ -1,6 +1,6 @@
 /**
  * Per-viewer UI preferences that the frozen Settings contract has no field for
- * (keyboard shortcuts, table density, acknowledge target). Browser storage only;
+ * (keyboard shortcuts, table density, acknowledge target, on-call week view). Browser storage only;
  * every access is guarded because storage can be unavailable.
  */
 import { useCallback, useState } from "react";
@@ -12,9 +12,11 @@ export interface UiPrefs {
   tableDensity: "default" | "condensed";
   /** Acknowledge target in minutes: drives the age color and the MTTA meter. */
   ackTargetMin: number;
+  /** On-call "Upcoming shifts" week view: show Monday → Friday instead of Sunday → Saturday. */
+  shiftsWorkdaysOnly: boolean;
 }
 
-export const DEFAULT_PREFS: UiPrefs = { keyboardShortcuts: true, tableDensity: "condensed", ackTargetMin: 5 };
+export const DEFAULT_PREFS: UiPrefs = { keyboardShortcuts: true, tableDensity: "condensed", ackTargetMin: 5, shiftsWorkdaysOnly: false };
 
 const STORAGE_KEY = "command-center.ui-prefs.v1";
 

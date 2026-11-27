@@ -178,7 +178,15 @@ executa DQL: as abas abertas leem apenas o App State.
 | Origens habilitadas | Q2 e Q3 adicionam uma consulta cada por execução |
 | Look-back de problems (72 h) | Uma janela mais ampla varre mais dados |
 | Volume de dados | Mais problems e eventos, mais bytes varridos |
-| Abas abertas no navegador | Sem custo de Grail. Cada aba lê o App State a cada 30 s por padrão. |
+| Abas abertas no navegador | Sem custo de Grail. Cada aba lê o App State a cada minuto por padrão. |
+
+**Limite de varredura (proteção de custo).** Toda consulta do motor leva um limite de varredura, *Grail scan limit per
+query* em Settings → Event sources (padrão 1 GB, de 1 a 100 GB inteiros; o Grail não aceita valor menor). No ambiente
+trial, uma consulta do motor varreu no máximo 1,4 MB e uma execução inteira cerca de 2 MB, então 1 GB nunca corta uma
+execução normal; ele limita quanto uma execução pode custar se os dados crescerem inesperadamente. O limite é por
+consulta: o pior caso de uma execução é o número de consultas (1 a 8) vezes o limite. Uma consulta que o atinge conta
+como cortada: sua origem fica incompleta naquela execução (nada dela é arquivado) e o último erro do motor informa
+isso. Settings → Event sources mostra o que a última execução varreu e a estimativa diária no intervalo atual.
 
 Como medir no seu ambiente:
 
@@ -263,6 +271,14 @@ fetch dt.davis.problems, from: now() - 2h
 
 - **Nunca resolvido por ausência.** Uma consulta com falha ou vazia nunca resolve nada. Somente um registro CLOSED,
   `cc.action: "resolve"` ou um operador resolve um incidente.
+- **Um resultado incompleto não prova ausência.** Quando o Grail corta o resultado de uma consulta (limite de
+  registros, limite de varredura, amostragem), o motor ainda usa os registros recebidos, mas trata essa fonte como
+  incompleta na execução: nenhum incidente resolvido dessa fonte é arquivado, e o último erro do heartbeat informa a
+  consulta e o aviso do Grail, por exemplo `Q1 problems: result truncated (…)`.
+- **Uma execução que cai bloqueia poucas execuções.** O lease do motor dura de 130 a 180 segundos, mais do que uma
+  execução pode levar (120 s). Se uma execução morre sem liberá-lo, as próximas execuções agendadas são puladas até
+  ele expirar: no máximo 2 com intervalo de 1 minuto, 1 com 2 minutos, nenhuma com 5 minutos. Uma execução de *Run
+  engine now* ou *Engine on problem* que morre logo antes de uma execução agendada pode custar mais uma.
 - **Acionamento pelo menos uma vez (at least once).** O registro (ledger) impede duplicatas na operação normal. Em
   raras condições de corrida (uma execução que se sobrepõe a uma execução anterior lenta, um resultado que chega depois
   do timeout), uma pessoa pode ser notificada duas vezes.

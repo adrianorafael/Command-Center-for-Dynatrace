@@ -11,6 +11,31 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-11-27
+
+### Added
+- **On-call → Shifts**: a week view (Sunday → Saturday in the display time zone) with previous/next week, *This week*
+  and a *Week of* date picker; *Workdays only* hides the weekend and is remembered per browser; the week is in the URL
+  (`?week=YYYY-MM-DD`). Each team row expands into one row per person with their shifts and hours on call; bars carry
+  the on-call person's name, overrides are outlined, gaps say "No one on call". Replaces the 24 h / 7 / 14 days range.
+- **Console → Acknowledged by**: a column (name and time) and a filter ("Me" and everyone who acknowledged); the
+  incident details header shows it too.
+- **Grail cost guard**: Settings → Event sources → *Grail scan limit per query (GB)*, default 1 GB (the smallest Grail
+  accepts; measured on a trial tenant, one engine run scans about 2 MB). Every engine query carries it; a query that
+  reaches it counts as incomplete, never as "all clear". The last run's scanned bytes and a daily estimate are shown.
+- Project page: screenshots open in a lightbox (arrows, Esc, swipe); war room and an example filled post-mortem
+  notebook added to the gallery.
+
+### Changed
+- Console auto-refresh default: 1 minute (stored settings keep their value).
+- Console **Resolved** and **All** tabs show incidents created today unless a *Created* timeframe is picked.
+
+### Fixed
+- Grail truncation and sampling notices reached the engine only as a record count: a scan-limited or sampled result
+  could count as complete. The engine now gets the full result, and an incomplete source never archives incidents.
+- Engine lease: a crashed run blocks at most 2 runs at a 1-minute interval (was 3), 1 at 2 minutes, 0 at 5.
+- Delivery report window: the 24 h value is kept; its justification is now correct and tested.
+
 ## [2.4.0] - 2026-11-27
 
 ### Added

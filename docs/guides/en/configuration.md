@@ -12,7 +12,7 @@ that needs a fix.
 | Setting | Default | Range | Effect |
 | --- | --- | --- | --- |
 | Tenant time zone | The browser's time zone | IANA zones | Timestamps, schedules, handoffs and report days |
-| Auto-refresh default | 30 s | Off, 15 s, 30 s, 1 min, 5 min | How often open pages reload App State. No Grail cost: the UI runs no DQL. |
+| Auto-refresh default | 1 min | Off, 15 s, 30 s, 1 min, 5 min | How often open pages reload App State. No Grail cost: the UI runs no DQL. |
 | Table density *(this browser)* | Condensed | Default, Condensed | Row height of the tables |
 | Single-key keyboard shortcuts in the Console *(this browser)* | On | On, Off | `j`/`k`, `a`, `r`, `x`, `/`, `Shift+R`, `Esc` |
 | Acknowledge target (minutes) *(this browser)* | 5 | 1–240 | Incidents older than this without an acknowledgement turn red in the Console. Drives the MTTA meter. |
@@ -33,6 +33,7 @@ without affecting anyone on call.
 | Davis event types | `CUSTOM_ALERT, ERROR_EVENT` | Comma-separated | Event types read by Q2 |
 | Generic events (OpenPipeline) | Off | | Reads the `events` table (Q3, last 24 h) |
 | Generic event type | `command_center.alert` | | `event.type` read by Q3 |
+| Grail scan limit per query (GB) | 1 | 1–100, whole GB | Cost guard: the most data one engine query may scan. A query that reaches it marks its source incomplete in the engine's last error (Integrations → Workflows), never all clear. Below the field: what the last run scanned. See [cost](operations.md#cost-and-consumption). |
 
 The formats and fields are in the [alerts reference](alerts-reference.md).
 

@@ -15,7 +15,7 @@ import {
   chunk,
   safeEventIds,
 } from "../../ui/app/data/dql";
-import { asGrailResult, describeError, type GrailRecord, type QueryRunner } from "../../ui/app/data/grail";
+import { asGrailResult, clampScanLimitGBytes, describeError, type GrailRecord, type QueryRunner } from "../../ui/app/data/grail";
 import type { AlertSource } from "../../ui/app/domain/contracts";
 
 /** Health of one inbound source in a tick; the engine passes it to the domain as `sourceStatus`. */
@@ -31,6 +31,21 @@ export interface SourceRecords {
   /** Problems held back this tick because their routing properties could not be fetched or are not readable yet. */
   heldProblems: number;
   errors: string[];
+  /** Cost of this fetch: queries run and the bytes Grail reported scanning for them (unreported counts as 0). */
+  grail: { queries: number; scannedBytes: number; scanLimitGBytes: number };
+}
+
+/** Per-query Grail scan limit when settings carry none (ui/app/domain/validation/defaults.ts has the reasoning). */
+export const DEFAULT_SCAN_LIMIT_GBYTES = 1;
+/** Upper bound of settings.engine.scanLimitGBytes (validate.ts). */
+export const MAX_SCAN_LIMIT_GBYTES = 100;
+
+/**
+ * The scan limit every engine query carries: the setting as whole GB within 1–100, the default when it is missing or
+ * invalid. Never "no limit": a broken setting must not lift the cost guard.
+ */
+export function engineScanLimitGBytes(settings: Settings): number {
+  return Math.min(MAX_SCAN_LIMIT_GBYTES, clampScanLimitGBytes(settings.engine.scanLimitGBytes) ?? DEFAULT_SCAN_LIMIT_GBYTES);
 }
 
 /** Max event ids looked up per tick (5 Q4 chunks). */
@@ -102,7 +117,12 @@ export async function fetchSources(
     status: { "davis-problem": "ok", "davis-event": "ok", "generic-event": "ok" },
     heldProblems: 0,
     errors: [],
+    grail: { queries: 0, scannedBytes: 0, scanLimitGBytes: DEFAULT_SCAN_LIMIT_GBYTES },
   };
+  // Cost guard (settings.engine.scanLimitGBytes): every query of the fetch carries the same per-query scan limit. A
+  // query cut by it reports a scan-limit notice and its source becomes "truncated" below, never "ok".
+  const scanLimitGBytes = engineScanLimitGBytes(settings);
+  out.grail.scanLimitGBytes = scanLimitGBytes;
   const mark = (source: AlertSource, h: SourceHealth) => {
     if (out.status[source] === "failed") return;
     if (h === "failed" || out.status[source] === "ok") out.status[source] = h;
@@ -115,7 +135,9 @@ export async function fetchSources(
   ): Promise<GrailRecord[] | undefined> => {
     if (!q) return [];
     try {
-      const r = asGrailResult(await runQuery(q, { timeoutMs }), DQL_LIMIT);
+      out.grail.queries++;
+      const r = asGrailResult(await runQuery(q, { timeoutMs, scanLimitGBytes }), DQL_LIMIT);
+      out.grail.scannedBytes += r.scannedBytes ?? 0;
       if (r.truncated) {
         mark(source, "truncated");
         out.errors.push(`${label}: result truncated (${r.notices.join(", ")})`);

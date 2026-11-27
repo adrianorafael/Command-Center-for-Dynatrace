@@ -37,7 +37,25 @@ export interface DeliveryReportResponse {
 
 /** Results beyond this count in one report are dropped (and reported as excess). */
 export const MAX_RESULTS = 1000;
-/** A result is accepted for records planned at most this long ago (a run takes ≤ 2 min). */
+/**
+ * Shortest window that is still correct: the longest time the engine itself waits for a result before it marks the
+ * record `timeout` (engine.reportTimeoutSec, at most 3600 s per validation/validate.ts) plus one action / function
+ * invocation (120 s), during which the result of the last send of that wait can still arrive. A shorter window would
+ * reject the result of a record the engine is still waiting on.
+ */
+export const MIN_REPORT_WINDOW_MS = (3600 + 120) * 1000;
+
+/**
+ * A result is accepted only for a record that is still awaiting one (planned / timeout) and was planned at most this
+ * long ago (`now - plannedAt <= REPORT_WINDOW_MS`). Every result is for one attempt's own key, and the domain accepts
+ * a late "sent" after a timeout on purpose (it corrects "No result" in the incident's Notifications; the retry, if
+ * any, is already planned under the next attempt's key). So the window is policy above MIN_REPORT_WINDOW_MS:
+ *  - long enough for a send run by an integration's own workflow (send-notification action) whose run was queued or
+ *    retried by the workflow long after the engine handed it off;
+ *  - bounded well below the ledger TTL (NOTIFICATION_TTL_MS, 14 days; the write here renews it), because the
+ *    rollup counts a result on the day it is reported, not the day it was planned: 24 h keeps a late count on the
+ *    planning day or the next, and a hand re-run of an old workflow execution days later does not rewrite history.
+ */
 export const REPORT_WINDOW_MS = 24 * 3600_000;
 
 function isResult(v: unknown): v is DeliveryResult {

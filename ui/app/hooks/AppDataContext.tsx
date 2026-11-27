@@ -239,7 +239,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
     void load();
   }, [load]);
 
-  const refreshSec = refreshOverride ?? raw?.settings.ui.autoRefreshSec ?? 30;
+  const refreshSec = refreshOverride ?? raw?.settings.ui.autoRefreshSec ?? 60;
   useEffect(() => {
     if (!refreshSec || paused) return;
     const t = window.setInterval(() => void load(), refreshSec * 1000);

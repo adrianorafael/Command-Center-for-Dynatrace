@@ -1,16 +1,16 @@
-/** On-call (route `/on-call`): who is on call now, schedules with their Gantt, and overrides. */
+/** On-call (route `/on-call`): who is on call now, the shifts of one week (`?week=`), schedules and overrides. */
 import { markCreated } from "../../components/NewItemHighlight";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface, Container } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { Heading, Link, Text } from "@dynatrace/strato-components/typography";
 import { Avatar, Chip } from "@dynatrace/strato-components/content";
-import { Select, ToggleButtonGroup } from "@dynatrace/strato-components/forms";
+import { DateTimePicker, Select, Switch, ToggleButtonGroup } from "@dynatrace/strato-components/forms";
 import { Tooltip } from "@dynatrace/strato-components/overlays";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
-import { CalendarIcon, GanttChartIcon, PlusIcon, XmarkIcon, MobileIcon, CallIcon, ChatIcon, HttpIcon } from "@dynatrace/strato-icons";
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, GanttChartIcon, PlusIcon, XmarkIcon, MobileIcon, CallIcon, ChatIcon, HttpIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Channel, Schedule, ScheduleOverride } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
@@ -18,10 +18,25 @@ import { newId, onCallAt, onCallNowAndNext } from "../../hooks/domain";
 import { CellEmpty, CellPerson, CellText, LIST_TABLE_VARIANT, CellLink, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
-import { ShiftGantt, coverage } from "../../components/ShiftGantt";
+import { coverage } from "../../components/ShiftGantt";
+import { WeekShiftGantt, WeekShiftLegend } from "../../components/WeekShiftGantt";
+import { readPrefs, writePrefs } from "../../hooks/prefs";
+import {
+  addWeeks,
+  civilDate,
+  formatCivilDate,
+  formatDaysRange,
+  pickedCivilDate,
+  resolveWeekParam,
+  safeTimeZone,
+  weekDays,
+  weekStartAt,
+  weekStartOfDate,
+  type CivilDate,
+} from "../../hooks/domain";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { IconButton } from "../../components/IconButton";
-import { formatDateTime, formatDayTime, formatRelative, initials, zoneAbbr } from "../../components/format";
+import { browserTimeZone, formatDateTime, formatDayTime, formatRelative, initials, zoneAbbr } from "../../components/format";
 import { OverrideModal } from "./OverrideModal";
 
 const DAY = 86_400_000;
@@ -132,18 +147,125 @@ export const OnCallCard = ({ schedule, onAddOverride }: { schedule: Schedule; on
   );
 };
 
+/** Value type of the Strato date picker (a "YYYY-MM-DD" string or TimeValue for `type="date"`). */
+type PickerValue = React.ComponentProps<typeof DateTimePicker>["value"];
+
+/** Week toolbar + week view of the shifts: the week lives in `?week=`, "workdays only" in browser prefs. */
+const ShiftsByWeek = ({ schedules }: { schedules: Schedule[] }) => {
+  const { data, now } = useAppData();
+  const [params, setParams] = useSearchParams();
+  const tz = safeTimeZone(data?.settings.ui.timeZone ?? browserTimeZone());
+  const week = resolveWeekParam(params.get("week"), now, tz);
+  const weekKey = formatCivilDate(week);
+  const thisWeekKey = formatCivilDate(weekStartAt(now, tz));
+  const todayKey = formatCivilDate(civilDate(now, tz));
+  const [workdaysOnly, setWorkdaysOnly] = useState(() => readPrefs().shiftsWorkdaysOnly);
+  const [openRows, setOpenRows] = useState<Record<string, boolean>>({});
+  // The picker shows the date that was picked; when the week changes some other way (buttons,
+  // link) it falls back to the week's Sunday.
+  const [picked, setPicked] = useState<PickerValue>(() => weekKey);
+  useEffect(() => {
+    const d = pickedCivilDate(picked, browserTimeZone());
+    if (!d || formatCivilDate(weekStartOfDate(d)) !== weekKey) setPicked(weekKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekKey]);
+  // weekKey (a string) instead of `week` (a new object every render) keeps the memo stable.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const days = useMemo(() => weekDays(week, tz, workdaysOnly), [weekKey, tz, workdaysOnly]);
+
+  /** Shows the week containing `d`; the current week clears the parameter so the link stays "this week". */
+  const goTo = (d: CivilDate) => {
+    const key = formatCivilDate(weekStartOfDate(d));
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (key === thisWeekKey) next.delete("week");
+        else next.set("week", key);
+        return next;
+      },
+      { replace: true },
+    );
+  };
+  const toggleWorkdays = (v: boolean) => {
+    setWorkdaysOnly(v);
+    // Re-read before writing so preferences changed elsewhere in this session are kept.
+    writePrefs({ ...readPrefs(), shiftsWorkdaysOnly: v });
+  };
+  const allOpen = schedules.length > 0 && schedules.every((s) => openRows[s.id]);
+
+  return (
+    <Flex flexDirection="column" gap={12}>
+      <Flex alignItems="center" gap={8} flexWrap="wrap">
+        <GanttChartIcon />
+        <Heading level={3}>Shifts</Heading>
+        <Text style={{ color: Colors.Text.Neutral.Subdued }}>
+          {formatDaysRange(days)} · {tz}
+        </Text>
+      </Flex>
+      <Flex gap={12} alignItems="center" flexWrap="wrap">
+        <Flex gap={4} alignItems="center">
+          <IconButton label="Previous week" icon={<ChevronLeftIcon />} onClick={() => goTo(addWeeks(week, -1))} />
+          <Button onClick={() => goTo(weekStartAt(now, tz))} disabled={weekKey === thisWeekKey}>
+            This week
+          </Button>
+          <IconButton label="Next week" icon={<ChevronRightIcon />} onClick={() => goTo(addWeeks(week, 1))} />
+        </Flex>
+        <Flex gap={6} alignItems="center">
+          <Text textStyle="small-emphasized">Week of</Text>
+          <DateTimePicker
+            type="date"
+            aria-label="Go to the week of a date"
+            value={picked}
+            onChange={(v) => {
+              // The picker reports every edited segment, including half-typed years ("0002-01-14"):
+              // keep its value as typed, and move the week only once the date is plausible.
+              // Clearing the field (it emits "") puts the week's Sunday back.
+              setPicked(v ? v : weekKey);
+              const d = pickedCivilDate(v, browserTimeZone());
+              if (d) goTo(d);
+            }}
+          />
+        </Flex>
+        <Switch value={workdaysOnly} onChange={toggleWorkdays}>
+          Workdays only
+        </Switch>
+        <Flex style={{ marginLeft: "auto" }}>
+          <Button
+            variant="emphasized"
+            disabled={schedules.length === 0}
+            onClick={() => setOpenRows(allOpen ? {} : Object.fromEntries(schedules.map((s) => [s.id, true])))}
+          >
+            {allOpen ? "Hide people" : "Show people"}
+          </Button>
+        </Flex>
+      </Flex>
+      <WeekShiftGantt
+        schedules={schedules}
+        days={days}
+        today={todayKey}
+        now={now}
+        timeZone={tz}
+        openRows={openRows}
+        onOpenRowsChange={setOpenRows}
+      />
+      <WeekShiftLegend />
+    </Flex>
+  );
+};
+
 const NowTab = ({ onAddOverride }: { onAddOverride: (s: Schedule) => void }) => {
-  const { data, now, currentUser } = useAppData();
+  const { data, currentUser } = useAppData();
   const myTeams = useMemo(
     () => (data?.teams ?? []).filter((t) => t.members.some((m) => m.uid === currentUser.uid)).map((t) => t.id),
     [data, currentUser.uid],
   );
   const [teams, setTeams] = useState<string[] | null>(null);
-  const [range, setRange] = useState("7");
   const chosen = teams ?? [];
-  const schedules = (data?.schedules ?? []).filter((s) => chosen.length === 0 || chosen.includes(s.teamId ?? ""));
-  const days = Number(range);
-  const from = now - 2 * 3_600_000;
+  const schedules = useMemo(
+    () => (data?.schedules ?? []).filter((s) => chosen.length === 0 || chosen.includes(s.teamId ?? "")),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data?.schedules, chosen.join(",")],
+  );
   if (data && data.schedules.length === 0)
     return (
       <NoSchedules />
@@ -164,25 +286,13 @@ const NowTab = ({ onAddOverride }: { onAddOverride: (s: Schedule) => void }) => 
             </Select.Content>
           </Select>
         </Flex>
-        <Flex flexDirection="column" gap={4}>
-          <Text textStyle="small-emphasized">Range</Text>
-          <ToggleButtonGroup value={range} onChange={(v: string) => setRange(v)}>
-            <ToggleButtonGroup.Item value="1">24 h</ToggleButtonGroup.Item>
-            <ToggleButtonGroup.Item value="7">7 days</ToggleButtonGroup.Item>
-            <ToggleButtonGroup.Item value="14">14 days</ToggleButtonGroup.Item>
-          </ToggleButtonGroup>
-        </Flex>
       </Flex>
       <Grid gridTemplateColumns="repeat(auto-fill, minmax(280px, 1fr))" gap={12}>
         {schedules.map((s) => (
           <OnCallCard key={s.id} schedule={s} onAddOverride={onAddOverride} />
         ))}
       </Grid>
-      <Flex alignItems="center" gap={8}>
-        <GanttChartIcon />
-        <Heading level={3}>Upcoming shifts</Heading>
-      </Flex>
-      <ShiftGantt schedules={schedules} from={from} to={from + days * DAY} now={now} />
+      <ShiftsByWeek schedules={schedules} />
     </Flex>
   );
 };
@@ -460,7 +570,20 @@ export const OnCallPage = () => {
           }
         />
         <QueryState isLoading={isLoading} error={error} errorTitle="Couldn't load schedules" onRetry={() => void refresh()}>
-          <Tabs selectedIndex={tab} onChange={(i) => setParams({ tab: TABS[i] }, { replace: true })}>
+          <Tabs
+            selectedIndex={tab}
+            onChange={(i) =>
+              // Functional update: keep ?week= (and anything else) when switching tabs.
+              setParams(
+                (prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.set("tab", TABS[i]);
+                  return next;
+                },
+                { replace: true },
+              )
+            }
+          >
             <Tab title="Now">
               <Flex paddingTop={16} flexDirection="column">
                 <NowTab onAddOverride={(s) => setOverride({ scheduleId: s.id })} />

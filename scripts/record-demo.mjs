@@ -255,8 +255,10 @@ const CHAPTERS = [
         await pause(900);
       });
       await step("scan rows", async () => {
-        await hover(text("Error rate spike on order-service"), 500);
-        await hover(text("Queue depth above threshold: orders"), 600);
+        // The first rows of the table, whatever they are: rows further down may not be rendered (virtualised).
+        const rows = page.getByRole("row");
+        await hover(rows.nth(1), 500);
+        await hover(rows.nth(3), 600);
       });
       await step("open a triggered incident", () => click(text("Packet loss between GRU and IAD"), 1600));
     },
@@ -268,8 +270,11 @@ const CHAPTERS = [
     route: "/incidents/dp-p-00012",
     async run() {
       await step("timeline", async () => {
-        await hover(text("Notification sent").first(), 900);
-        await hover(text("Notification failed").first(), 1200);
+        // The details header grew (Acknowledged by), so bring the first timeline entries into view first.
+        const first = text(/^Notification (sent|planned|failed)$/).first();
+        await first.scrollIntoViewIfNeeded({ timeout: 6000 });
+        await hover(first, 900);
+        await hover(text(/^Notification (failed|planned)$/).nth(1), 1200);
       });
       await step("escalation tab", () => click(tab("Escalation"), 2200));
       await step("notifications tab", () => click(tab(/^Notifications/), 2400));

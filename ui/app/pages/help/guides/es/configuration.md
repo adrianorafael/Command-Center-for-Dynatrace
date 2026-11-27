@@ -12,7 +12,7 @@ validación se ejecuta antes de guardar e indica el nombre del campo que hay que
 | Ajuste | Predeterminado | Rango | Efecto |
 | --- | --- | --- | --- |
 | Tenant time zone | La zona horaria del navegador | Zonas IANA | Marcas de tiempo, calendarios, traspasos y días de los informes |
-| Auto-refresh default | 30 s | Off, 15 s, 30 s, 1 min, 5 min | Con qué frecuencia las páginas abiertas recargan App State. Sin costo de Grail: la UI no ejecuta DQL. |
+| Auto-refresh default | 1 min | Off, 15 s, 30 s, 1 min, 5 min | Con qué frecuencia las páginas abiertas recargan App State. Sin costo de Grail: la UI no ejecuta DQL. |
 | Table density *(this browser)* | Condensed | Default, Condensed | Altura de fila de las tablas |
 | Single-key keyboard shortcuts in the Console *(this browser)* | On | On, Off | `j`/`k`, `a`, `r`, `x`, `/`, `Shift+R`, `Esc` |
 | Acknowledge target (minutes) *(this browser)* | 5 | 1–240 | Los incidentes más antiguos que este valor sin un reconocimiento se ponen en rojo en la Console. Determina el medidor de MTTA. |
@@ -33,6 +33,7 @@ demo en su propia pantalla sin afectar a nadie de guardia.
 | Davis event types | `CUSTOM_ALERT, ERROR_EVENT` | Separados por comas | Tipos de evento que lee Q2 |
 | Generic events (OpenPipeline) | Off | | Lee la tabla `events` (Q3, últimas 24 h) |
 | Generic event type | `command_center.alert` | | `event.type` que lee Q3 |
+| Grail scan limit per query (GB) | 1 | 1–100, GB enteros | Protección de costo: el máximo de datos que puede escanear una consulta del motor. Una consulta que lo alcanza marca su fuente como incompleta en el último error del motor (Integrations → Workflows), nunca como todo en orden. Debajo del campo: lo que escaneó la última ejecución. Consulta [costo](operations.md#costo-y-consumo). |
 
 Los formatos y los campos están en la [referencia de alertas](alerts-reference.md).
 

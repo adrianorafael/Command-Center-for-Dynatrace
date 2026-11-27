@@ -16,7 +16,13 @@ export { onCallAt, onCallUids, layerOnCallAt } from "../domain/schedule/resolve"
 export type { OnCall } from "../domain/schedule/resolve";
 export { scheduleTimeline, layerTimeline, overrideTimeline, onCallNowAndNext, onCallHoursByUser } from "../domain/schedule/timeline";
 export { firstHandoff } from "../domain/schedule/resolve";
-export { startOfLocalDay, weekdayInZone } from "../domain/time/tz";
+export { startOfLocalDay, weekdayInZone, civilDate, safeTimeZone } from "../domain/time/tz";
+export type { CivilDate } from "../domain/time/tz";
+export {
+  addWeeks, daysRange, formatCivilDate, formatDaysRange, isInDays, pickedCivilDate, placeSpan, positionIn,
+  resolveWeekParam, weekDays, weekStartAt, weekStartOfDate,
+} from "../domain/time/week";
+export type { WeekDay } from "../domain/time/week";
 export type { ShiftSegment } from "../domain/schedule/timeline";
 export { routeAlert, ruleMatches, evaluateCondition, fieldValues, RULE_FIELDS } from "../domain/routing/match";
 export type { RouteDecision } from "../domain/routing/match";

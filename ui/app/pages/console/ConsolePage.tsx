@@ -1,4 +1,9 @@
-/** Console (routes `/` and `/incidents/:id`): KPI strip, filterable incident table, details panel, shortcuts. */
+/**
+ * Console (routes `/` and `/incidents/:id`): KPI strip, filterable incident table, details panel, shortcuts.
+ *
+ * The Resolved and All tabs show only incidents created today (display time zone) unless a timeframe is picked in
+ * "Created"; the bound comes from `createdBound` in filters.ts, which the tab counts use too.
+ */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Flex, PageLayout } from "@dynatrace/strato-components/layouts";
@@ -8,6 +13,7 @@ import { FilterBar, TimeframeSelector } from "@dynatrace/strato-components/filte
 import { SearchInput, Select, ToggleButtonGroup } from "@dynatrace/strato-components/forms";
 import { Text } from "@dynatrace/strato-components/typography";
 import { RefreshAutoIcon, RefreshIcon } from "@dynatrace/strato-icons";
+import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Timeframe } from "@dynatrace/strato-components/core";
 import { PRIORITIES } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
@@ -17,12 +23,25 @@ import { PriorityChip } from "../../components/PriorityChip";
 import { EngineHealthBanner } from "../../components/Banners";
 import { ErrorMessage, SimpleEmpty } from "../../components/QueryState";
 import { IconButton } from "../../components/IconButton";
-import { formatTime, pickerToMs } from "../../components/format";
+import { browserTimeZone, formatTime, pickerToMs } from "../../components/format";
 import { KpiStrip } from "./KpiStrip";
 import { IncidentTable } from "./IncidentTable";
 import { IncidentDetails } from "./IncidentDetails";
 import { ActionModals, type ModalRequest } from "./ActionModals";
-import { applyFilters, DEFAULT_STATUS, isDefaultFilter, readFilters, SOURCE_LABEL, STATUS_VIEWS, statusViewOf, writeFilters, type ConsoleFilters } from "./filters";
+import {
+  applyFilters,
+  createdBound,
+  DEFAULT_STATUS,
+  includesResolved,
+  isDefaultFilter,
+  readFilters,
+  SOURCE_LABEL,
+  STATUS_VIEWS,
+  statusViewCounts,
+  statusViewOf,
+  writeFilters,
+  type ConsoleFilters,
+} from "./filters";
 import { useIncidentCommands } from "./useIncidentCommands";
 
 const REFRESH_OPTIONS = [
@@ -78,14 +97,19 @@ export const ConsolePage = () => {
     [setParams],
   );
 
-  const createdAfter = timeframe ? pickerToMs(timeframe.from) : undefined;
+  const pickedFrom = timeframe ? pickerToMs(timeframe.from) : undefined;
+  // "Today" is the display day: settings.ui.timeZone, else the browser's zone (same fallback as the time labels).
+  const dayZone = tz || browserTimeZone();
+  // `now` ticks every 15 s even with auto-refresh off, so the bound rolls over at local midnight.
+  const bound = createdBound(filters.status, pickedFrom, now, dayZone);
+  const createdAfter = bound.createdAfter;
   const all = useMemo(() => data?.incidents ?? [], [data]);
   const visible = useMemo(() => applyFilters(all, filters, currentUser.uid, createdAfter), [all, filters, currentUser.uid, createdAfter]);
   // Tab counts follow every other filter, so each tab says how many rows it would show.
-  const statusCounts = useMemo(() => {
-    const base = applyFilters(all, { ...filters, status: [] }, currentUser.uid, createdAfter);
-    return Object.fromEntries(STATUS_VIEWS.map((v) => [v.id, v.status.length ? base.filter((i) => v.status.includes(i.status)).length : base.length]));
-  }, [all, filters, currentUser.uid, createdAfter]);
+  const statusCounts = useMemo(
+    () => statusViewCounts(all, filters, currentUser.uid, pickedFrom, now, dayZone),
+    [all, filters, currentUser.uid, pickedFrom, now, dayZone],
+  );
   const active = activeId ? all.find((i) => i.id === activeId) : undefined;
 
   // Keyboard shortcuts (DESIGN §13), off while typing and switchable in Settings (WCAG 2.1.4).
@@ -135,12 +159,13 @@ export const ConsolePage = () => {
     />
   ) : (
     <SimpleEmpty
-      title="No incidents match your filters"
+      title={bound.today ? "No incidents created today match your filters" : "No incidents match your filters"}
+      details={bound.today ? "Pick a timeframe in Created to see older incidents." : undefined}
       actions={
         <Button
           onClick={() => {
             setTimeframe(null);
-            setFilters({ status: DEFAULT_STATUS, priority: [], team: [], assignee: [], service: [], source: [], escalation: [], q: "" });
+            setFilters({ status: DEFAULT_STATUS, priority: [], team: [], assignee: [], ackby: [], service: [], source: [], escalation: [], q: "" });
           }}
         >
           Clear filters
@@ -154,6 +179,13 @@ export const ConsolePage = () => {
     data?.teams.forEach((t) => t.members.forEach((m) => uids.add(m.uid)));
     return [...uids].map((u) => ({ uid: u, name: userName(u) })).sort((a, b) => a.name.localeCompare(b.name));
   }, [data, userName]);
+  // Everyone who acknowledged an incident in the loaded data (from `all`, so a chosen person never drops out of the list).
+  const ackers = useMemo(() => {
+    const uids = new Set<string>();
+    // The current user stays listed by name too (as in Assignee), so a shared `ackby=<uid>` link has a matching option.
+    all.forEach((i) => i.acknowledgedBy && uids.add(i.acknowledgedBy));
+    return [...uids].map((u) => ({ uid: u, name: userName(u) })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [all, userName]);
   const maxSteps = Math.max(1, ...(data?.policies ?? []).map((p) => p.steps.length));
 
   return (
@@ -195,7 +227,7 @@ export const ConsolePage = () => {
             me={currentUser.uid}
             ackTargetMs={ackTargetMs}
             loading={isLoading}
-            onFilter={(patch) => setFilters({ status: DEFAULT_STATUS, priority: [], assignee: [], ...patch })}
+            onFilter={(patch) => setFilters({ status: DEFAULT_STATUS, priority: [], assignee: [], ackby: [], ...patch })}
           />
           {/* Search first, then FilterBar with the TimeframeSelector as its last pinned item (Strato TimeframeSelector
               "Where to position" + FilterBar "TimeframeSelector as filter control"). Outside the FilterBar the selector's
@@ -214,6 +246,7 @@ export const ConsolePage = () => {
                   priority: "pinned",
                   team: "pinned",
                   assignee: "pinned",
+                  ackby: "pinned",
                   // FilterBar renders pinned items before pinned-optional ones; service is pinned so the timeframe stays last.
                   service: "pinned",
                   source: "optional",
@@ -250,6 +283,19 @@ export const ConsolePage = () => {
                       <Select.Option value="me">Me</Select.Option>
                       <Select.Option value="unassigned">Unassigned</Select.Option>
                       {people.map((u) => (
+                        <Select.Option key={u.uid} value={u.uid}>
+                          {u.name}
+                        </Select.Option>
+                      ))}
+                    </Select.Content>
+                  </Select>
+                </FilterBar.Item>
+                <FilterBar.Item name="ackby" label="Acknowledged by">
+                  <Select multiple clearable name="ackby" value={filters.ackby} onChange={(v) => setFilters({ ackby: v ?? [] })}>
+                    <Select.Filter />
+                    <Select.Content>
+                      <Select.Option value="me">Me</Select.Option>
+                      {ackers.map((u) => (
                         <Select.Option key={u.uid} value={u.uid}>
                           {u.name}
                         </Select.Option>
@@ -311,10 +357,15 @@ export const ConsolePage = () => {
             >
               {STATUS_VIEWS.map((v) => (
                 <ToggleButtonGroup.Item key={v.id} value={v.id}>
-                  {`${v.label} (${statusCounts[v.id] ?? 0})`}
+                  {`${v.label}${pickedFrom === undefined && includesResolved(v.status) ? " today" : ""} (${statusCounts[v.id] ?? 0})`}
                 </ToggleButtonGroup.Item>
               ))}
             </ToggleButtonGroup>
+            {bound.today && (
+              <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+                Today · pick a timeframe in Created to see older incidents
+              </Text>
+            )}
           </Flex>
           <IncidentTable
             incidents={visible}

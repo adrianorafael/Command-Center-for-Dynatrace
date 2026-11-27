@@ -30,7 +30,7 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 ## Project specifics
 
 - **App id:** `my.command.center` (keep the `my.` prefix — unsigned app). **Name:** `Command Center`.
-- **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.4.0); every release is
+- **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.5.0); every release is
   recorded in `CHANGELOG.md`. Versions must increase monotonically per environment or `dt-app deploy` is rejected.
 - **Scopes (11):** `storage:buckets:read`, `storage:events:read`, `state:app-states:read|write|delete`,
   `iam:users:read`, `automation:workflows:read`, `automation:workflows:run` (custom workflow provider),
@@ -47,7 +47,7 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 - **Cost driver:** the engine — a SIMPLE workflow (no workflow hours) whose single task is this app's custom action
   `run-engine` (`actions/run-engine.action.ts`), every 1, 2 or 5 minutes: one function invocation and 1–8 Grail queries
   per run. Measured on a trial tenant: one `ACTION` billing event per run. The UI runs no DQL; it polls App State
-  (default every 30 s). Never reintroduce a standard workflow or Run JavaScript tasks for the engine.
+  (default every minute). Never reintroduce a standard workflow or Run JavaScript tasks for the engine.
 - **Every workflow task execution is one billed function call, whatever the trigger** (Dynatrace licensing docs;
   measured for this app's actions and for Dynatrace's own HTTP request action). So the engine sends notifications
   itself; an integration's own workflow is opt-in (one more call per notification). Do not add workflows "for
@@ -71,7 +71,7 @@ ui/app/pages|components|hooks/   Strato UI. Consumes contracts.ts, the Repositor
 workflow-templates/   GENERATED engine workflow JSON files: interval and on-problem (node scripts/gen-workflow-templates.mjs)
                       + trial-only simulator.
 scripts/              install-workflow, gen-workflow-templates, gen-help-content, preview-server, screenshot,
-                      doc-screenshots, record-demo + edit-demo (demo video for docs/media).
+                      doc-screenshots (+ render-postmortem), record-demo + edit-demo (demo video for docs/media).
 docs/                 project page (index.html, icon.svg, screenshots/) and guides/en/ — the English guides, the source.
                       GitHub is English only. The translations live in the app: ui/app/pages/help/guides/{pt-BR,es}/
                       (the in-app Help shows all three). Update the three languages together, never document anything
