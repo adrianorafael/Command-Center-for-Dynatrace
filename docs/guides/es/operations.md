@@ -123,10 +123,10 @@ Medido en el entorno trial con problemas de prueba (2026-11-27):
 | --- | --- |
 | El disparador se activa después del evento del problema | 1–4 s para un cierre o una actualización vista por primera vez, 11–12 s para un problema nuevo |
 | El registro del problema se puede consultar en Grail | Unos 30–40 s después de su timestamp. Ejecuciones 24 s y 29 s después todavía no encontraron el registro. |
-| Incidente creado por la ejecución iniciada por el problema | 34 s y 40 s después del timestamp del problema, en dos pruebas. La ejecución programada (intervalo de 1 minuto) los habría creado 50 s y 34 s más tarde. |
-| Incidente resuelto después de que el problema se cerró | Dentro de los 30 s del evento de cierre |
+| Incidente creado por la ejecución iniciada por el problema | 34 s, 40 s y 34 s después del timestamp del problema, en tres pruebas. La ejecución programada (intervalo de 1 minuto) los habría creado 50 s, 34 s y 45 s más tarde. |
+| Incidente resuelto después de que el problema se cerró | Dentro de los 30 s del evento de cierre (tres cierres) |
 | Enrutamiento | El incidente recibió el equipo de su servicio a partir de `cc.service`: el evento de Davis del problema ya se podía leer |
-| Facturación | Una invocación `ACTION` por disparo (ejecuciones de 24–30 s). El disparador se activó una vez cuando el problema se abrió y una vez cuando se cerró, y no en la actualización intermedia. |
+| Facturación | Una invocación `ACTION` por disparo (ejecuciones de 23–30 s). El disparador se activó una vez cuando el problema se abrió y una vez cuando se cerró, y no en la actualización intermedia. |
 
 Como el disparador se activa antes de que el registro se pueda consultar, la ejecución **espera**. Cada 5 segundos
 revisa el incidente en App State y una consulta pequeña (el estado más reciente del problema), durante un máximo de

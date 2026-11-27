@@ -119,10 +119,10 @@ Measured on the trial environment with test problems (2026-11-27):
 | --- | --- |
 | The trigger fires after the problem event | 1–4 s for a close or a first-seen update, 11–12 s for a new problem |
 | The problem record can be queried in Grail | About 30–40 s after its timestamp. Runs 24 s and 29 s after it did not find the record yet. |
-| Incident created by the problem-triggered run | 34 s and 40 s after the problem's timestamp, in two tests. The scheduled run (1-minute interval) would have created them 50 s and 34 s later. |
-| Incident resolved after the problem closed | Within 30 s of the close event |
+| Incident created by the problem-triggered run | 34 s, 40 s and 34 s after the problem's timestamp, in three tests. The scheduled run (1-minute interval) would have created them 50 s, 34 s and 45 s later. |
+| Incident resolved after the problem closed | Within 30 s of the close event (three closes) |
 | Routing | The incident got its service's team from `cc.service`: the problem's Davis event was readable by then |
-| Billing | One `ACTION` invocation per firing (runs of 24–30 s). The trigger fired once when the problem opened and once when it closed, not on the update in between. |
+| Billing | One `ACTION` invocation per firing (runs of 23–30 s). The trigger fired once when the problem opened and once when it closed, not on the update in between. |
 
 Because the trigger fires before the record can be queried, the run **waits**. Every 5 seconds it checks the incident
 in App State and one small query (the problem's newest status), for up to 40 seconds. As soon as the problem can be
