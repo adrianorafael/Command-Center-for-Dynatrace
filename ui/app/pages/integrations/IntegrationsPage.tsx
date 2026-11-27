@@ -170,15 +170,16 @@ const InboundTab = () => {
 const PARAMS: Record<ProviderConfig["kind"], { key: string; label: string; hint?: string }[]> = {
   twilio: [
     { key: "from", label: "Sender number", hint: "E.164, for example +15550100000 (WhatsApp: the approved sender)" },
-    { key: "messagingServiceSid", label: "Messaging service SID (optional)" },
+    { key: "accountSid", label: "Account SID (only with an API key)", hint: "AC…; needed when the vault entry holds an API key SID (SK…) instead of the Account SID" },
+    { key: "messagingServiceSid", label: "Messaging service SID (optional, SMS)" },
     { key: "voice", label: "Voice (voice calls, optional)" },
     { key: "language", label: "Voice language (optional)", hint: "For example en-US" },
   ],
   ifttt: [{ key: "eventName", label: "Event name", hint: "Letters, digits, - and _" }],
   "slack-webhook": [],
   "teams-webhook": [],
-  "telegram-bot": [{ key: "parseMode", label: "Parse mode", hint: "HTML or MarkdownV2" }],
-  webhook: [{ key: "authHeader", label: "Auth header name (optional)", hint: "The value comes from a username/password vault entry" }],
+  "telegram-bot": [],
+  webhook: [{ key: "authHeader", label: "Auth header name (optional)", hint: "Then use a username/password vault entry: username = endpoint URL, password = header value" }],
 };
 
 const VAULT_HINT: Record<ProviderConfig["kind"], string> = {
@@ -187,7 +188,7 @@ const VAULT_HINT: Record<ProviderConfig["kind"], string> = {
   "slack-webhook": "Token entry: the full Slack incoming-webhook URL",
   "teams-webhook": "Token entry: the full Teams Workflows webhook URL",
   "telegram-bot": "Token entry: the bot token",
-  webhook: "Token entry: the full https URL of your endpoint",
+  webhook: "Token entry: the full https URL of your endpoint (or username/password: URL + auth header value)",
 };
 
 const ProviderSheet = ({ provider, onClose }: { provider?: ProviderConfig; onClose: () => void }) => {
@@ -473,6 +474,8 @@ const WorkflowsTab = () => {
                 <Health status="neutral">Not installed</Health>
               ) : status.outdated ? (
                 <Health status="warning">{status.usesAction ? "Update available" : "Old engine (standard workflow): reinstall to stop workflow-hour cost"}</Health>
+              ) : status.type && status.type !== "SIMPLE" ? (
+                <Health status="warning">Installed as a standard workflow: it consumes workflow hours. Replace it with the JSON upload or the admin script (see the steps)</Health>
               ) : (
                 <Health status="ideal">Installed · {status.type === "SIMPLE" ? "simple workflow (no workflow hours)" : status.type ?? "workflow"}</Health>
               ))}
@@ -542,7 +545,11 @@ const WorkflowsTab = () => {
           <Flex flexDirection="column" gap={8}>
             <Heading level={3}>Set up the engine</Heading>
             <List ordered>
-              <Text>Choose how often the engine runs and select Install in Workflows. The Workflows app opens with the workflow filled in: review it and deploy it.</Text>
+              <Text>
+                Choose how often the engine runs and select Install in Workflows. The Workflows app opens with the workflow filled in: review it and deploy it. If
+                the status then says “standard workflow”, delete that workflow and upload the downloaded JSON in the Workflows app instead (it carries the type
+                “simple”), or ask an admin to run scripts/install-workflow.mjs.
+              </Text>
               <Text>In Workflows → Settings → Authorization settings, enable the permissions for the workflow actor (the person who deploys it, or a service user).</Text>
               <Text>Add the provider hosts below to Settings → General → External requests.</Text>
               <Text>Store each provider secret in the Credential Vault (scope AppEngine, owned by the workflow actor) and enter its ID under Providers.</Text>

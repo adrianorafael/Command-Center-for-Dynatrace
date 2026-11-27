@@ -5,7 +5,7 @@
  *
  *   DT_ENVIRONMENT=https://YOUR-ENVIRONMENT.apps.dynatrace.com \
  *   DT_PLATFORM_TOKEN=<platform token with automation:workflows:read + automation:workflows:write> \
- *   node scripts/install-workflow.mjs [--app-id my.command.center] [--workflow-id <uuid>] [--actor <service-user-uid>] [--dry-run]
+ *   node scripts/install-workflow.mjs [--app-id my.command.center] [--workflow-id <uuid>] [--actor <service-user-uid>] [--interval 1|2|5] [--dry-run]
  *
  * Endpoints (same as @dynatrace-sdk/client-automation 8.10 esm/index.js):
  *   GET  /platform/automation/v1/workflows/{id}            → 200 exists / 404
@@ -33,6 +33,7 @@ const env = (process.env.DT_ENVIRONMENT ?? "").replace(/\/+$/, "");
 const token = process.env.DT_PLATFORM_TOKEN;
 const appId = opt("app-id", "my.command.center");
 const actor = opt("actor", undefined);
+const intervalMinutes = Number(opt("interval", "1"));
 const dryRun = has("dry-run");
 
 if (!dryRun && !/^https:\/\/[a-z0-9.-]+$/i.test(env)) {
@@ -68,7 +69,7 @@ try {
 const settings = mod.defaultSettings();
 settings.engine.workflowId = opt("workflow-id", settings.engine.workflowId);
 const id = settings.engine.workflowId;
-const def = { appId, settings, ...(actor ? { actor } : {}) };
+const def = { appId, settings, intervalMinutes, ...(actor ? { actor } : {}) };
 const createBody = mod.buildEngineWorkflowCreate(def);
 const updateBody = mod.buildEngineWorkflowUpdate(def);
 
@@ -126,4 +127,4 @@ if (existing.status === 200) {
   fail("lookup", existing);
 }
 console.log(`Command Center · Engine ${outcome} (workflow id ${id}, app ${appId}).`);
-console.log("Next: set a service user as actor, allowlist provider hosts, create vault entries (see workflow-templates/README.md).");
+console.log("Next: enable the Workflows authorization settings for the actor, allowlist provider hosts, create vault entries (see docs/guides/en/getting-started.md).");

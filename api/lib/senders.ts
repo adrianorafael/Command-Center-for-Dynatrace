@@ -196,7 +196,8 @@ const sendTelegram: SendFn = async (n, _provider, cred, deps) => {
 };
 
 const sendWebhook: SendFn = async (n, provider, cred, deps) => {
-  const url = cred.token || "";
+  // Token entry: the URL. Username/password entry: username = URL, password = auth header value.
+  const url = cred.token || cred.user || "";
   if (!url.startsWith("https://")) throw new Error("Webhook credential must hold an https URL");
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const h = provider.params?.authHeader;

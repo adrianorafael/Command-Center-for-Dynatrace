@@ -9,8 +9,14 @@
  * "Davis events" and "generic events" sources (problems dedupe and close in Davis itself).
  */
 
+// Documented in docs.dynatrace.com → OpenPipeline → API ingestion reference (Davis events: platform token with
+// openpipeline:events.davis:ingest). Verified on a trial tenant: HTTP 201, Davis opened a problem.
 // eslint-disable-next-line noSecrets/no-secrets -- placeholder URL, not a credential
-export const EVENTS_ENDPOINT = "https://YOUR-ENVIRONMENT.apps.dynatrace.com/platform/classic/environment-api/v2/events/ingest";
+export const EVENTS_ENDPOINT = "https://YOUR-ENVIRONMENT.live.dynatrace.com/api/v2/events/ingest";
+/** Optional generic-events source: OpenPipeline generic event ingest (scope openpipeline:events:ingest). */
+// eslint-disable-next-line noSecrets/no-secrets -- placeholder URL, not a credential
+export const GENERIC_EVENTS_ENDPOINT = "https://YOUR-ENVIRONMENT.live.dynatrace.com/platform/ingest/v1/events";
+export const GENERIC_TOKEN_SCOPE = "openpipeline:events:ingest";
 /** Platform token permission for Davis event ingest (spec H3). */
 export const TOKEN_SCOPE = "openpipeline:events.davis:ingest";
 

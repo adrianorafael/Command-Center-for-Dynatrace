@@ -20,7 +20,7 @@ export function defaultProviders(): ProviderConfig[] {
     { id: "ifttt", name: "IFTTT Webhooks", channel: "ifttt", kind: "ifttt", enabled: false, params: { eventName: "command_center_alert" } },
     { id: "slack", name: "Slack", channel: "slack", kind: "slack-webhook", enabled: false, params: {} },
     { id: "teams", name: "Microsoft Teams", channel: "teams", kind: "teams-webhook", enabled: false, params: {} },
-    { id: "telegram", name: "Telegram", channel: "telegram", kind: "telegram-bot", enabled: false, params: { parseMode: "HTML" } },
+    { id: "telegram", name: "Telegram", channel: "telegram", kind: "telegram-bot", enabled: false, params: {} },
     { id: "webhook", name: "Generic webhook", channel: "webhook", kind: "webhook", enabled: false, params: {} },
   ];
 }

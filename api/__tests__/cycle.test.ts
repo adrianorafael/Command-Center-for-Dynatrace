@@ -89,6 +89,13 @@ describe("senders", () => {
     expect(JSON.parse(String(init?.body))).toMatchObject({ source: "command-center", version: 1, notification: { key: note().key } });
   });
 
+  it("generic webhook accepts a username/password entry (username = URL, password = header value)", async () => {
+    const f = okFetch({});
+    await sendAll({ webhook: [note({ channel: "webhook" })] }, [provider({ channel: "webhook", kind: "webhook", params: { authHeader: "Authorization" } })], NOW + 60_000, deps(f, { user: "https://receiver.example/in", password: "Bearer abc" }));
+    expect(f.mock.calls[0][0]).toBe("https://receiver.example/in");
+    expect((f.mock.calls[0][1]?.headers as Record<string, string>)["Authorization"]).toBe("Bearer abc");
+  });
+
   it("never leaks secrets or URLs in error text", async () => {
     expect(safeError(new Error("bad token secret-token at https://api.twilio.com/x"), ["secret-token"])).toBe("bad token *** at <url>");
     const f = vi.fn(async () => new Response("echo secret-token", { status: 401 }));

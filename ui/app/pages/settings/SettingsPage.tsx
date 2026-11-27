@@ -39,7 +39,9 @@ const SCOPES = [
   { scope: "state:app-states:delete", enables: "Delete configuration and the legacy v1 key" },
   { scope: "iam:users:read", enables: "Search tenant users for teams and schedules" },
   { scope: "automation:workflows:read", enables: "Show the engine workflow status" },
-  { scope: "automation:workflows:run", enables: "Escalate now, run the engine, send test notifications" },
+  { scope: "document:documents:read", enables: "List notebooks to attach to war rooms" },
+  { scope: "document:documents:write", enables: "Create post-mortem notebooks from war rooms" },
+  { scope: "credential-vault:entries:read", enables: "Read provider secrets when the engine sends notifications" },
 ];
 
 const LEGACY_KEY = "problem-ack-states";
@@ -313,7 +315,6 @@ export const SettingsPage = () => {
                 onChange={(v) => set({ sources: { ...draft.sources, genericEvents: { ...draft.sources.genericEvents, eventType: v } } })}
               />
             </FormField>
-            <Text textStyle="small">The engine queries are UNVALIDATED until they run against a tenant.</Text>
             {saveRow}
           </SectionSurface>
 
@@ -364,8 +365,8 @@ export const SettingsPage = () => {
             </Switch>
             <FormField>
               <Label>Engine workflow ID</Label>
-              <TextInput value={draft.engine.workflowId} onChange={(v) => set({ engine: { ...draft.engine, workflowId: v.trim() } })} placeholder="Assigned when you download the workflow" />
-              <FieldHint>The UUID of the uploaded engine workflow (Integrations → Workflows)</FieldHint>
+              <TextInput value={draft.engine.workflowId} onChange={(v) => set({ engine: { ...draft.engine, workflowId: v.trim() } })} placeholder="Filled in by Integrations → Workflows → Save this ID" />
+              <FieldHint>The UUID of the installed engine workflow; the run interval is chosen when you install it (Integrations → Workflows)</FieldHint>
             </FormField>
             <FormField>
               <Label>Max notifications per run</Label>
@@ -381,7 +382,8 @@ export const SettingsPage = () => {
             </FormField>
             <FormField>
               <Label>Engine lock lease (seconds)</Label>
-              <NumberInput value={draft.engine.lockTtlSec} min={30} max={600} onChange={(v) => set({ engine: { ...draft.engine, lockTtlSec: v ?? 90 } })} />
+              <NumberInput value={draft.engine.lockTtlSec} min={30} max={180} onChange={(v) => set({ engine: { ...draft.engine, lockTtlSec: v ?? 90 } })} />
+              <FieldHint>Prevents two runs from paging twice. The engine uses a value between 130 and 180 seconds.</FieldHint>
             </FormField>
             {saveRow}
           </SectionSurface>
