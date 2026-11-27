@@ -1,3 +1,5 @@
+import { WarRoomModal, type WarRoomRequest } from "../warrooms/WarRoomModal";
+import { isSafeHttpsUrl, openRoomsForIncident } from "../../domain/warrooms";
 import React, { useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex } from "@dynatrace/strato-components/layouts";
@@ -20,6 +22,7 @@ import {
   StepIcon,
   SuccessIcon,
   TimelineEventIcon,
+  GroupIcon,
 } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { EntityRef, Incident, NotificationRecord } from "../../domain/contracts";
@@ -109,6 +112,8 @@ const LedgerTable = ({ records, steps }: { records: NotificationRecord[]; steps?
 export const IncidentDetails = ({ incident, onModal }: { incident: Incident; onModal: (r: ModalRequest) => void }) => {
   const { data, now, act, userName } = useAppData();
   const cmd = useIncidentCommands();
+  const [warRoom, setWarRoom] = useState<WarRoomRequest>();
+  const rooms = openRoomsForIncident(data?.warRooms ?? [], incident.id).filter((r) => isSafeHttpsUrl(r.url));
   const [tab, setTab] = useState(0);
   const [note, setNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
@@ -193,6 +198,22 @@ export const IncidentDetails = ({ incident, onModal }: { incident: Incident; onM
           </Button.Prefix>
           Reassign
         </Button>
+        {rooms.length > 0 ? (
+          <Button onClick={() => window.open(rooms[0].url, "_blank", "noopener,noreferrer")}>
+            <Button.Prefix>
+              <GroupIcon />
+            </Button.Prefix>
+            Join war room
+          </Button>
+        ) : (
+          <Button onClick={() => setWarRoom({ mode: "create", incidentId: incident.id })}>
+            <Button.Prefix>
+              <GroupIcon />
+            </Button.Prefix>
+            Open war room
+          </Button>
+        )}
+        {warRoom && <WarRoomModal request={warRoom} onClose={() => setWarRoom(undefined)} />}
         <Button disabled={incident.status === "resolved"} onClick={() => void cmd.escalate(ids)}>
           <Button.Prefix>
             <ArrowUpIcon />

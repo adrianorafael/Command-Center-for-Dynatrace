@@ -1,11 +1,12 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { AppHeader, HelpMenu } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Tooltip } from "@dynatrace/strato-components/overlays";
 import { Menu } from "@dynatrace/strato-components/navigation";
-import { Avatar } from "@dynatrace/strato-components/content";
+import { Avatar, Chip } from "@dynatrace/strato-components/content";
 import {
+  LogoutIcon,
   CallIcon,
   CheckmarkIcon,
   CriticalIcon,
@@ -21,6 +22,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import { useAppData } from "../hooks/AppDataContext";
 import { isRuntimeMissing, onCallAt } from "../hooks/domain";
 import { formatDayTime, formatRelative, initials, zoneAbbr } from "./format";
+import { OnCallSwitchModal, scheduleParticipants, type OnCallSwitchRequest } from "./OnCallSwitch";
 import {
   CATEGORY_LABEL,
   clearNotifications,
@@ -111,6 +113,7 @@ interface OnCallEntry {
 const OnCallNowAction = () => {
   const { data, error, now, currentUser, userName } = useAppData();
   const navigate = useNavigate();
+  const [switchReq, setSwitchReq] = useState<OnCallSwitchRequest>();
 
   const entries = useMemo<OnCallEntry[]>(() => {
     if (!data) return [];
@@ -151,18 +154,62 @@ const OnCallNowAction = () => {
 
   const byTeam = new Map<string, OnCallEntry[]>();
   entries.forEach((e) => byTeam.set(e.teamName, [...(byTeam.get(e.teamName) ?? []), e]));
+  // Schedules where I'm on call now (can leave) and where I take part but am not on call (can take over).
+  const mineNow = entries.filter((e) => e.uid === currentUser.uid).map((e) => e.scheduleId);
+  const canTake = (data?.schedules ?? [])
+    .filter((s) => !mineNow.includes(s.id) && scheduleParticipants(s).includes(currentUser.uid))
+    .map((s) => s.id);
 
   return (
+    <>
     <Menu>
       <Menu.Trigger>
-        <AppHeader.ActionButton>
+        <AppHeader.ActionButton aria-label={mine ? "You're on call: open to leave on-call" : label}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <CallIcon />
+            {mine ? (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  background: Colors.Background.Container.Success.Accent,
+                  color: Colors.Text.Success.OnAccent.Default,
+                }}
+              >
+                <CallIcon size="small" />
+              </span>
+            ) : (
+              <CallIcon />
+            )}
             {label}
           </span>
         </AppHeader.ActionButton>
       </Menu.Trigger>
       <Menu.Content>
+        {(mineNow.length > 0 || canTake.length > 0) && (
+          <Menu.Group>
+            <Menu.Label>{mine ? "You're on call" : "You're off call"}</Menu.Label>
+            {mineNow.length > 0 && (
+              <Menu.Item onSelect={() => setSwitchReq({ mode: "off", scheduleIds: mineNow })}>
+                <Menu.Prefix>
+                  <LogoutIcon style={{ color: Colors.Icon.Critical.Default }} />
+                </Menu.Prefix>
+                Leave on-call now…
+              </Menu.Item>
+            )}
+            {canTake.length > 0 && (
+              <Menu.Item onSelect={() => setSwitchReq({ mode: "on", scheduleIds: canTake })}>
+                <Menu.Prefix>
+                  <CallIcon style={{ color: Colors.Icon.Success.Default }} />
+                </Menu.Prefix>
+                Take on-call now…
+              </Menu.Item>
+            )}
+          </Menu.Group>
+        )}
         {[...byTeam.entries()].map(([team, list]) => (
           <Menu.Group key={team}>
             <Menu.Label>{team}</Menu.Label>
@@ -186,11 +233,15 @@ const OnCallNowAction = () => {
         </Menu.Group>
       </Menu.Content>
     </Menu>
+    {switchReq && <OnCallSwitchModal request={switchReq} onClose={() => setSwitchReq(undefined)} />}
+    </>
   );
 };
 
 export const ShellHeader = () => {
   const navigate = useNavigate();
+  const { data } = useAppData();
+  const openRooms = (data?.warRooms ?? []).filter((r) => r.status === "open").length;
   return (
     <AppHeader>
       {/* Inside Dynatrace the logo and app name come from the platform automatically; offline the
@@ -214,6 +265,20 @@ export const ShellHeader = () => {
         </AppHeader.NavigationItem>
         <AppHeader.NavigationItem as={NavLink} to="/integrations">
           Integrations
+        </AppHeader.NavigationItem>
+        <AppHeader.NavigationItem
+          as={NavLink}
+          to="/war-rooms"
+          aria-label={openRooms ? `War rooms, ${openRooms} in progress` : "War rooms"}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            War rooms
+            {openRooms > 0 && (
+              <Chip size="condensed" color="critical" variant="accent">
+                {openRooms}
+              </Chip>
+            )}
+          </span>
         </AppHeader.NavigationItem>
         <AppHeader.NavigationItem as={NavLink} to="/reports">
           Reports

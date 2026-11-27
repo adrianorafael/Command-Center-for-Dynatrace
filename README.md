@@ -107,6 +107,23 @@ Screenshots on the [project page](https://adrianorafael.github.io/Command-Center
 - **Silence** turns pop-ups off: notifications are then only counted on the bell. **Show pop-ups for…** chooses which categories may pop up.
 - Preferences are per browser.
 
+### War rooms (`/war-rooms`)
+
+- Open a war room from an incident (**Incident details → Open war room**): paste the meeting link (Teams, Zoom, Meet, Slack huddle; https only).
+  Incidents that share the same root cause, or the same service and team, are added automatically; add or remove any.
+- Attach notebooks (for example Dynatrace Notebooks) to document the investigation and the post-mortem.
+- Rooms are opened and closed by people. While a room is open its link is clickable (**Join**) and the incident shows **Join war room**;
+  once closed the link stays visible as plain text but can't be clicked.
+- The list shows status and running time, title and link, incidents, notebooks, who opened it, start, end and duration.
+  It shows today's rooms by default (opened or closed today, or still open), with In progress, Closed and All filters.
+- The **War rooms** tab shows how many rooms are in progress. Rooms are stored as `war.<id>` in App State.
+
+### On-call switch (header)
+
+- When you're on call the header indicator turns green (**You're on call**). **Leave on-call now…** hands the rest of your shift to
+  someone else (the next person in the rotation is suggested) through a schedule override, effective immediately.
+- When you take part in a schedule but aren't on call, **Take on-call now…** puts you on call until the current shift ends.
+
 ### Incident detail (`/incidents/:id`)
 Opens beside the console table. Tabs: **Timeline** (every state change, note and notification), **Escalation** (which
 step fired, who is next and when), **Notifications** (the delivery ledger: planned, sent, failed, timed out, with the

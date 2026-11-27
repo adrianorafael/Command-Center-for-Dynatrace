@@ -21,6 +21,7 @@ import type {
   Team,
   UserContact,
 } from "../domain/contracts";
+import type { WarRoom } from "../domain/warrooms";
 
 export const KEY = {
   settings: "cfg.settings",
@@ -38,6 +39,7 @@ export const KEY = {
   notification: (key: string) => `ntf.${key}`,
   archive: (yyyymmdd: string, incId: string) => `arc.${yyyymmdd}.${incId}`,
   rollup: (day: string) => `rpt.${day}`,
+  warRoom: (id: string) => `war.${id}`,
 } as const;
 
 export const PREFIX = {
@@ -51,6 +53,7 @@ export const PREFIX = {
   notification: "ntf.",
   archive: "arc.",
   rollup: "rpt.",
+  warRoom: "war.",
 } as const;
 
 /** A stored record plus server-side modification info, when the adapter knows it. */
@@ -100,4 +103,7 @@ export interface Store {
   listNotifications(incidentId?: string): Promise<NotificationRecord[]>;
   listRollups(): Promise<DailyRollup[]>;
   getHeartbeat(): Promise<EngineHeartbeat | undefined>;
+  listWarRooms(): Promise<WarRoom[]>;
+  saveWarRoom(w: WarRoom): Promise<void>;
+  deleteWarRoom(id: string): Promise<void>;
 }

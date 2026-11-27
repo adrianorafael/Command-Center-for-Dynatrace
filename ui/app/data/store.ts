@@ -24,6 +24,7 @@ import {
 import { KEY, PREFIX, type Repository, type Store, type Stored } from "./repository";
 import { defaultSettings } from "./domainPort";
 import { applyRollupDelta } from "../domain/reports/metrics";
+import type { WarRoom } from "../domain/warrooms";
 
 /** Rollup delta keys `rpt.<day>.d.<rand>` (writers outside the engine lease); summed on read. */
 export const ROLLUP_DELTA_MARK = ".d.";
@@ -142,6 +143,9 @@ export function createStore(repo: Repository): Store {
     },
 
     listRollups: async () => sumRollups(await repo.list<DailyRollup>(PREFIX.rollup)),
+    listWarRooms: async () => (await repo.list<WarRoom>(PREFIX.warRoom)).map((x) => x.value).sort((a, b) => b.openedAt - a.openedAt),
+    saveWarRoom: (w) => repo.put(KEY.warRoom(w.id), w),
+    deleteWarRoom: (id) => repo.delete(KEY.warRoom(id)),
 
     async getHeartbeat() {
       return (await repo.get<EngineHeartbeat>(KEY.heartbeat))?.value;

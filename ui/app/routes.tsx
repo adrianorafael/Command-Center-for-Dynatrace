@@ -23,6 +23,7 @@ const IntegrationsPage = lazy(() =>
   import("./pages/integrations/IntegrationsPage").then((m) => ({ default: m.IntegrationsPage })),
 );
 const SettingsPage = lazy(() => import("./pages/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const WarRoomsPage = lazy(() => import("./pages/warrooms/WarRoomsPage").then((m) => ({ default: m.WarRoomsPage })));
 const ReportsPage = lazy(() => import("./pages/reports/ReportsPage").then((m) => ({ default: m.ReportsPage })));
 const HelpPage = lazy(() => import("./pages/help/HelpPage").then((m) => ({ default: m.HelpPage })));
 
@@ -58,6 +59,7 @@ export const AppRoutes = () => (
       <Route path="/routing" element={<Navigate to="/services?tab=rules" replace />} />
       <Route path="/integrations" element={<IntegrationsPage />} />
       <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/war-rooms" element={<WarRoomsPage />} />
       <Route path="/reports" element={<ReportsPage />} />
       <Route path="/help" element={<HelpPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />

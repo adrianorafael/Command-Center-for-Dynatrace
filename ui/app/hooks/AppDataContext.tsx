@@ -5,6 +5,7 @@
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { notify } from "./notifications";
+import type { WarRoom } from "../domain/warrooms";
 import { Button } from "@dynatrace/strato-components/buttons";
 import type {
   DailyRollup,
@@ -40,6 +41,7 @@ export interface AppData {
   notifications: NotificationRecord[];
   rollups: DailyRollup[];
   heartbeat?: EngineHeartbeat;
+  warRooms: WarRoom[];
 }
 
 /** Distributive omit so each action variant keeps its own fields. */
@@ -119,7 +121,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
     setRefreshing(true);
     const p = (async () => {
       try {
-        const [settings, teams, schedules, policies, services, rules, contacts, rawIncidents, actions, notifications, rollups, heartbeat] =
+        const [settings, teams, schedules, policies, services, rules, contacts, rawIncidents, actions, notifications, rollups, heartbeat, warRooms] =
           await Promise.all([
             store.getSettings(),
             store.listTeams(),
@@ -133,6 +135,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
             store.listNotifications(),
             store.listRollups(),
             store.getHeartbeat(),
+            store.listWarRooms(),
           ]);
         const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
         setRaw({
@@ -148,6 +151,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
           notifications,
           rollups: [...rollups].sort((a, b) => a.day.localeCompare(b.day)),
           heartbeat,
+          warRooms,
         });
         // New urgent incidents (P1/P2, triggered) and paging-engine health go to the notification center.
         const ids = new Set(rawIncidents.map((i) => i.id));
