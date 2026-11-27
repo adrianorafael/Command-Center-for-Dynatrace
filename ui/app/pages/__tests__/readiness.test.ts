@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AppData } from "../../hooks/AppDataContext";
 import type { Team } from "../../domain/contracts";
 import { defaultSettings } from "../../domain/validation/defaults";
+import { buildDemoData } from "../../domain/demo/fixtures";
 import { deliveryIssues, teamReadiness } from "../teams/readiness";
 
 const team: Team = { schemaVersion: 1, id: "pay", name: "Payments", rev: 1, members: [{ uid: "user-0001", role: "responder" }, { uid: "user-0002", role: "observer" }] };
@@ -99,5 +100,17 @@ describe("delivery issues: 'Ready to page' must not promise more than can be sen
   it("observers' contact methods don't count, and demo mode has no engine to install", () => {
     const observerOnly = [{ ...contacts[0]!, uid: "user-0002", methods: [{ id: "m2", channel: "voice" as const, address: "+15550100001" }] }];
     expect(deliveryIssues(team, data({ contacts: observerOnly }), true)).toEqual([]);
+  });
+});
+
+describe("demo data shows a working setup", () => {
+  it("every demo team has all five steps done and a provider for every channel its people use", () => {
+    const d = buildDemoData(Date.UTC(2026, 10, 26, 15, 0, 0));
+    const demo = { ...d, warRooms: [] } as unknown as AppData;
+    for (const t of d.teams) {
+      const open = teamReadiness(t, demo, (u) => u).filter((i) => !i.done).map((i) => `${t.name}: ${i.key}`);
+      expect(open).toEqual([]);
+      expect(deliveryIssues(t, demo, true)).toEqual([]);
+    }
   });
 });

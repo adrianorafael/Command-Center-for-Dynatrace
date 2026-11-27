@@ -19,9 +19,9 @@ Davis detects on its own reaches that team: before, it ended with no team and pa
 step done.
 
 ### Added
-- **Default team from the team form**: *New team* and *Edit team* have a **Default team** checkbox, ticked while no
-  default team exists. The default team receives every alert that no routing rule sends elsewhere. Deleting the
-  default team clears the setting.
+- **Default team from the team form**: *New team* and *Edit team* have a **Default team** checkbox. For a new team it
+  is ticked while no default team exists; in *Edit team* it shows whether that team is the default. The default team
+  receives every alert that no routing rule sends elsewhere. Deleting the default team clears the setting.
 - **Ready to page?** names what still stops a message outside the team: a channel its people use that has no
   provider switched on, and an engine that has never run. The routing step offers *Receive all unrouted alerts* (one
   click) or *Add routing rule* (a rule already named and pointing to the team).
