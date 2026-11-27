@@ -74,11 +74,11 @@ Measured on the trial environment, from the billing events in `dt.system.events`
 | Invocations | 00:50 → 105, 01:00 → 120, 01:10 → 114 | 01:30 → 21, 01:40 → 11, 01:50 → 18 |
 | of which `ACTION` (the engine) | — | 10 per window = 1 per minute |
 
-The remaining invocations in the new column are the trial-only alert simulator (a standard workflow running
-JavaScript) and our own test calls to the app functions.
+The remaining invocations in the new column are a test alert generator we ran on the trial environment (a
+standard workflow running JavaScript, not part of the app) and our own test calls to the app functions.
 
-Workflow hours, from the `Automation Workflow` billing events: for the hour 01:00–02:00 UTC only the alert simulator
-(a standard workflow) was billed. The simple-workflow engine, which ran every minute in that hour, produced no workflow
+Workflow hours, from the `Automation Workflow` billing events: for the hour 01:00–02:00 UTC only that test alert
+generator (a standard workflow) was billed. The simple-workflow engine, which ran every minute in that hour, produced no workflow
 billing event.
 
 ### Why the integration workflows start on demand

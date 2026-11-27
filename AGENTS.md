@@ -30,7 +30,7 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 ## Project specifics
 
 - **App id:** `my.command.center` (keep the `my.` prefix — unsigned app). **Name:** `Command Center`.
-- **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.5.0); every release is
+- **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.5.1); every release is
   recorded in `CHANGELOG.md`. Versions must increase monotonically per environment or `dt-app deploy` is rejected.
 - **Scopes (11):** `storage:buckets:read`, `storage:events:read`, `state:app-states:read|write|delete`,
   `iam:users:read`, `automation:workflows:read`, `automation:workflows:run` (custom workflow provider),
@@ -68,8 +68,7 @@ api/                  app functions engine-run, config, status, incidents, direc
                       the problem-triggered run, sources, lease, senders. They import the domain and data layers from
                       ui/app (shared code).
 ui/app/pages|components|hooks/   Strato UI. Consumes contracts.ts, the Repository/store and pure domain functions.
-workflow-templates/   GENERATED engine workflow JSON files: interval and on-problem (node scripts/gen-workflow-templates.mjs)
-                      + trial-only simulator.
+workflow-templates/   GENERATED engine workflow JSON files: interval and on-problem (node scripts/gen-workflow-templates.mjs).
 scripts/              install-workflow, gen-workflow-templates, gen-help-content, preview-server, screenshot,
                       doc-screenshots (+ render-postmortem), record-demo + edit-demo (demo video for docs/media).
 docs/                 project page (index.html, icon.svg, screenshots/) and guides/en/ — the English guides, the source.

@@ -141,7 +141,8 @@ const InboundTab = () => {
         <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth variant={LIST_TABLE_VARIANT}>
           <DataTable.RowActions>
             {(row) => (
-              <Button size="condensed" onClick={() => navigate(`/?status=triggered,acknowledged,snoozed,resolved&source=${(row as SourceRow).id}`)}>
+              // All statuses, last 24 h: the same window as the "incidents in 24 h" count next to it.
+              <Button size="condensed" onClick={() => navigate(`/?status=&created=24h&source=${(row as SourceRow).id}`)}>
                 Show events
               </Button>
             )}

@@ -41,6 +41,7 @@ import {
   statusViewOf,
   writeFilters,
   type ConsoleFilters,
+  timeframeFromParam,
 } from "./filters";
 import { useIncidentCommands } from "./useIncidentCommands";
 
@@ -73,7 +74,8 @@ export const ConsolePage = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const filters = useMemo(() => readFilters(params), [params]);
-  const [timeframe, setTimeframe] = useState<Timeframe | null>(null);
+  // `?created=24h` (other pages' links, e.g. Integrations → Show events) opens with the last N hours picked in Created.
+  const [timeframe, setTimeframe] = useState<Timeframe | null>(() => timeframeFromParam(params.get("created")));
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [modal, setModal] = useState<ModalRequest>();
   const prefs = useMemo(() => readPrefs(), []);

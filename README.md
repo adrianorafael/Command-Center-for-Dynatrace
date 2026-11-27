@@ -39,7 +39,7 @@ and using **Strato**, the Dynatrace design system.
 | **Storage** | Dynatrace App State. No external database. Provider secrets stay in the Credential Vault. |
 | **Demo mode** | Per browser: sample data everywhere, nothing read or written, nothing sent. Off: only real data. |
 
-Current version: **2.5.0** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **2.5.1** — see [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentation
 
@@ -176,7 +176,7 @@ api/lib/                         engine cycle, problem-triggered run, sources (Q
 ui/app/domain/                   pure TypeScript core: routing, schedules, escalation, planning, reports
 ui/app/data/                     App State, DQL builders, IAM directory, notebooks, workflow definition
 ui/app/pages/                    console, war rooms, on-call, teams, escalations, services, integrations, reports, settings, help
-workflow-templates/              generated engine workflows (interval, on problem) + trial-only alert simulator
+workflow-templates/              generated engine workflows (interval, on problem)
 docs/                            project page, guides (English), screenshots
 scripts/gen-help-content.mjs     builds the in-app Help from the guides (en; pt-BR and es live in ui/app/pages/help/guides)
 specs/, design/                  specification and screen design
