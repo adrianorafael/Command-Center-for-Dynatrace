@@ -205,11 +205,9 @@ A war room is a meeting link plus the incidents it handles and its notebooks.
 
 ![On-call](../../screenshots/oncall.png)
 
-| Tab | Content |
-| --- | --- |
-| Now | One card per team: who is on call until when, their contact methods (greyed out when not configured), who is next, and each layer. *No one is on call* comes with **Add override**. While there is no team yet, the page says *Start with a team*. Below: *Shifts*, one calendar week (Sunday → Saturday, one column per day) in the *Tenant time zone* of Settings (shown next to the dates), with a *Now* line and today's column highlighted. One row per team shows the final schedule with the on-call person's name in each bar; overrides have a dashed outline and *· override*, *No one on call* gaps are striped amber. Expand a team (or **Show people**) for one row per person with their shift times and hours on call this week; hover a bar for exact times. Move with the previous / next arrows, **This week**, or *Week of* (a date picker that jumps to the week containing that date). The week is in the link (`?week=2026-11-22`), so it can be shared; **Workdays only** shows Monday → Friday and is remembered in this browser. Filter: Team. |
-| Schedules | Name, team, time zone, layers, on call now, next handoff, coverage for the next 7 days (in %). Edit, Duplicate, Delete. |
-| Overrides | Who covers, for whom, schedule, from, to, reason. Upcoming or past. Remove. |
+- **Now**: One card per team: who is on call until when, their contact methods (greyed out when not configured), who is next, and each layer. *No one is on call* comes with **Add override**. While there is no team yet, the page says *Start with a team*. Below: *Shifts*, one calendar week (Sunday → Saturday, one column per day) in the *Tenant time zone* of Settings (shown next to the dates), with a *Now* line and today's column highlighted. One row per team shows the final schedule with the on-call person's name in each bar; overrides have a dashed outline and *· override*, *No one on call* gaps are striped amber. Expand a team (or **Show people**) for one row per person with their shift times and hours on call this week; hover a bar for exact times. Move with the previous / next arrows, **This week**, or *Week of* (a date picker that jumps to the week containing that date). The week is in the link (`?week=2026-11-22`), so it can be shared; **Workdays only** shows Monday → Friday and is remembered in this browser. Filter: Team.
+- **Schedules**: Name, team, time zone, layers, on call now, next handoff, coverage for the next 7 days (in %). Edit, Duplicate, Delete.
+- **Overrides**: Who covers, for whom, schedule, from, to, reason. Upcoming or past. Remove.
 
 **Schedule editor** ![Schedule editor](../../screenshots/schedule-editor.png)
 
@@ -304,12 +302,10 @@ environment, with a 1-minute interval, every step of a four-step test policy fir
 
 ![Services](../../screenshots/services.png) ![Routing](../../screenshots/routing.png)
 
-| Tab | Content |
-| --- | --- |
-| Services | Service, team, escalation policy (or *Team default*), rules, open incidents, noise last 7 days |
-| Routing rules (N) | Ordered rules (drag to reorder). **The first enabled rule that matches wins.** A new rule is placed above the first catch-all rule (a rule without conditions). Columns: #, name, conditions, actions, matched in 24 h, and a switch that turns the rule on or off. The last, fixed row is the default route; it warns when there is no default team. On this tab the page button is **New rule**. |
-| Test a rule | Load a recent alert or an example, edit the JSON, **Run test**: shows the matched rule (or the closest one), each condition :icon[SuccessIcon]:/:icon[XmarkIcon]:, and the resulting service, team, policy and priority with its source |
-| Priority mapping | Priority by Davis category and by severity, plus the fallback |
+- **Services**: Service, team, escalation policy (or *Team default*), rules, open incidents, noise last 7 days
+- **Routing rules (N)**: Ordered rules (drag to reorder). **The first enabled rule that matches wins.** A new rule is placed above the first catch-all rule (a rule without conditions). Columns: #, name, conditions, actions, matched in 24 h, and a switch that turns the rule on or off. The last, fixed row is the default route; it warns when there is no default team. On this tab the page button is **New rule**.
+- **Test a rule**: Load a recent alert or an example, edit the JSON, **Run test**: shows the matched rule (or the closest one), each condition :icon[SuccessIcon]:/:icon[XmarkIcon]:, and the resulting service, team, policy and priority with its source
+- **Priority mapping**: Priority by Davis category and by severity, plus the fallback
 
 **Rule editor**: name, enabled, *Match all / any*, conditions (field, operator, value, *Not*), and **Then**: service,
 team, escalation policy, priority (or *Use priority mapping*), add tags, and *Suppress (create the incident, page
@@ -323,11 +319,15 @@ priority.
 
 ## Integrations
 
-| Tab | Content |
-| --- | --- |
-| Inbound ![Inbound](../../screenshots/integrations.png) | Each source with its status (*Receiving*, *Quiet > 1 h*, *Turned off*, *Never seen*), last event, incidents in 24 h and **Show events** (opens the Console on *All* with *Created* set to the last 24 hours, so the list matches that count). Copy-ready snippets (curl, PowerShell, Python, Dynatrace Workflow) and the fields the app reads. |
-| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | The nine providers (eight built-in plus **Custom workflow**), each with an **On/Off** switch: *Not configured*, *Off*, *Configured*, *Last delivery failed* or *Host not allowed: add it to External requests*, sent/failed counts, *Sent by the engine* (the default) or *Sent by its workflow*, **Configure** (vault entry ID or workflow ID, parameters, **Delivery**, and for a built-in provider the host to allow under *External requests*) and **Send test**. Under **Delivery** you choose who sends a built-in provider: *By the engine* (no extra cost) or *Through its own workflow* (one more function call per notification). One provider per channel can be on. |
-| Workflows ![Workflows](../../screenshots/integrations-workflow.png) | Engine status (*Not installed*, *Installed · simple workflow*, *Update available*, *Installed as a standard workflow…*), the last engine run, **Run every**, **Install in Workflows**, **Download JSON**, **Run engine now**, **Refresh**, the setup steps and the hosts to allow. A second card, **Command Center · Engine on problem**, installs the optional workflow that runs the engine when Davis opens or closes a problem (*Optional · not installed*, *Installed · simple workflow*, *Installed, but its trigger is switched off*). |
+- **Inbound**: Each source with its status (*Receiving*, *Quiet > 1 h*, *Turned off*, *Never seen*), last event, incidents in 24 h and **Show events** (opens the Console on *All* with *Created* set to the last 24 hours, so the list matches that count). Copy-ready snippets (curl, PowerShell, Python, Dynatrace Workflow) and the fields the app reads.
+
+  ![Inbound](../../screenshots/integrations.png)
+- **Outbound**: The nine providers (eight built-in plus **Custom workflow**), each with an **On/Off** switch: *Not configured*, *Off*, *Configured*, *Last delivery failed* or *Host not allowed: add it to External requests*, sent/failed counts, *Sent by the engine* (the default) or *Sent by its workflow*, **Configure** (vault entry ID or workflow ID, parameters, **Delivery**, and for a built-in provider the host to allow under *External requests*) and **Send test**. Under **Delivery** you choose who sends a built-in provider: *By the engine* (no extra cost) or *Through its own workflow* (one more function call per notification). One provider per channel can be on.
+
+  ![Outbound](../../screenshots/integrations-outbound.png)
+- **Workflows**: Engine status (*Not installed*, *Installed · simple workflow*, *Update available*, *Installed as a standard workflow…*), the last engine run, **Run every**, **Install in Workflows**, **Download JSON**, **Run engine now**, **Refresh**, the setup steps and the hosts to allow. A second card, **Command Center · Engine on problem**, installs the optional workflow that runs the engine when Davis opens or closes a problem (*Optional · not installed*, *Installed · simple workflow*, *Installed, but its trigger is switched off*).
+
+  ![Workflows](../../screenshots/integrations-workflow.png)
 
 Details: [integrations](integrations.md) and [getting started](getting-started.md).
 

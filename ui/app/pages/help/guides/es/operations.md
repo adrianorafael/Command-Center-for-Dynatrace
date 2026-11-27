@@ -57,12 +57,22 @@ motor.
 
 ## Por qué un único simple workflow
 
-| Diseño | Horas de workflow | Invocaciones de función | Veredicto |
-| --- | --- | --- | --- |
-| Versión 2 antes de este cambio: un **standard** workflow `tick` → 8 emisores → `report` | 1 por hora de vida del workflow, haga algo o no | Medido: cerca de 690 por hora (≈ 11.5 por minuto) | Reemplazado |
-| **Un simple workflow, una acción, trigger de intervalo** (actual) | **ninguna** | Medido: **1 por ejecución** (60 por hora con 1 minuto) | El motor también envía, así que una notificación no agrega ninguna invocación. |
-| Un segundo simple workflow con **Problem trigger** y la misma acción (opcional) | ninguna | Medido: **1 por disparo**, cerca de 2 por problema (se abre, se cierra) | Opcional. El primer aviso no espera al intervalo, así que un intervalo más largo se vuelve práctico. Ver [Ejecución en cada problema](#ejecución-en-cada-problema). |
-| Un **simple** workflow por integración, ejecutado por el motor por cada notificación (opcional, por integración) | ninguna | Medido: **1 por notificación** de esa integración (la tarea del workflow), incluidos los envíos que fallan | Opcional desde la 2.3.0 (era lo predeterminado en la 2.1 y la 2.2). Cada entrega es una ejecución de workflow que puedes ver. El motor recurre a un envío directo cuando ese workflow no se puede ejecutar. |
+- Versión 2 antes de este cambio: un **standard** workflow `tick` → 8 emisores → `report`
+  - *Horas de workflow*: 1 por hora de vida del workflow, haga algo o no
+  - *Invocaciones de función*: Medido: cerca de 690 por hora (≈ 11.5 por minuto)
+  - *Veredicto*: Reemplazado
+- **Un simple workflow, una acción, trigger de intervalo** (actual)
+  - *Horas de workflow*: **ninguna**
+  - *Invocaciones de función*: Medido: **1 por ejecución** (60 por hora con 1 minuto)
+  - *Veredicto*: El motor también envía, así que una notificación no agrega ninguna invocación.
+- Un segundo simple workflow con **Problem trigger** y la misma acción (opcional)
+  - *Horas de workflow*: ninguna
+  - *Invocaciones de función*: Medido: **1 por disparo**, cerca de 2 por problema (se abre, se cierra)
+  - *Veredicto*: Opcional. El primer aviso no espera al intervalo, así que un intervalo más largo se vuelve práctico. Ver [Ejecución en cada problema](#ejecución-en-cada-problema).
+- Un **simple** workflow por integración, ejecutado por el motor por cada notificación (opcional, por integración)
+  - *Horas de workflow*: ninguna
+  - *Invocaciones de función*: Medido: **1 por notificación** de esa integración (la tarea del workflow), incluidos los envíos que fallan
+  - *Veredicto*: Opcional desde la 2.3.0 (era lo predeterminado en la 2.1 y la 2.2). Cada entrega es una ejecución de workflow que puedes ver. El motor recurre a un envío directo cuando ese workflow no se puede ejecutar.
 
 Fuentes: *Create a simple workflow* ("without consuming workflow hours") y *Workflows concepts* (los simple workflows
 "do not generate any consumption of workflow hours") en la documentación de Dynatrace. Los simple workflows permiten
