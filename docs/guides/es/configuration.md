@@ -44,7 +44,7 @@ Se usan cuando ninguna regla de enrutamiento, propiedad del evento o servicio de
 
 | Ajuste | Predeterminado | Efecto |
 | --- | --- | --- |
-| Default team | ninguno (viene marcado cuando creas el primer equipo) | Equipo para los incidentes que ninguna regla o servicio asigna. Los problemas de Davis no traen equipo: sin un equipo predeterminado o reglas de enrutamiento, no avisan a nadie. También se define desde un equipo (**New team**, **Edit team** o el *Receive all unrouted alerts* de la lista de verificación). Eliminar el equipo predeterminado lo deja sin definir. |
+| Default team | ninguno (viene marcado cuando creas el primer equipo) | Equipo para los incidentes que ninguna regla o servicio asigna. Los problemas que Davis detecta por sí solo no traen equipo: sin un equipo predeterminado o reglas de enrutamiento, no avisan a nadie. También se define desde un equipo (**New team**, **Edit team** o el *Receive all unrouted alerts* de la lista de verificación). Eliminar el equipo predeterminado lo deja sin definir. |
 | Default escalation policy | ninguna | Política cuando ni la regla, ni el servicio, ni el equipo tienen una. Sin una política no se avisa a nadie. |
 | Fallback priority | P3 | Último paso del orden de prioridad |
 

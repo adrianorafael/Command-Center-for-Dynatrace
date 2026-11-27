@@ -223,7 +223,7 @@ Uma frase de prévia diz exatamente o que vai acontecer.
   referências sejam removidas.
 - **New team**: um nome e uma descrição opcional. **Default team** (equipe padrão) vem marcado enquanto não existe
   nenhuma equipe padrão: a equipe padrão recebe todo alerta que nenhuma regra de roteamento envia para outro lugar. Os
-  problemas do Davis não trazem equipe; por isso, sem uma equipe padrão ou regras de roteamento, eles não acionam
+  problemas que o Davis detecta sozinho não trazem equipe; por isso, sem uma equipe padrão ou regras de roteamento, eles não acionam
   ninguém. **Edit team** também define a política de escalonamento padrão da equipe.
 - **Abas do detalhe da equipe**: *Members*, *On-call*, *Escalation*, *Quiet hours*, *Services*.
 - **Ready to page?** Uma checklist de 5 passos, em ordem: pessoas que são acionadas, métodos de contato, uma escala de

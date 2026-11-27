@@ -29,7 +29,7 @@ const CONCEPTS = `
 - **Team**: Dynatrace users with a role. *Team admins* edit the team and get paged, *Responders* get paged, *Observers* only watch and are never paged.
 - **Schedule**: who is on call. A **rotation** makes its people take turns daily, weekly or every N hours, optionally only in certain hours. A schedule can have more rotations (**layers**), for example for nights or weekends: where their hours overlap, the layer further down the list is on call. **Overrides** win over everything.
 - **Escalation policy**: ordered steps. Each step waits a number of minutes, then notifies an on-call schedule, a whole team, or a person. It can repeat; it stops as soon as someone acknowledges.
-- **Service and routing rule**: rules are checked top to bottom and the first match decides service, team, policy and priority, or suppresses the alert. An alert that no rule or service assigns goes to the **default team**. Davis problems carry no team: without a default team or a routing rule they page nobody.
+- **Service and routing rule**: rules are checked top to bottom and the first match decides service, team, policy and priority, or suppresses the alert. An alert that no rule or service assigns goes to the **default team**. Problems that Davis detects on its own carry no team (only events you post can name a service in \`cc.service\`): without a default team or a routing rule they page nobody.
 `;
 
 const CONSOLE = `

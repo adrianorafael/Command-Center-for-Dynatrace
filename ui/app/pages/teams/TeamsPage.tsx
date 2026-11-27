@@ -136,7 +136,7 @@ export const TeamFormModal = ({ team, show, onClose }: { team?: Team; show: bool
           <FieldHint>
             {currentDefault && currentDefault.id !== draft.id
               ? `The default team is ${currentDefault.name} now. Tick this to make it ${name.trim() || "this team"} instead.`
-              : "Davis problems carry no team. Without a default team or routing rules they page nobody."}
+              : "Problems that Davis detects on its own carry no team. Without a default team or routing rules they page nobody."}
           </FieldHint>
         </Flex>
       </Flex>

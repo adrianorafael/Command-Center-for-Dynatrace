@@ -152,7 +152,7 @@ Then use **Send test** with one address. Details: [integrations](integrations.md
 The team page guides you: its **Ready to page?** checklist always highlights the next step.
 
 1. **Teams → New team**: type a name and leave **Default team** ticked. The team then receives every alert that no
-   routing rule sends elsewhere. This matters because Davis problems carry no team.
+   routing rule sends elsewhere. This matters because problems that Davis detects on its own carry no team.
 2. **Add people**: your own user is offered first; for others, type at least 3 characters of a name or email.
 3. **Add contact methods**: a row is ready for each person (phone in E.164, Telegram chat ID, a name for
    Slack/Teams/IFTTT, a routing key for the webhook). **Save and next** moves on to the next person. Notification
@@ -164,8 +164,9 @@ The team page guides you: its **Ready to page?** checklist always highlights the
 6. Optional: **Services** and **routing rules** send certain alerts to other teams; **Test a rule** checks them.
    **Settings → Routing defaults** shows the default team and policy.
 
-From an empty app this takes about 20 clicks and typed fields for a team of three. A Davis problem is then routed to
-the team and its escalation policy (check it with **Services → Test a rule**).
+Measured in the offline preview, from an empty app: 21 clicks and typed fields for a team of three. A problem that
+Davis detects on its own is then routed to the team and its escalation policy; check it in your environment with
+**Services → Test a rule**.
 
 Details for every screen: [user guide](user-guide.md).
 

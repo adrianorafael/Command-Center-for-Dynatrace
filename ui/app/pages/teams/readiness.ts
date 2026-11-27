@@ -88,7 +88,7 @@ export function teamReadiness(team: Team, data: AppData, userName: (uid: string)
         : rules.length
           ? `${rules.length} routing ${rules.length === 1 ? "rule sends" : "rules send"} alerts here`
           : services.length
-            ? `Only events that name ${services.map((x) => x.name).join(" or ")} in cc.service arrive. Davis problems need a routing rule or the default team`
+            ? `Only events that name ${services.map((x) => x.name).join(" or ")} in cc.service arrive. Problems that Davis detects on its own need a routing rule or the default team`
             : "No alert reaches this team yet",
       fixLabel: defaultTeam ? "Add routing rule" : "Receive all unrouted alerts",
       routingFix: defaultTeam ? "rule" : "default-team",

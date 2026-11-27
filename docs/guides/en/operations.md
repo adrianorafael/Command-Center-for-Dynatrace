@@ -201,7 +201,7 @@ fetch dt.davis.events, from: now() - 72h
 | Workflows tab: *Installed as a standard workflow* | The create-workflow intent has no type field. Delete that workflow and upload the downloaded JSON, or run `scripts/install-workflow.mjs`. |
 | Workflows tab: *Update available* | The app was upgraded. Reinstall, then delete the old workflow. |
 | No incidents appear | Settings → Event sources; check that the event reached Grail (`fetch dt.davis.events` in a Notebook) and that its type opens a problem. Otherwise turn on the Davis events source. |
-| An incident has no team and nobody was paged | No routing rule matched and there is no default team. Davis problems carry no team. Open the team and select *Receive all unrouted alerts* in its **Ready to page?** checklist (or set Settings → Routing defaults), or add a routing rule. The checklist also shows what else the team is missing. |
+| An incident has no team and nobody was paged | No routing rule matched and there is no default team. Problems that Davis detects on its own carry no team (only events you post can name a service in `cc.service`). Open the team and select *Receive all unrouted alerts* in its **Ready to page?** checklist (or set Settings → Routing defaults), or add a routing rule. The checklist also shows what else the team is missing. |
 | Routing ignores `cc.service` | The name or ID doesn't match a service, or an earlier rule set another service. Use Services → Test a rule. |
 | A notification **failed** | Incident → Notifications shows the provider error. Usual causes: host missing in External requests, a vault entry the actor can't read, wrong credential type, phone not in E.164, Twilio API key without *Account SID*. |
 | A notification shows **No result** | The run ended before the call returned. It is retried up to *Delivery attempts*. |
@@ -234,6 +234,12 @@ Not verified, or only partly:
 - **Minimal permissions** of the workflow actor: all permissions were enabled on the trial environment.
 - **User search** returned nobody for users who had just been invited. A search for active users in a signed-in
   session was not confirmed on the trial environment. With a platform token, IAM answered *User not authorized*.
+- **First-time setup** (new team → *Ready to page?* → contact methods → schedule → policy): walked through in the
+  offline preview starting with no data, not in a signed-in session on an environment. That a problem Davis detects
+  on its own goes to the default team was checked there with the rule tester and is covered by a unit test; it was
+  not observed with a live problem.
+- **Add people → your own user**: it is offered from the signed-in user's ID. That this ID is the IAM user ID that
+  team membership uses was not confirmed in a signed-in session.
 - **Problems open longer than the look-back** (72 h) are no longer read; their incident stays open until resolved by
   hand.
 - **Two-way replies** (acknowledge by SMS or chat) are not implemented.

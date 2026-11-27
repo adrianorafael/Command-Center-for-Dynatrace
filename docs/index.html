@@ -471,7 +471,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
       <li><b>Authorization settings.</b> Workflows app → Settings → Authorization settings: enable Grail read, App State and Credential Vault read for the workflow actor.</li>
       <li><b>Providers.</b> Integrations → Outbound: switch on only the providers you use, paste their vault entry IDs, sender numbers or IFTTT event name,
         then <b>Send test</b>. For any other tool, <b>Custom workflow → Create example workflow</b> prefills a workflow you edit in the Workflows app.</li>
-      <li><b>A team that can be paged.</b> Teams → <b>New team</b>, with <b>Default team</b> ticked (Davis problems carry no team). Then follow the team's
+      <li><b>A team that can be paged.</b> Teams → <b>New team</b>, with <b>Default team</b> ticked (problems that Davis detects on its own carry no team). Then follow the team's
         <b>Ready to page?</b> checklist: people from IAM, their contact methods, a schedule and an escalation policy, both prefilled. Services and routing rules are optional.</li>
       <li><b>Send an event.</b> A platform token with <code>openpipeline:events.davis:ingest</code>, and
         <code>cc.service</code>, <code>cc.priority</code>, <code>cc.tags</code> as properties.</li>
@@ -500,7 +500,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
           <tr><td>No incidents appear</td>
               <td>Settings → Event sources; check that the event reached Grail and that its type opens a problem. Otherwise enable the Davis-events source.</td></tr>
           <tr><td>An incident has no team and nobody was paged</td>
-              <td>No routing rule matched and there is no default team. Davis problems carry no team. Open the team and select <b>Receive all unrouted alerts</b> in its checklist, or add a routing rule.</td></tr>
+              <td>No routing rule matched and there is no default team. Problems that Davis detects on its own carry no team. Open the team and select <b>Receive all unrouted alerts</b> in its checklist, or add a routing rule.</td></tr>
           <tr><td>Routing ignores <code>cc.service</code></td>
               <td>The name or ID does not match a service, or an earlier rule set another service. Use <b>Services → Test a rule</b>.</td></tr>
           <tr><td>A notification shows <b>Failed</b></td>

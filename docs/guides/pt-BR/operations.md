@@ -213,7 +213,7 @@ fetch dt.davis.events, from: now() - 72h
 | Aba Workflows: *Installed as a standard workflow* | O intent create-workflow não tem campo de tipo. Exclua esse workflow e faça o upload do JSON baixado, ou execute `scripts/install-workflow.mjs`. |
 | Aba Workflows: *Update available* | O app foi atualizado. Reinstale e depois exclua o workflow antigo. |
 | Nenhum incidente aparece | Settings → Event sources; confira se o evento chegou ao Grail (`fetch dt.davis.events` em um Notebook) e se o seu tipo abre um problem. Caso contrário, ative a origem de Davis events. |
-| Um incidente fica sem equipe e ninguém é acionado | Nenhuma regra de roteamento correspondeu e não há equipe padrão. Os problemas do Davis não trazem equipe. Abra a equipe e selecione *Receive all unrouted alerts* na checklist **Ready to page?** dela (ou defina em Settings → Routing defaults), ou adicione uma regra de roteamento. A checklist também mostra o que mais falta para a equipe. |
+| Um incidente fica sem equipe e ninguém é acionado | Nenhuma regra de roteamento correspondeu e não há equipe padrão. Os problemas que o Davis detecta sozinho não trazem equipe (só os eventos que você envia podem citar um serviço em `cc.service`). Abra a equipe e selecione *Receive all unrouted alerts* na checklist **Ready to page?** dela (ou defina em Settings → Routing defaults), ou adicione uma regra de roteamento. A checklist também mostra o que mais falta para a equipe. |
 | O roteamento ignora `cc.service` | O nome ou ID não corresponde a um serviço, ou uma regra anterior definiu outro serviço. Use Services → Test a rule. |
 | Uma notificação **falhou** (Failed) | Incidente → Notifications mostra o erro do provedor. Causas comuns: host ausente em External requests, uma entrada do vault que o ator não consegue ler, tipo de credencial errado, telefone fora do padrão E.164, API key do Twilio sem *Account SID*. |
 | Uma notificação mostra **No result** | A execução terminou antes de a chamada retornar. Ela é tentada novamente até *Delivery attempts*. |
@@ -247,6 +247,12 @@ Não verificado, ou apenas parcialmente:
 - A **busca de usuários** não retornou ninguém para usuários que tinham acabado de ser convidados. Uma busca por
   usuários ativos em uma sessão conectada não foi confirmada no ambiente trial. Com um platform token, o IAM respondeu
   *User not authorized*.
+- **Configuração inicial** (nova equipe → *Ready to page?* → métodos de contato → escala → política): percorrida na
+  prévia offline, começando sem dados, e não em uma sessão conectada em um ambiente. Que um problema detectado pelo
+  próprio Davis vai para a equipe padrão foi conferido ali com o testador de regras e está coberto por um teste
+  unitário; não foi observado com um problema real.
+- **Add people → o seu próprio usuário**: ele é oferecido a partir do ID do usuário conectado. Que esse ID é o ID de
+  usuário do IAM usado na participação em equipes não foi confirmado em uma sessão conectada.
 - **Problems abertos há mais tempo que o look-back** (72 h) deixam de ser lidos; o incidente deles continua aberto até
   ser resolvido manualmente.
 - **Respostas bidirecionais** (reconhecer por SMS ou chat) não estão implementadas.

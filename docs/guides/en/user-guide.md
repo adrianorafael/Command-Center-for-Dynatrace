@@ -212,7 +212,7 @@ says exactly what will happen.
 - **Teams list**: name, members, on call now, escalation policy, services, open incidents per priority. A team that is
   still used by policies, rules or services cannot be deleted until those references are removed.
 - **New team**: a name and an optional description. **Default team** is ticked while no default team exists: the
-  default team receives every alert that no routing rule sends elsewhere. Davis problems carry no team, so without a
+  default team receives every alert that no routing rule sends elsewhere. Problems that Davis detects on its own carry no team, so without a
   default team or routing rules they page nobody. **Edit team** also sets the team's default escalation policy.
 - **Team detail tabs**: *Members*, *On-call*, *Escalation*, *Quiet hours*, *Services*.
 - **Ready to page?** A checklist of 5 steps, in order: people who get paged, contact methods, an on-call schedule, an

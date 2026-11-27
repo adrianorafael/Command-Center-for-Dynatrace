@@ -14,8 +14,9 @@ The version here must match `app.config.json` → `app.version`, which is the si
 ## [2.2.0] - 2026-11-27
 
 A usability pass over Teams, On-call, Escalations and Services, walked through from an empty app in the offline
-preview. A team of three that can be paged now takes 21 clicks and typed fields (about 39 before), and a Davis problem
-reaches that team: before, it ended with no team and paged nobody even with every checklist step done.
+preview. A team of three that can be paged now takes 21 clicks and typed fields (about 39 before), and a problem that
+Davis detects on its own reaches that team: before, it ended with no team and paged nobody even with every checklist
+step done.
 
 ### Added
 - **Default team from the team form**: *New team* and *Edit team* have a **Default team** checkbox, ticked while no
@@ -33,7 +34,7 @@ reaches that team: before, it ended with no team and paged nobody even with ever
 
 ### Changed
 - **Ready to page? step 5** is done only when the team is the default team or an enabled routing rule sends alerts
-  to it. A service alone no longer counts, because Davis problems carry no `cc.service`. Teams that only own services
+  to it. A service alone no longer counts, because problems that Davis detects on its own carry no `cc.service`. Teams that only own services
   show this step as open after the upgrade. The next step has the highlighted button and steps that need people
   first show none.
 - A **new schedule** opens ready to save: named after its team, with the team's paged people in the rotation,
@@ -51,6 +52,8 @@ reaches that team: before, it ended with no team and paged nobody even with ever
 - **Help → Get started** has five steps; the team steps are one link to the team's checklist. Help also explains the
   default team and the "incident has no team" case.
 - The policy list shows who is notified at each step and the wait in between.
+- Demo mode: the Telegram provider is switched on, so every channel the demo people use has a provider and the demo
+  teams show as ready to page.
 
 ### Fixed
 - The schedule editor named the handoff weekday from the browser's time zone; it now comes from the schedule's own

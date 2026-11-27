@@ -153,8 +153,8 @@ nada se perde. Depois use **Send test** com um endereço. Detalhes: [integraçõ
 A página da equipe conduz você: a checklist **Ready to page?** sempre destaca o próximo passo.
 
 1. **Teams → New team**: digite um nome e deixe **Default team** (equipe padrão) marcado. A equipe passa a receber
-   todo alerta que nenhuma regra de roteamento envia para outro lugar. Isso importa porque os problemas do Davis não
-   trazem equipe.
+   todo alerta que nenhuma regra de roteamento envia para outro lugar. Isso importa porque os problemas que o Davis
+   detecta sozinho não trazem equipe.
 2. **Add people**: o seu próprio usuário é oferecido primeiro; para os demais, digite pelo menos 3 caracteres de um
    nome ou email.
 3. **Add contact methods**: há uma linha pronta para cada pessoa (telefone em E.164, chat ID do Telegram, um nome para
@@ -168,9 +168,9 @@ A página da equipe conduz você: a checklist **Ready to page?** sempre destaca 
 6. Opcional: **Services** e **regras de roteamento** enviam certos alertas para outras equipes; **Test a rule** as
    confere. **Settings → Routing defaults** mostra a equipe e a política padrão.
 
-A partir de um app vazio, isso leva cerca de 20 cliques e campos digitados para uma equipe de três pessoas. Um
-problema do Davis é então roteado para a equipe e para a política de escalonamento dela (confira em **Services → Test
-a rule**).
+Medido na prévia offline, a partir de um app vazio: 21 cliques e campos digitados para uma equipe de três pessoas. Um
+problema que o Davis detecta sozinho é então roteado para a equipe e para a política de escalonamento dela; confira no
+seu ambiente em **Services → Test a rule**.
 
 Detalhes de cada tela: [guia do usuário](user-guide.md).
 

@@ -155,8 +155,8 @@ proveedor, así que no se pierde nada. Luego usa **Send test** con una direcció
 La página del equipo te guía: su lista de verificación **Ready to page?** siempre resalta el siguiente paso.
 
 1. **Teams → New team**: escribe un nombre y deja **Default team** (equipo predeterminado) marcado. El equipo recibe
-   entonces toda alerta que ninguna regla de enrutamiento envía a otro lugar. Esto importa porque los problemas de
-   Davis no traen equipo.
+   entonces toda alerta que ninguna regla de enrutamiento envía a otro lugar. Esto importa porque los problemas que
+   Davis detecta por sí solo no traen equipo.
 2. **Add people**: primero se ofrece tu propio usuario; para los demás, escribe al menos 3 caracteres de un nombre o
    correo electrónico.
 3. **Add contact methods**: hay una fila lista para cada persona (teléfono en E.164, chat ID de Telegram, un nombre
@@ -170,8 +170,9 @@ La página del equipo te guía: su lista de verificación **Ready to page?** sie
 6. Opcional: **Services** y las **routing rules** envían ciertas alertas a otros equipos; **Test a rule** las
    comprueba. **Settings → Routing defaults** muestra el equipo y la política predeterminados.
 
-Desde una app vacía, esto lleva unos 20 clics y campos escritos para un equipo de tres personas. Un problema de Davis
-se enruta entonces al equipo y a su política de escalamiento (compruébalo con **Services → Test a rule**).
+Medido en la vista previa sin conexión, desde una app vacía: 21 clics y campos escritos para un equipo de tres
+personas. Un problema que Davis detecta por sí solo se enruta entonces al equipo y a su política de escalamiento;
+compruébalo en tu entorno con **Services → Test a rule**.
 
 Detalles de cada pantalla: [guía del usuario](user-guide.md).
 

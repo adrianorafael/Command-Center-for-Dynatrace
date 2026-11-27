@@ -222,7 +222,7 @@ motivo. Una frase de vista previa dice exactamente qué va a ocurrir.
   referencias.
 - **New team**: un nombre y una descripción opcional. **Default team** (equipo predeterminado) viene marcado mientras
   no existe ningún equipo predeterminado: el equipo predeterminado recibe toda alerta que ninguna regla de
-  enrutamiento envía a otro lugar. Los problemas de Davis no traen equipo; por eso, sin un equipo predeterminado o
+  enrutamiento envía a otro lugar. Los problemas que Davis detecta por sí solo no traen equipo; por eso, sin un equipo predeterminado o
   reglas de enrutamiento, no avisan a nadie. **Edit team** también define la política de escalamiento predeterminada
   del equipo.
 - **Pestañas del detalle del equipo**: *Members*, *On-call*, *Escalation*, *Quiet hours*, *Services*.
