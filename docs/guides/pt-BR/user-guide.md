@@ -12,7 +12,8 @@ As capturas de tela foram feitas em **modo demo**, com dados de exemplo.
 | --- | --- |
 | **Console · On-call · Teams · Escalations · Services · Integrations · War rooms · Reports** | Navegação principal. **War rooms** mostra um contador vermelho enquanto há salas em andamento. |
 | 🔔 **Sino** | As últimas notificações desta sessão, com um contador de não lidas (até `99+`). Estados do ícone: sino = nada novo, sino ativo = itens não lidos, sino riscado = pop-ups silenciados. Selecionar um item abre aquilo a que ele se refere. Fechar o menu marca tudo como lido. |
-| 📞 **Indicador de plantão** | `You're on call` em um círculo verde quando você está de plantão; caso contrário, `On call: <name>` (+N para mais pessoas) ou `No one on call`. O menu lista quem está de plantão em cada equipe e até quando, e oferece **Leave on-call now…** ou **Take on-call now…** (abaixo). |
+| 📞 **Indicador de plantão** | `You're on call` em um círculo verde quando você está de plantão; caso contrário, `On call: <name>` (+N para mais pessoas), `On call` quando ninguém está cobrindo neste momento, ou `No one on call` quando ainda não existe
+escala. O menu lista quem está de plantão em cada equipe e até quando, e oferece **Leave on-call now…** ou **Take on-call now…** (abaixo). |
 | ⚙️ **Settings** | Abre as [configurações](configuration.md). |
 | Menu de ajuda **?** | Primeiros passos, guia dentro do app, envio de eventos, atalhos de teclado, sobre. |
 
@@ -25,7 +26,7 @@ Os pop-ups aparecem no **canto inferior direito** para quatro categorias:
 | New P1/P2 incidents (novos incidentes P1/P2) | `P1 · <title>` (crítico), `P2 · <title>` (aviso). Depois de três, eles são agrupados como `N more new P1/P2 incidents`. |
 | Confirmations of my actions (confirmações das minhas ações) | `Incident acknowledged` com **Undo** (10 segundos), `Incident resolved` com **Undo**, `Incident snoozed`… |
 | Errors (erros) | `Couldn't save your changes`, `Couldn't acknowledge …` com **Retry** |
-| Paging engine health (saúde do motor de acionamento) | `Paging engine is not running`: nenhuma execução do motor por dois intervalos mais um minuto |
+| Paging engine health (saúde do motor de acionamento) | `Paging engine is not running`: nenhuma execução do motor por dois intervalos mais um minuto (um erro do motor aparece apenas no banner do Console) |
 
 No menu do sino, **Pop-ups on (click to silence)** alterna para *Silenced: only counting*. **Show pop-ups for…**
 escolhe as categorias, e **Clear all** esvazia a lista. As preferências ficam guardadas neste navegador. A lista em si
@@ -102,7 +103,7 @@ O Console é a tela do NOC: todos os incidentes abertos, os mais recentes primei
 
 **Filtros**: busca (título, ID, entidade, tag), Status (padrão *Triggered + Acknowledged*), Priority, Team, Assignee
 (*Me*, *Unassigned*, membros), Service, Source, Escalation level (*Not started*, *Step N*, *Exhausted*) e Created
-(intervalo de tempo). Os filtros fazem parte da URL, então uma visão de NOC pode ser salva nos favoritos.
+(intervalo de tempo). Todos os filtros, exceto o intervalo de tempo, fazem parte da URL, então uma visão de NOC pode ser salva nos favoritos.
 
 **Colunas**: Priority, Status (e *until …* quando em snooze), Incident (título, `#display ID · first entity`), Age
 (vermelho com um ícone de relógio quando um incidente **triggered** é mais antigo que a meta de reconhecimento),
@@ -226,8 +227,9 @@ Os papéis são orientações: o App State não tem permissões por chave, entã
 alterar a configuração.
 
 - **Contact methods** (pessoa → *Edit contact methods*): canal, endereço e rótulo, mais **Send test** por método.
-  Formatos de endereço: telefone em E.164 com o código do país (SMS, voz, WhatsApp); chat ID do Telegram; member ID ou
-  canal do Slack; referência de usuário ou canal do Teams; routing key do IFTTT; routing key do webhook. Números de
+  Formatos de endereço: telefone em E.164 com o código do país (SMS, voz, WhatsApp); chat ID do Telegram; qualquer rótulo
+  para Slack, Teams e IFTTT (o webhook ou o applet decide o destino, e as mensagens mostram o nome da pessoa); uma
+  routing key para o webhook ou o custom workflow. Números de
   telefone e chat IDs podem ser lidos por todos os usuários do app. Eles ficam mascarados nas listas. Email não é um
   canal separado: envie emails por meio de um gateway de webhook.
 - **When I'm paged** (regras de notificação): *method*, *after N minutes* (contados a partir do momento em que o passo
@@ -243,7 +245,8 @@ alterar a configuração.
 ![Escalations](../../screenshots/escalations.png) ![Policy editor](../../screenshots/policy-editor.png)
 
 - **Lista**: nome, equipe, passos (`N · summary`), repetição, usada por, último disparo. Excluir uma política faz os
-  seus incidentes voltarem para a política padrão definida em Settings.
+  seus incidentes voltarem para a política padrão da sua equipe ou, na falta dela, para a política padrão definida em
+  Settings.
 - **Editor**: os passos rodam em ordem até alguém reconhecer. Cada passo espera um número de minutos (0–1440)
   **contados a partir do passo anterior** e então notifica os seus alvos: *On-call of schedule*, *Team (all
   responders)*, que significa todos que não são observadores, incluindo os admins, ou um *User*. *Channels* são
@@ -252,7 +255,7 @@ alterar a configuração.
 - **Repetição**: *Repeat policy if nobody acknowledges* de 1 a 5 vezes. Cada repetição começa após o atraso do último
   passo (5 minutos se esse atraso for 0). Quando todas as repetições terminam, a política fica **esgotada (exhausted)**
   e o incidente continua triggered.
-- **Simulação**: *If an incident is triggered now* lista, minuto a minuto, quem seria acionado e em quais canais, e
+- **Simulação** (sempre visível no editor): *If an incident is triggered now* lista, minuto a minuto, quem seria acionado e em quais canais, e
   avisa quando um passo não aciona ninguém (uma lacuna na escala ou uma equipe vazia).
 
 A precisão do timing é igual ao intervalo do motor: um passo dispara na primeira execução do motor depois de vencido.
@@ -266,12 +269,12 @@ um minuto após o vencimento.
 | Aba | Conteúdo |
 | --- | --- |
 | Services | Serviço, equipe, política de escalonamento (ou *Team default*), regras, incidentes abertos, ruído nos últimos 7 dias |
-| Routing rules (N) | Regras ordenadas (arraste para reordenar). **A primeira regra habilitada que corresponder vence.** Colunas: #, nome, condições, ações, habilitada, correspondências em 24 h. A última linha, fixa, é a rota padrão. |
+| Routing rules (N) | Regras ordenadas (arraste para reordenar). **A primeira regra habilitada que corresponder vence.** Uma regra nova é colocada acima da primeira regra genérica (catch-all, uma regra sem condições). Colunas: #, nome, condições, ações, habilitada, correspondências em 24 h. A última linha, fixa, é a rota padrão. |
 | Test a rule | Carregue um alerta recente ou um exemplo, edite o JSON, **Run test**: mostra a regra correspondente (ou a mais próxima), cada condição ✔/✖ e o serviço, a equipe, a política e a prioridade resultantes, com a sua origem |
 | Priority mapping | Prioridade por categoria do Davis e por severidade, mais o fallback |
 
 **Editor de regra**: nome, habilitada, *Match all / any*, condições (campo, operador, valor, *Not*) e **Then**:
-serviço, equipe, política de escalonamento, prioridade (ou *Use priority mapping*), adicionar tags e *Suppress*. Os
+serviço, equipe, política de escalonamento, prioridade (ou *Use priority mapping*), adicionar tags e *Suppress (create the incident, page nobody)* (criar o incidente, não acionar ninguém). Os
 campos, os operadores e a ordem de roteamento estão listados na
 [referência de alertas](alerts-reference.md#como-um-alerta-vira-um-incidente).
 
@@ -283,7 +286,7 @@ de escalonamento (vazio = a padrão da equipe) e prioridade padrão.
 | Aba | Conteúdo |
 | --- | --- |
 | Inbound ![Inbound](../../screenshots/integrations.png) | Cada origem com o seu status (*Receiving*, *Quiet > 1 h*, *Turned off*, *Never seen*), último evento, incidentes em 24 h e **Show events**. Snippets prontos para copiar (curl, PowerShell, Python, Dynatrace Workflow) e os campos que o app lê. |
-| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | Os oito provedores: *Not configured*, *Configured* ou *Last delivery failed*, contagens de enviados/falhos, **Configure** (ID da entrada do vault, habilitado, parâmetros) e **Send test**. |
+| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | Os nove provedores (oito integrados mais **Custom workflow**), cada um com uma chave **On/Off**: *Not configured*, *Off*, *Configured* ou *Last delivery failed*, contagens de enviados/falhos, **Configure** (ID da entrada do vault ou ID do workflow, parâmetros) e **Send test**. Só pode haver um provedor ativado por canal. |
 | Workflows ![Workflows](../../screenshots/integrations-workflow.png) | Status do motor (*Not installed*, *Installed · simple workflow*, *Update available*, *Installed as a standard workflow…*), a última execução do motor, **Run every**, **Install in Workflows**, **Download JSON**, **Run engine now**, **Refresh**, os passos de configuração e os hosts a liberar. |
 
 Detalhes: [integrações](integrations.md) e [primeiros passos](getting-started.md).
@@ -292,7 +295,10 @@ Detalhes: [integrações](integrations.md) e [primeiros passos](getting-started.
 
 ![Reports](../../screenshots/reports.png)
 
-Construídos a partir de consolidações diárias (mantidas por 90 dias). O intervalo de tempo padrão é os últimos 30 dias.
+O intervalo de tempo padrão é os últimos 30 dias. Os painéis de resposta, volume, equipes e ruído vêm de consolidações
+diárias (mantidas por 90 dias). *Time to acknowledge* e as colunas de fora do horário, noturno e reconhecimentos de
+*On-call load* usam os incidentes ainda presentes no app e o registro de notificações (mantido por 14 dias), então
+cobrem no máximo cerca de 14 dias.
 
 | Painel | Pergunta que responde |
 | --- | --- |
@@ -302,7 +308,7 @@ Construídos a partir de consolidações diárias (mantidas por 90 dias). O inte
 | Incidents per day | *When do incidents arrive, and how urgent are they?* (quando os incidentes chegam, e quão urgentes eles são?) |
 | Incidents by team | *Which teams get the most incidents?* (quais equipes recebem mais incidentes?) |
 | Noisiest services and sources | *Where do incidents come from?* (de onde vêm os incidentes?) (top 10) |
-| Time to acknowledge | Distribuição em minutos (0, 1, 2, 5, 10, 15, 30, 60, 120, 240+) |
+| Time to acknowledge | Distribuição em minutos (faixas a partir de 0, 1, 2, 5, 10, 15, 30, 60 e 120 minutos; a última faixa contém tudo de 120 para cima) |
 | Notification delivery | Proporção de notificações que os provedores aceitaram |
 | On-call load | Por pessoa: horas de plantão, acionamentos, acionamentos fora do horário, acionamentos noturnos (00–06), reconhecimentos, tempo médio para reconhecer |
 

@@ -43,12 +43,11 @@ flowchart LR
 2. Ejecutar las consultas DQL de las fuentes habilitadas (Q1–Q4), normalizar los registros en alertas, deduplicarlas y
    enrutarlas.
 3. Crear o actualizar incidentes, aplicar en orden las acciones de los operadores, terminar las posposiciones que
-   vencen, evaluar las políticas de escalamiento contra los calendarios y planificar las notificaciones en el registro
-   de notificaciones (ledger).
-4. Leer cada secreto de proveedor necesario desde el Credential Vault y enviar. Escribir `sent` o `failed` en el
-   registro de notificaciones.
-5. Reintentar las notificaciones sin resultado (`timeout`), archivar los incidentes resueltos antiguos, actualizar el
-   resumen diario, escribir el heartbeat (`hb.engine`) y liberar el lease.
+   vencen, evaluar las políticas de escalamiento contra los calendarios, planificar las notificaciones y los reintentos
+   (fallidas o sin resultado) en el registro de notificaciones (ledger), archivar los incidentes resueltos antiguos y
+   actualizar el resumen diario. Escribir el heartbeat (`hb.engine`) y liberar el lease.
+4. Leer cada secreto de proveedor necesario desde el Credential Vault y enviar (o ejecutar tu custom workflow).
+   Escribir `sent` o `failed` en el registro de notificaciones.
 
 Toda la lógica de enrutamiento, calendarios, escalamiento y planificación es TypeScript simple en `ui/app/domain/`. La
 UI usa el mismo código, así que lo que muestra la Console justo después de una acción coincide con lo que hará el
@@ -59,7 +58,7 @@ motor.
 | Diseño | Horas de workflow | Invocaciones de función | Veredicto |
 | --- | --- | --- | --- |
 | Versión 2 antes de este cambio: un **standard** workflow `tick` → 8 emisores → `report` | 1 por hora de vida del workflow, haga algo o no | Medido: cerca de 690 por hora (≈ 11.5 por minuto) | Reemplazado |
-| Un **simple** workflow por integración, disparado por eventos | ninguna | Una invocación por notificación, más una ingesta de evento por notificación para dispararlo | Descartado: más invocaciones y más piezas móviles |
+| Un **simple** workflow por integración integrada, disparado por eventos | ninguna | Una invocación por notificación, más una ingesta de evento por notificación para dispararlo | No se usa para los proveedores integrados: no necesitan ningún workflow, y una integración desactivada no tiene nada que instalar. Se ofrece como la integración opcional **Custom workflow**, ejecutada directamente por el motor (sin ingesta de eventos). |
 | **Un simple workflow, una acción, trigger de intervalo** (actual) | **ninguna** | Medido: **1 por ejecución** (60 por hora con 1 minuto) | ✅ |
 
 Fuentes: *Create a simple workflow* ("without consuming workflow hours") y *Workflows concepts* (los simple workflows
@@ -92,7 +91,8 @@ en esa hora, no generó ningún evento de facturación de workflow.
 | Horas de workflow | 0 | 0 | 0 |
 | Consultas a Grail | 1–8 por ejecución (más abajo) | igual | igual |
 
-**Consultas a Grail por ejecución**: Q1 problemas (siempre), Q4 propiedades de eventos de los problemas activos (una
+**Consultas a Grail por ejecución**: Q1 problemas (cuando la fuente Davis problems está activada, el valor
+predeterminado), Q4 propiedades de eventos de los problemas que devolvió Q1 (una
 por cada 100 IDs de eventos, como máximo 5), Q2 eventos de Davis y Q3 eventos genéricos (solo cuando están activados).
 La UI **no** ejecuta DQL: las pestañas abiertas solo leen App State.
 
@@ -164,8 +164,9 @@ fetch dt.davis.events, from: now() - 72h
 
 ## Salud y monitoreo
 
-- **Banner de la Console** y **campana**: el motor está *atrasado* (late) después de dos intervalos más un minuto sin
-  una ejecución (3 minutos con el intervalo predeterminado), o cuando la última ejecución reportó un error.
+- **Banner de la Console**: el motor está *atrasado* (late) después de dos intervalos más un minuto sin una ejecución
+  (3 minutos con el intervalo predeterminado), o cuando la última ejecución reportó un error. La **campana** avisa solo
+  cuando el motor está atrasado.
 - **Integrations → Workflows**: última ejecución, su duración y conteos, el último error y el estado de instalación.
 - **Monitoreo externo**: llama a la función de la app `status`. Devuelve el heartbeat, el lease y los conteos de
   abiertos/triggered (consulta [configuración](configuration.md#funciones-de-la-app-automatización-y-scripts)).
@@ -194,8 +195,10 @@ fetch dt.davis.events, from: now() - 72h
 - **Los datos de contacto son visibles para todos los usuarios de la app.** App State no tiene permisos por clave.
   Avísales a las personas antes de que ingresen números personales. Los correos electrónicos no se almacenan; se leen
   en vivo desde IAM.
-- **El workflow del motor no es privado.** Sus ejecuciones conservan solo metadatos, y la acción devuelve solo conteos,
-  así que no aparecen números de teléfono ni textos de mensajes en Workflows.
+- **El workflow del motor no necesita ser privado.** No expone datos personales: sus ejecuciones conservan solo
+  metadatos y la acción devuelve solo conteos, así que no aparecen números de teléfono ni textos de mensajes en
+  Workflows. Un custom workflow recibe la notificación completa (incluida la dirección) como parámetros de ejecución:
+  decide tú quién puede verla.
 - **El tráfico de salida** está limitado por la lista de hosts permitidos de External requests: permite solo los hosts
   de los proveedores que uses.
 - **Tokens de entrada**: dale a tus herramientas un platform token con solo `openpipeline:events.davis:ingest` (o
@@ -230,13 +233,16 @@ Verificado en un entorno trial (latest Dynatrace):
 - Eventos genéricos a través de `/platform/ingest/v1/events`: trigger y resolve por `cc.dedup_key`.
 - El motor como **simple workflow** con la acción personalizada de la app: todas las ejecuciones exitosas, lecturas de
   App State, Grail y Credential Vault, HTTPS de salida. Facturación: una invocación `ACTION` por ejecución.
+- La integración **Custom workflow**: una prueba y un escalamiento programado ejecutaron un simple workflow con una
+  tarea HTTP request, y la expresión `{{ execution().params | to_json }}` entregó el JSON completo de la notificación.
 - Funciones de la app `engine-run`, `config` (export, import, dry run), `status` e `incidents`. Notebooks de war rooms
   creados a través de la Document API.
 
 No verificado, o solo en parte:
 
 - Emisores de **Twilio, IFTTT, Slack, Microsoft Teams y Telegram**: implementados a partir de la documentación de los
-  proveedores y con pruebas unitarias, no ejercitados en vivo.
+  proveedores, no ejercitados en vivo. Las pruebas unitarias cubren las solicitudes de Twilio SMS y voz, Slack y
+  Telegram.
 - **Install in Workflows** (intent) y el **Upload** del JSON en la app Workflows: no los recorrimos haciendo clic
   nosotros. La instalación por API de la misma definición está verificada.
 - **Permisos mínimos** del actor del workflow: en el entorno trial se habilitaron todos los permisos.

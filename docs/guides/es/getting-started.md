@@ -38,7 +38,8 @@ ejercitado allí por la funcionalidad de la segunda columna.
 | `storage:events:read` | El motor lee `dt.davis.problems`, `dt.davis.events` y `events` | [Grail permissions](https://docs.dynatrace.com/docs/platform/grail/organize-data/assign-permissions-in-grail) |
 | `state:app-states:read` / `:write` / `:delete` | Configuración, incidentes, acciones de los operadores, registro de notificaciones (App State) | Referencia del SDK `@dynatrace-sdk/client-state` ("Required scope" de cada llamada), [State management API](https://docs.dynatrace.com/docs/dynatrace-api/platform-api/platform-state-management-v1) |
 | `iam:users:read` | Búsqueda de miembros de equipo y nombres para mostrar | [IAM API: get users](https://docs.dynatrace.com/docs/dynatrace-api/platform-api/platform-iam-v1/organizational-levels-level-type-level-id-users-get) |
-| `automation:workflows:read` | Integrations → Workflows: estado de instalación del workflow del motor | [Workflows security](https://docs.dynatrace.com/docs/analyze-explore-automate/workflows/security) |
+| `automation:workflows:read` | Integrations → Workflows: estado de instalación del workflow del motor; encontrar tu custom workflow | [Workflows security](https://docs.dynatrace.com/docs/analyze-explore-automate/workflows/security) |
+| `automation:workflows:run` | La integración **Custom workflow**: el motor ejecuta tu workflow una vez por notificación | [Workflows security](https://docs.dynatrace.com/docs/analyze-explore-automate/workflows/security) |
 | `document:documents:read` | War rooms: listar notebooks para adjuntar | [Document SDK](https://developer.dynatrace.com/develop/sdks/client-document/) |
 | `document:documents:write` | War rooms: crear el notebook de post-mortem | Referencia del SDK `@dynatrace-sdk/client-document` ("Required scope" de `createDocument`) |
 | `credential-vault:entries:read` | El motor lee los secretos de los proveedores cuando envía | [Credential Vault API](https://docs.dynatrace.com/docs/dynatrace-api/platform-api/platform-credential-vault-v1/entries-entry-id-get) |
@@ -50,8 +51,6 @@ ejercitado allí por la funcionalidad de la segunda columna.
   misma**. El paso 5 muestra la alternativa de un clic.
 - Ningún scope de ingesta: la app nunca escribe en Grail. Tus herramientas envían eventos con su propio token (consulta
   la [referencia de alertas](alerts-reference.md)).
-- `automation:workflows:run`: ya no es necesario. Las ejecuciones manuales del motor llaman a la función propia de la
-  app `engine-run`.
 
 **Permisos de usuario.** Un scope de la app no basta por sí solo. La app actúa con los permisos de cada **usuario**,
 así que los usuarios también necesitan políticas de IAM que otorguen los mismos permisos (lectura de Grail, App State,
@@ -110,7 +109,7 @@ tres opciones:
 | Opción | Cómo | Estado |
 | --- | --- | --- |
 | **A. Install in Workflows** | Abre la app Workflows con el workflow ya completado (intent "create workflow" de Workflows). Revísalo, guárdalo y despliégalo. | El payload del intent documentado por Dynatrace tiene título, tareas y trigger, pero **ningún tipo de workflow**. Si el nuevo workflow queda como un *standard* workflow, la pestaña Workflows muestra una advertencia. En ese caso elimínalo y usa B o C. |
-| **B. Download JSON** | App Workflows → **Upload** → el archivo descargado. El archivo contiene `"type": "SIMPLE"`. | Es la misma definición que se creó mediante la Automation API y se ejecutó en el entorno trial. El botón de carga en sí no fue ejercitado. |
+| **B. Download JSON** | App Workflows → **Upload** → el archivo descargado. El archivo contiene `"type": "SIMPLE"` y el intervalo que elegiste. | Es la misma definición que se creó mediante la Automation API y se ejecutó en el entorno trial. El botón de carga en sí no fue ejercitado. |
 | **C. Script de administración** | `DT_ENVIRONMENT=https://YOUR-ENVIRONMENT.apps.dynatrace.com DT_PLATFORM_TOKEN=… node scripts/install-workflow.mjs --interval 1` (token con `automation:workflows:read` y `automation:workflows:write`). Idempotente; `--dry-run` imprime el JSON. | Verificado en el entorno trial: un simple workflow, ejecutándose cada minuto, todas las ejecuciones exitosas. |
 
 Luego:
@@ -119,8 +118,8 @@ Luego:
    usuario de servicio. La acción del motor lee Grail, App State y el Credential Vault con los permisos del actor.
 2. **Authorization settings.** En la app Workflows → **Settings → Authorization settings**, habilita para el actor los
    permisos que usa el motor: `storage:buckets:read`, `storage:events:read`, `state:app-states:read`,
-   `state:app-states:write`, `state:app-states:delete` y `credential-vault:entries:read`. En el entorno trial se
-   habilitaron todos los permisos para el actor, así que el conjunto mínimo no se aisló.
+   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` y, si usas la integración
+   Custom workflow, `automation:workflows:run`. En el entorno trial se habilitaron todos los permisos para el actor, así que el conjunto mínimo no se aisló.
 3. De vuelta en Command Center selecciona **Refresh**. Si el workflow se encontró por su título, selecciona **Save this
    ID**. El estado se pone en verde (**Installed · simple workflow**) y **Last engine run** se actualiza dentro de un
    intervalo.
@@ -130,8 +129,10 @@ propios permisos. Úsalo para probar sin esperar a la programación.
 
 ## Paso 6 — Configurar los proveedores
 
-**Integrations → Outbound** → abre un proveedor. Pega el ID de la entrada del vault, completa los parámetros no
-secretos y actívalo. Luego usa **Send test notification** hacia una dirección.
+**Integrations → Outbound**: cada tarjeta de proveedor tiene un interruptor **On/Off**, y solo se usan los proveedores
+que están activados. Al activar uno por primera vez se abre **Configure**: pega el ID de la entrada del vault, completa
+los parámetros no secretos y guarda. Luego usa **Send test** con una dirección. Puede haber un solo proveedor activado
+por canal.
 
 | Proveedor | Parámetros |
 | --- | --- |
@@ -139,6 +140,7 @@ secretos y actívalo. Luego usa **Send test notification** hacia una dirección.
 | IFTTT | *Event name* (predeterminado `command_center_alert`) |
 | Slack, Microsoft Teams, Telegram | ninguno |
 | Webhook genérico | *Auth header name* (opcional). El valor del header es el password de una entrada username/password. |
+| Custom workflow | *Workflow ID* de un workflow que es tuyo (consulta [integraciones](integrations.md#custom-workflow)). Sin entrada del vault. |
 
 ## Paso 7 — Personas, calendarios, políticas y enrutamiento
 
@@ -150,7 +152,7 @@ secretos y actívalo. Luego usa **Send test notification** hacia una dirección.
 3. **On-call → Schedules** → capas, rotación, hora de traspaso y zona horaria. La vista previa de cobertura muestra los
    huecos.
 4. **Escalations** → una política, por ejemplo: paso 1 la persona de guardia del calendario después de 0 minutos,
-   paso 2 el equipo completo después de 10 minutos, repetir una vez. **Simulate** muestra a quién se notifica y cuándo.
+   paso 2 el equipo completo después de 10 minutos, repetir una vez. La sección **Simulation** muestra a quién se notifica y cuándo.
 5. **Services** → un servicio con un equipo propietario, una política y una prioridad predeterminada. Luego agrega
    **routing rules** y usa **Test a rule**.
 6. **Settings → Routing defaults** → el equipo y la política que se usan cuando nada más decide.

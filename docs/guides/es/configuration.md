@@ -3,8 +3,9 @@
 🌐 [English](../en/configuration.md) · [Português (BR)](../pt-BR/configuration.md) · **Español**
 
 Los ajustes son **para toda la app**: un cambio se aplica a todos los usuarios de la app en el entorno. Las únicas
-excepciones son los elementos marcados como *this browser* (este navegador). Cada sección de **Settings** tiene su
-propio botón **Save**. La validación se ejecuta antes de guardar y señala el campo que hay que corregir.
+excepciones son los elementos marcados como *this browser* (este navegador), que se guardan de inmediato. Las secciones
+General, Event sources, Routing defaults, Paging engine y Data retention tienen cada una su propio botón **Save**. La
+validación se ejecuta antes de guardar e indica el nombre del campo que hay que corregir.
 
 ![Settings](../../screenshots/settings.png)
 
@@ -54,8 +55,8 @@ El mapeo de prioridad por severidad y categoría se edita en **Services → Prio
 | Ajuste | Predeterminado | Rango | Efecto |
 | --- | --- | --- | --- |
 | Engine enabled | On | | Off pausa **todos** los avisos. El motor sigue ejecutándose según la programación pero no hace nada. |
-| Engine workflow ID | Lo completa Integrations → Workflows | UUID | Permite que la pestaña Workflows encuentre y vincule el workflow. El intervalo (1, 2 o 5 minutos) se elige al instalar. |
-| Max notifications per run | 100 | 1–1000 | Las notificaciones que superan este valor se vuelven a planificar en la siguiente ejecución |
+| Engine workflow ID | Lo completa Integrations → Workflows | UUID | Permite que la pestaña Workflows encuentre y vincule el workflow. El intervalo (1, 2 o 5 minutos) se elige al instalar; la app lo vuelve a leer del workflow instalado. |
+| Max notifications per run | 100 | 1–500 | Las notificaciones que superan este valor se vuelven a planificar en la siguiente ejecución |
 | Delivery report timeout (seconds) | 180 | 30–3600 | Una notificación sin resultado de entrega después de este tiempo se marca como *timeout* y se reintenta |
 | Delivery attempts | 3 | 1–10 | Intentos por notificación antes de que se marque como fallida |
 | Engine lock lease (seconds) | 130 | 30–180 | Evita que dos ejecuciones avisen dos veces. El motor siempre usa un valor entre 130 y 180. |
@@ -67,17 +68,20 @@ El mapeo de prioridad por severidad y categoría se edita en **Services → Prio
 | Keep resolved incidents visible (hours) | 24 | 1–720 | Después el incidente se archiva y sale de la Console |
 | Archive resolved incidents for (days) | 30 | 1–90 | Cuánto tiempo se conservan los incidentes archivados. App State permite como máximo 90 días. |
 
-La sección muestra el uso estimado de App State de la app. App State permite 50 MB por app; el motor lo mide en cada
-ejecución.
+La sección muestra una estimación del App State que usan los datos cargados en esta página (excluidos los
+incidentes archivados). App State permite 50 MB por app.
 
 ## Export and import
 
 - **Export configuration** descarga como JSON los ajustes, equipos, calendarios, políticas, servicios, reglas de
   enrutamiento y contactos. No se incluyen incidentes, war rooms ni historial.
 - **Import configuration** valida primero el archivo completo, incluidas las referencias entre las entidades. Si algo
-  está mal, no se escribe nada y obtienes la lista de errores. La importación **agrega o actualiza por ID** y nunca
-  elimina; los ajustes se fusionan con los ajustes actuales.
-- El archivo contiene números de teléfono y chat IDs: guárdalo como datos personales.
+  está mal, no se escribe nada y obtienes la lista de errores. Los equipos, calendarios, políticas, servicios y contactos
+  se **agregan o actualizan por ID** y nunca se eliminan. Las reglas de enrutamiento del archivo **reemplazan** las
+  reglas actuales, y una lista de proveedores en el archivo reemplaza los proveedores actuales. Los demás ajustes se
+  fusionan.
+- El archivo contiene números de teléfono, chat IDs e IDs de entradas del Credential Vault en texto plano: guárdalo como
+  datos personales.
 - **Legacy data** (datos heredados): la versión 1 guardaba los reconocimientos en la clave de App State `problem-ack-states`. La
   versión 2 no la lee, y este botón la elimina.
 

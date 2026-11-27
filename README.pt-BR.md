@@ -35,7 +35,7 @@ e usando o **Strato**, o design system da Dynatrace.
 | **Console** | Tabela de incidentes ao vivo com tiles de KPI, filtros, ações em massa e atalhos de teclado; detalhes do incidente com linha do tempo, progresso do escalonamento, registro de notificações, entidades e notas. |
 | **Plantão** | Equipes de **usuários do Dynatrace** (escolhidos no IAM), escalas em camadas com rodízio e substituições (overrides), políticas de escalonamento com passos e repetições, métodos de contato pessoais, regras de notificação e quiet hours (horário de silêncio) por equipe. |
 | **War rooms** | Um link de reunião mais os incidentes que ela trata e os seus Dynatrace Notebooks, incluindo um notebook de post-mortem gerado. |
-| **Saída** | Um único **simple workflow** (*Command Center · Engine*) executa a ação do próprio app a cada 1, 2 ou 5 minutos. Ele não consome workflow hours. |
+| **Saída** | Um único **simple workflow** (*Command Center · Engine*) executa a ação do próprio app a cada 1, 2 ou 5 minutos e não consome workflow hours. Cada integração tem uma chave On/Off; uma integração **Custom workflow** entrega as notificações a um workflow pré-preenchido que é seu e que você edita. |
 | **Armazenamento** | Dynatrace App State. Nenhum banco de dados externo. Os segredos dos provedores ficam no Credential Vault. |
 | **Modo demo** | Por navegador: dados de exemplo em todo lugar, nada é lido nem escrito, nada é enviado. Desativado: somente dados reais. |
 
@@ -68,7 +68,7 @@ Também disponível em inglês em [docs/guides/en](docs/guides/en/) e em espanho
 | Manutenção e quiet hours | Janelas de manutenção do Davis suprimem o acionamento (configurável); as quiet hours da equipe retêm ou rebaixam acionamentos menos urgentes |
 | War rooms / pontes | Link de reunião, incidentes vinculados, notebooks, modelo de post-mortem |
 | Relatórios | MTTA, MTTR, volume, ruído, entrega, carga de plantão |
-| Integrações de saída | Remetentes integrados mais um webhook JSON genérico para todo o resto |
+| Integrações de saída | Remetentes integrados, um webhook JSON genérico e um custom workflow seu para todo o resto |
 
 Não implementado: reconhecimento bidirecional por respostas de SMS ou chat, um app móvel, status pages e permissões
 por usuário aplicadas no servidor.
@@ -86,7 +86,8 @@ Depois, no app:
 1. **Integrations → Workflows** → escolha o intervalo → **Install in Workflows** (ou **Download JSON** e faça o upload
    do arquivo). Habilite as **Authorization settings** do Workflows para o ator.
 2. Entradas do **Credential Vault** para os seus provedores. Adicione os hosts deles em **External requests**.
-3. **Integrations → Outbound** → configure um provedor → **Send test notification**.
+3. **Integrations → Outbound** → ative os provedores que você usa (Twilio, IFTTT, Slack, Teams, Telegram, webhook ou
+   o seu próprio custom workflow) → **Send test**.
 4. **Teams**, **On-call**, **Escalations**, **Services** → pessoas, escalas, uma política, roteamento.
 5. Envie um evento (o token precisa de `openpipeline:events.davis:ingest`):
 
@@ -107,7 +108,8 @@ Cada passo em detalhe: [primeiros passos](docs/guides/pt-BR/getting-started.md).
 | `storage:events:read` | Ler `dt.davis.problems`, `dt.davis.events`, `events` |
 | `state:app-states:read` / `:write` / `:delete` | Configuração, incidentes, ações, registro de notificações |
 | `iam:users:read` | Busca de membros de equipe e nomes |
-| `automation:workflows:read` | Status de instalação do workflow do motor |
+| `automation:workflows:read` | Status de instalação do workflow do motor; encontrar o seu custom workflow |
+| `automation:workflows:run` | Integração Custom workflow: executar o seu workflow uma vez por notificação |
 | `document:documents:read` / `:write` | War rooms: anexar notebooks, criar o notebook de post-mortem |
 | `credential-vault:entries:read` | O motor lê os segredos dos provedores quando envia |
 

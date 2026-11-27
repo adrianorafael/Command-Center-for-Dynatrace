@@ -3,8 +3,9 @@
 🌐 [English](../en/configuration.md) · **Português (BR)** · [Español](../es/configuration.md)
 
 As configurações valem **para o app inteiro**: uma alteração se aplica a todos os usuários do app no ambiente. As
-únicas exceções são os itens marcados como *this browser* (este navegador). Cada seção de **Settings** tem o seu
-próprio botão **Save**. A validação roda antes de salvar e aponta o campo que precisa de correção.
+únicas exceções são os itens marcados como *this browser* (este navegador), que são salvos imediatamente. As seções
+General, Event sources, Routing defaults, Paging engine e Data retention têm cada uma o seu próprio botão **Save**. A
+validação roda antes de salvar e indica o campo que precisa de correção.
 
 ![Settings](../../screenshots/settings.png)
 
@@ -54,8 +55,8 @@ O mapeamento de prioridade por severidade e categoria é editado em **Services �
 | Configuração | Padrão | Faixa | Efeito |
 | --- | --- | --- | --- |
 | Engine enabled | On | | Off pausa **todos** os acionamentos. O motor continua rodando no agendamento, mas não faz nada. |
-| Engine workflow ID | Preenchido por Integrations → Workflows | UUID | Permite que a aba Workflows encontre e vincule o workflow. O intervalo (1, 2 ou 5 minutos) é escolhido na instalação. |
-| Max notifications per run | 100 | 1–1000 | Notificações além disso são planejadas novamente na execução seguinte |
+| Engine workflow ID | Preenchido por Integrations → Workflows | UUID | Permite que a aba Workflows encontre e vincule o workflow. O intervalo (1, 2 ou 5 minutos) é escolhido na instalação; o app o lê de volta a partir do workflow instalado. |
+| Max notifications per run | 100 | 1–500 | Notificações além disso são planejadas novamente na execução seguinte |
 | Delivery report timeout (seconds) | 180 | 30–3600 | Uma notificação sem resultado de entrega após esse tempo é marcada como *timeout* e tentada novamente |
 | Delivery attempts | 3 | 1–10 | Tentativas por notificação antes de ela ser marcada como falha |
 | Engine lock lease (seconds) | 130 | 30–180 | Impede que duas execuções acionem duas vezes. O motor sempre usa um valor entre 130 e 180. |
@@ -67,17 +68,19 @@ O mapeamento de prioridade por severidade e categoria é editado em **Services �
 | Keep resolved incidents visible (hours) | 24 | 1–720 | Depois disso o incidente é arquivado e sai do Console |
 | Archive resolved incidents for (days) | 30 | 1–90 | Por quanto tempo os incidentes arquivados são mantidos. O App State permite no máximo 90 dias. |
 
-A seção mostra o uso estimado de App State do app. O App State permite 50 MB por app; o motor mede isso a cada
-execução.
+A seção mostra uma estimativa do App State usado pelos dados carregados nesta página (arquivos excluídos). O App State
+permite 50 MB por app.
 
 ## Export and import (exportar e importar)
 
 - **Export configuration** baixa configurações, equipes, escalas, políticas, serviços, regras de roteamento e contatos
   como JSON. Incidentes, war rooms e histórico não são incluídos.
 - **Import configuration** valida o arquivo inteiro primeiro, incluindo as referências entre as entidades. Se algo
-  estiver errado, nada é gravado e você recebe a lista de erros. A importação **adiciona ou atualiza por ID** e nunca
-  exclui; as configurações são mescladas às configurações atuais.
-- O arquivo contém números de telefone e chat IDs: guarde-o como dado pessoal.
+  estiver errado, nada é gravado e você recebe a lista de erros. Equipes, escalas, políticas, serviços e contatos são
+  **adicionados ou atualizados por ID** e nunca excluídos. As regras de roteamento do arquivo **substituem** as regras
+  atuais, e uma lista de provedores no arquivo substitui os provedores atuais. As demais configurações são mescladas.
+- O arquivo contém números de telefone, chat IDs e IDs de entradas do Credential Vault em texto puro: guarde-o como
+  dado pessoal.
 - **Legacy data**: a versão 1 armazenava os reconhecimentos na chave de App State `problem-ack-states`. A versão 2 não
   a lê, e este botão a exclui.
 
