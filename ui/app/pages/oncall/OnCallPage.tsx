@@ -1,6 +1,6 @@
 /** On-call (route `/on-call`): who is on call now, the shifts of one week (`?week=`), schedules and overrides. */
 import { markCreated } from "../../components/NewItemHighlight";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface, Container } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -159,6 +159,14 @@ const ShiftsByWeek = ({ schedules }: { schedules: Schedule[] }) => {
   const todayKey = formatCivilDate(civilDate(now, tz));
   const [workdaysOnly, setWorkdaysOnly] = useState(() => readPrefs().shiftsWorkdaysOnly);
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({});
+  // The picker shows the date that was picked; when the week changes some other way (buttons,
+  // link) it falls back to the week's Sunday.
+  const [picked, setPicked] = useState<string | null>(() => civilDateToPickerIso(week));
+  useEffect(() => {
+    const d = pickedCivilDate(picked, browserTimeZone());
+    if (!d || formatCivilDate(weekStartOfDate(d)) !== weekKey) setPicked(civilDateToPickerIso(week));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekKey]);
   // weekKey (a string) instead of `week` (a new object every render) keeps the memo stable.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const days = useMemo(() => weekDays(week, tz, workdaysOnly), [weekKey, tz, workdaysOnly]);
@@ -205,9 +213,12 @@ const ShiftsByWeek = ({ schedules }: { schedules: Schedule[] }) => {
           <DateTimePicker
             type="date"
             aria-label="Go to the week of a date"
-            value={civilDateToPickerIso(week)}
+            value={picked}
             onChange={(v) => {
               const d = pickedCivilDate(v, browserTimeZone());
+              // Keep what the person typed: forcing the week's Sunday back in on every keystroke
+              // would overwrite the segments they are still editing.
+              setPicked(d ? (typeof v === "string" ? v : (v?.absoluteDate ?? null)) : civilDateToPickerIso(week));
               if (d) goTo(d);
             }}
           />

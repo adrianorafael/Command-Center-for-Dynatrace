@@ -57,7 +57,12 @@ const { buildPostmortemNotebook, postmortemNotebookName, demoSeed } = mod;
 const seed = demoSeed(Date.now());
 const room = seed.map((s) => s.value).find((v) => v && v.id === ROOM && Array.isArray(v.incidentIds));
 if (!room) throw new Error(`demo war room "${ROOM}" not found`);
-const incidents = new Map(seed.map((s) => s.value).filter((v) => v && v.alert).map((i) => [i.id, i]));
+const incidents = new Map(
+  seed
+    .map((s) => s.value)
+    .filter((v) => v && v.alert)
+    .map((i) => [i.id, i]),
+);
 const ids = room.incidentIds.map((id) => incidents.get(id)?.alert.displayId).filter(Boolean);
 const title = room.title.trim() || "War room";
 let n = 0;
@@ -66,7 +71,10 @@ const name = postmortemNotebookName(title, ids);
 
 // Minimal markdown for the constructs the template uses: headings, paragraphs, _emphasis_, tables, task lists.
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\b_([^_]+)_\b/g, "<em>$1</em>");
+const inline = (s) =>
+  esc(s)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\b_([^_]+)_\b/g, "<em>$1</em>");
 function markdown(src) {
   const out = [];
   const blocks = src.split(/\n{2,}/);
@@ -78,11 +86,25 @@ function markdown(src) {
     if (h && lines.length === 1) {
       out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`);
     } else if (lines.every((l) => l.trim().startsWith("|"))) {
-      const cells = (l) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const cells = (l) =>
+        l
+          .trim()
+          .replace(/^\||\|$/g, "")
+          .split("|")
+          .map((c) => c.trim());
       const [head, , ...body] = lines;
       out.push(
-        `<table><thead><tr>${cells(head).map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>` +
-          body.map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c) || "&nbsp;"}</td>`).join("")}</tr>`).join("") +
+        `<table><thead><tr>${cells(head)
+          .map((c) => `<th>${inline(c)}</th>`)
+          .join("")}</tr></thead><tbody>` +
+          body
+            .map(
+              (r) =>
+                `<tr>${cells(r)
+                  .map((c) => `<td>${inline(c) || "&nbsp;"}</td>`)
+                  .join("")}</tr>`,
+            )
+            .join("") +
           "</tbody></table>",
       );
     } else if (lines.every((l) => /^\s*- /.test(l))) {
@@ -110,12 +132,14 @@ const sections = notebook.sections
     if (s.type === "markdown") {
       const body = markdown(s.markdown);
       const empty = /^#+ .*$/.test(s.markdown.trim()) || /^\s*$/.test(s.markdown);
-      return `<section>${head}${body}${empty ? '<p class="hint">(left empty for the team to fill in)</p>' : ""}</section>`;
+      return `<section>${head}${body}${empty ? '<p class="note">Renderer note: the template leaves this section empty for the team to fill in.</p>' : ""}</section>`;
     }
     if (s.type === "dql") {
       const tf = s.state?.input?.timeframe;
-      return `<section class="dql">${head}<pre><code>${esc(s.state?.input?.value ?? "")}</code></pre>` +
-        `<p class="hint">Timeframe ${esc(tf?.from ?? "")} → ${esc(tf?.to ?? "")}. Runs against Grail when the notebook is opened in Dynatrace; not executed here, no results shown.</p></section>`;
+      return (
+        `<section class="dql">${head}<pre><code>${esc(s.state?.input?.value ?? "")}</code></pre>` +
+        `<p class="note">Renderer note: timeframe ${esc(tf?.from ?? "")} → ${esc(tf?.to ?? "")}. Runs against Grail when the notebook is opened in Dynatrace; not executed here, no results shown.</p></section>`
+      );
     }
     return `<section>${head}<pre><code>${esc(JSON.stringify(s, null, 2))}</code></pre></section>`;
   })
@@ -141,7 +165,8 @@ const html = `<!doctype html>
   .kind span { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--border); color: var(--text); font-size: 11px; }
   h1 { font-size: 24px; margin: 6px 0 6px; } h2 { font-size: 18px; margin: 6px 0 4px; }
   p { margin: 4px 0; } em { color: var(--dim); }
-  .hint { color: var(--dim); font-size: 12.5px; font-style: italic; }
+  /* Notes added by this renderer (not part of the notebook): set apart from the template's own text. */
+  .note { margin-top: 10px; padding-top: 6px; border-top: 1px dashed var(--border); color: #7f8aa6; font: 11.5px/1.4 ui-monospace, Menlo, Consolas, monospace; }
   table { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 14px; }
   th, td { border: 1px solid var(--border); padding: 5px 10px; text-align: left; }
   ul { list-style: none; padding: 0; margin: 6px 0; }
