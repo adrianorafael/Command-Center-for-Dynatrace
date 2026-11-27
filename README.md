@@ -126,12 +126,14 @@ app. The documentation link for each scope is in [getting started](docs/guides/e
 | Item | 1-minute interval | 2 minutes | 5 minutes |
 | --- | --- | --- | --- |
 | Engine runs (one function invocation each) per month | ≈ 43,200 | ≈ 21,600 | ≈ 8,640 |
+| Integration workflow runs (one function invocation each) | one per notification of an integration that has its own workflow | same | same |
 | Workflow hours | 0 | 0 | 0 |
 | Grail queries per run | 1–8 | 1–8 | 1–8 |
 
 Measured on a trial environment: the previous standard-workflow engine used about **690 function invocations per hour
 plus one workflow hour per hour**. The simple-workflow engine uses **1 invocation per run** (60 per hour at a 1-minute
-interval) and no workflow hours. The UI runs no DQL. The queries, the drivers and how to measure them in your own
+interval) and no workflow hours. An integration with its own workflow adds one invocation per notification, whatever
+trigger that workflow has; without one, the engine sends directly at no extra invocation. The UI runs no DQL. The queries, the drivers and how to measure them in your own
 environment are in the [operations guide](docs/guides/en/operations.md#cost-and-consumption).
 
 ## Development

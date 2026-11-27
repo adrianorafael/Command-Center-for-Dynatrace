@@ -127,12 +127,15 @@ Workflows. O link da documentação de cada escopo está em
 | Item | Intervalo de 1 minuto | 2 minutos | 5 minutos |
 | --- | --- | --- | --- |
 | Execuções do motor (uma invocação de função cada) por mês | ≈ 43.200 | ≈ 21.600 | ≈ 8.640 |
+| Execuções de workflows de integração (uma invocação de função cada) | uma por notificação de uma integração que tem workflow próprio | igual | igual |
 | Workflow hours | 0 | 0 | 0 |
 | Consultas ao Grail por execução | 1–8 | 1–8 | 1–8 |
 
 Medido em um ambiente trial: o motor anterior, baseado em workflow standard, usava cerca de **690 invocações de função
 por hora mais uma workflow hour por hora**. O motor baseado em simple workflow usa **1 invocação por execução** (60 por
-hora em um intervalo de 1 minuto) e nenhuma workflow hour. A UI não executa DQL. As consultas, os fatores de custo e
+hora em um intervalo de 1 minuto) e nenhuma workflow hour. Uma integração com workflow próprio acrescenta uma invocação
+por notificação, seja qual for o gatilho desse workflow; sem ele, o motor envia diretamente, sem invocação extra. A UI
+não executa DQL. As consultas, os fatores de custo e
 como medi-los no seu próprio ambiente estão no [guia de operações](docs/guides/pt-BR/operations.md#custo-e-consumo).
 
 ## Desenvolvimento

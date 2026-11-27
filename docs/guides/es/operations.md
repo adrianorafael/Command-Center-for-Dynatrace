@@ -58,7 +58,7 @@ motor.
 | Diseño | Horas de workflow | Invocaciones de función | Veredicto |
 | --- | --- | --- | --- |
 | Versión 2 antes de este cambio: un **standard** workflow `tick` → 8 emisores → `report` | 1 por hora de vida del workflow, haga algo o no | Medido: cerca de 690 por hora (≈ 11.5 por minuto) | Reemplazado |
-| Un **simple** workflow por integración, ejecutado por el motor por cada notificación (actual, adicional) | ninguna | Una ejecución de workflow adicional por cada notificación de esa integración | ✅ Cada integración activada obtiene su propio workflow (una confirmación). El motor sigue leyendo las alertas y escalando; entrega cada notificación al workflow de la integración y recurre a un envío directo cuando ese workflow no se puede ejecutar. |
+| Un **simple** workflow por integración, ejecutado por el motor por cada notificación (actual, adicional) | ninguna | Medido: **1 por notificación** de esa integración (la tarea del workflow), incluidos los envíos que fallan | ✅ Cada integración activada obtiene su propio workflow (una confirmación). El motor sigue leyendo las alertas y escalando; entrega cada notificación al workflow de la integración y recurre a un envío directo cuando ese workflow no se puede ejecutar. |
 | **Un simple workflow, una acción, trigger de intervalo** (actual) | **ninguna** | Medido: **1 por ejecución** (60 por hora con 1 minuto) | ✅ |
 
 Fuentes: *Create a simple workflow* ("without consuming workflow hours") y *Workflows concepts* (los simple workflows
@@ -80,6 +80,30 @@ Horas de workflow, a partir de los eventos de facturación `Automation Workflow`
 facturó el simulador de alertas (un standard workflow). El motor basado en simple workflow, que se ejecutó cada minuto
 en esa hora, no generó ningún evento de facturación de workflow.
 
+### Por qué los workflows de integración se inician bajo demanda
+
+El workflow del motor tiene un disparador de intervalo. Los workflows de integración y el custom workflow tienen el
+disparador **On demand**: el motor los inicia por la API de Workflows y pasa la notificación como parámetros de la
+ejecución. La documentación de Dynatrace describe *On demand* como el disparador para un workflow que "should run
+exclusively via API" (debe ejecutarse exclusivamente por API).
+
+Un **disparador de evento** (*Problem*, *Davis event* o *Event*) solo se activa cuando se ingiere un evento que
+coincide. Un aviso es una decisión del motor (quién está de guardia, qué paso del escalamiento, todavía sin
+reconocer), no un evento que Dynatrace produce. Con un disparador de evento, el motor tendría que ingerir primero un
+evento por notificación, con el destinatario y el texto.
+
+El disparador no cambia el costo. Cada ejecución corre su tarea como una llamada de función, sea cual sea el
+disparador. La documentación de licenciamiento de Dynatrace da el ejemplo de un simple workflow que notifica en cada
+problema nuevo: ninguna hora de workflow, una llamada de función por notificación. Medido en el entorno trial: la
+acción *Send Command Center notification* de la app y la acción *HTTP request* de la propia Dynatrace (el ejemplo del
+custom workflow) se facturaron con una invocación por ejecución cada una, incluidos los envíos que fallaron. La
+llamada de API que inicia una ejecución no generó un evento de facturación propio.
+
+Una integración sin workflow propio la envía directamente el motor, dentro de la ejecución que ya está haciendo, sin
+invocación adicional. El workflow propio agrega una invocación por notificación. A cambio, cada entrega es una
+ejecución que puedes ver en la app Workflows, y los envíos no comparten el límite de tiempo de la ejecución del motor
+(100 segundos; lo que no se envía a tiempo espera a una ejecución posterior).
+
 ## Costo y consumo
 
 > Lee esto antes de ejecutar la app en producción. El motor se ejecuta todo el día, independientemente de cuántas
@@ -90,7 +114,11 @@ en esa hora, no generó ningún evento de facturación de workflow.
 | Ejecuciones del motor = invocaciones de función (`ACTION`) | ≈ 43,200 | ≈ 21,600 | ≈ 8,640 |
 | Horas de workflow | 0 | 0 | 0 |
 | Consultas a Grail | 1–8 por ejecución (más abajo) | igual | igual |
-| Ejecuciones de workflows de integración | una por notificación de una integración vinculada | igual | igual |
+| Ejecuciones de workflows de integración = invocaciones de función (`ACTION`) | una por notificación de una integración que tiene workflow propio, incluidos los envíos que fallan y los reintentos | igual | igual |
+
+Una invocación es una llamada de función de hasta 60 segundos; una llamada que dura de 61 a 120 segundos cuenta como
+dos (documentación de licenciamiento de Dynatrace). Las ejecuciones del motor medidas en el entorno trial duraron de
+3 a 10 segundos.
 
 **Consultas a Grail por ejecución**: Q1 problemas (cuando la fuente Davis problems está activada, el valor
 predeterminado), Q4 propiedades de eventos de los problemas que devolvió Q1 (una
@@ -115,7 +143,10 @@ Cómo medir en tu entorno:
   disparar otras capacidades facturables: aquí, las invocaciones de función y las consultas a Grail.
 
 Cómo reducir el costo: mantén Q2 y Q3 desactivadas a menos que envíes eventos que no abren problemas; reduce el
-look-back; elige un intervalo de 2 o 5 minutos si las demoras de tus escalamientos son largas.
+look-back; elige un intervalo de 2 o 5 minutos si las demoras de tus escalamientos son largas. Una integración no cuesta
+invocación adicional mientras no tiene workflow propio: no crees ese workflow (cierra la app Workflows cuando se
+abra), o elimínalo ahí y selecciona *Unlink* en la configuración de la integración. Mientras exista un workflow
+llamado *Command Center · <integración>*, la pestaña Outbound lo vuelve a vincular.
 
 **Las consultas** (`ui/app/data/dql.ts`, todas ejecutadas en el entorno trial):
 
