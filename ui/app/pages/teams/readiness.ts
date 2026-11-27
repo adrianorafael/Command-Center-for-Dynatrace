@@ -101,6 +101,8 @@ export interface DeliveryIssue {
   /** In-app path that fixes it. */
   to: string;
   action: string;
+  /** True when nothing can be sent until this is fixed; false when only some channels are affected. */
+  all: boolean;
 }
 
 /**
@@ -118,9 +120,10 @@ export function deliveryIssues(team: Team, data: AppData, demo: boolean): Delive
       text: `No provider is switched on for ${off.map((c) => CHANNEL_LABEL[c]).join(", ")}: these messages can't be sent yet.`,
       to: "/integrations?tab=outbound",
       action: "Open Integrations",
+      all: off.length === used.size,
     });
   // Demo mode has no engine to install.
   if (!demo && !data.heartbeat)
-    issues.push({ text: "The paging engine has not run yet: install its workflow.", to: "/integrations?tab=workflows", action: "Install the engine" });
+    issues.push({ text: "The paging engine has not run yet: install its workflow.", to: "/integrations?tab=workflows", action: "Install the engine", all: true });
   return issues;
 }

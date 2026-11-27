@@ -201,6 +201,7 @@ fetch dt.davis.events, from: now() - 72h
 | Workflows tab: *Installed as a standard workflow* | The create-workflow intent has no type field. Delete that workflow and upload the downloaded JSON, or run `scripts/install-workflow.mjs`. |
 | Workflows tab: *Update available* | The app was upgraded. Reinstall, then delete the old workflow. |
 | No incidents appear | Settings → Event sources; check that the event reached Grail (`fetch dt.davis.events` in a Notebook) and that its type opens a problem. Otherwise turn on the Davis events source. |
+| An incident has no team and nobody was paged | No routing rule matched and there is no default team. Davis problems carry no team. Open the team and select *Receive all unrouted alerts* in its **Ready to page?** checklist (or set Settings → Routing defaults), or add a routing rule. The checklist also shows what else the team is missing. |
 | Routing ignores `cc.service` | The name or ID doesn't match a service, or an earlier rule set another service. Use Services → Test a rule. |
 | A notification **failed** | Incident → Notifications shows the provider error. Usual causes: host missing in External requests, a vault entry the actor can't read, wrong credential type, phone not in E.164, Twilio API key without *Account SID*. |
 | A notification shows **No result** | The run ended before the call returned. It is retried up to *Delivery attempts*. |

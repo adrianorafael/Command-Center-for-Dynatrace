@@ -84,6 +84,18 @@ describe("delivery issues: 'Ready to page' must not promise more than can be sen
     expect(deliveryIssues(team, data({ contacts, settings: s, heartbeat: hb }), false)).toEqual([]);
   });
 
+  it("says whether everything is blocked or only some channels", () => {
+    // The only channel in use has no provider: nothing can be sent.
+    expect(deliveryIssues(team, data({ contacts, heartbeat: hb }), false).map((i) => i.all)).toEqual([true]);
+    // SMS is on, Telegram is not: only some messages are affected.
+    const s = defaultSettings();
+    s.providers = s.providers.map((p) => (p.channel === "sms" ? { ...p, enabled: true, credentialVaultId: "CREDENTIAL_VAULT_ENTRY-0000000000000001" } : p));
+    const two = [{ ...contacts[0]!, methods: [...contacts[0]!.methods, { id: "m3", channel: "telegram" as const, address: "100001" }] }];
+    const issues = deliveryIssues(team, data({ contacts: two, settings: s, heartbeat: hb }), false);
+    expect(issues.map((i) => i.all)).toEqual([false]);
+    expect(issues[0]?.text).toMatch(/Telegram/);
+  });
+
   it("observers' contact methods don't count, and demo mode has no engine to install", () => {
     const observerOnly = [{ ...contacts[0]!, uid: "user-0002", methods: [{ id: "m2", channel: "voice" as const, address: "+15550100001" }] }];
     expect(deliveryIssues(team, data({ contacts: observerOnly }), true)).toEqual([]);

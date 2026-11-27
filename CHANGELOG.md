@@ -11,6 +11,54 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-11-27
+
+A usability pass over Teams, On-call, Escalations and Services, walked through from an empty app in the offline
+preview. A team of three that can be paged now takes 21 clicks and typed fields (about 39 before), and a Davis problem
+reaches that team: before, it ended with no team and paged nobody even with every checklist step done.
+
+### Added
+- **Default team from the team form**: *New team* and *Edit team* have a **Default team** checkbox, ticked while no
+  default team exists. The default team receives every alert that no routing rule sends elsewhere. Deleting the
+  default team clears the setting.
+- **Ready to page?** names what still stops a message outside the team: a channel its people use that has no
+  provider switched on, and an engine that has never run. The routing step offers *Receive all unrouted alerts* (one
+  click) or *Add routing rule* (a rule already named and pointing to the team).
+- **Save and next** in the contact sheet walks through the people who have no contact method yet.
+- Schedule editor: *Add from the team* buttons, a sentence that says when people swap, and **Who is on call, from
+  when** (the next handoffs as a list, in the schedule's time zone).
+- Policy simulation: names the people who have no contact method and says when nothing follows the only step.
+- **Add people** offers your own user first.
+- Offline preview: `?demo=empty` starts with no data, to walk through the first-time setup.
+
+### Changed
+- **Ready to page? step 5** is done only when the team is the default team or an enabled routing rule sends alerts
+  to it. A service alone no longer counts, because Davis problems carry no `cc.service`. Teams that only own services
+  show this step as open after the upgrade. The next step has the highlighted button and steps that need people
+  first show none.
+- A **new schedule** opens ready to save: named after its team, with the team's paged people in the rotation,
+  starting today. People come first; layer names and layer controls appear only with more than one layer.
+- A **new escalation policy** opens ready to save: named after its team, the on-call person first and the whole team
+  after 10 minutes. *Add step* adds a step with a target. The *Channels* field is behind **Force channels**.
+- **Contact sheet**: opens with one row, the address field is named after the channel (*Phone number*, *Chat ID*,
+  *Name in the message*, *Routing key*), rows left empty are ignored, and notification rules are an optional section
+  with *For priorities*. A new rule covers all priorities (before: up to P3); the sheet says which priorities a
+  person's rules leave out.
+- **New team** asks for a name and a description only; the default policy is chosen when editing.
+- **Routing rules**: the *Enabled* column is gone (the switch stays), the default row warns when there is no default
+  team, the page button follows the open tab, the rule's priority is a single select, and the rule tester no longer
+  adds sample values to the alert under test.
+- **Help → Get started** has five steps; the team steps are one link to the team's checklist. Help also explains the
+  default team and the "incident has no team" case.
+- The policy list shows who is notified at each step and the wait in between.
+
+### Fixed
+- The schedule editor named the handoff weekday from the browser's time zone; it now comes from the schedule's own
+  time zone and first handoff.
+- A new schedule started at 09:00 of the current day, so one created earlier in the day had nobody on call until
+  then. It now starts at the beginning of the day in the schedule's time zone.
+- Coverage on the Schedules tab is shown as a percentage, and the header keeps its height when you go on call.
+
 ## [2.1.1] - 2026-11-27
 
 ### Fixed

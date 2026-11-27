@@ -44,7 +44,7 @@ Usados quando nenhuma regra de roteamento, propriedade de evento ou serviço dec
 
 | Configuração | Padrão | Efeito |
 | --- | --- | --- |
-| Default team | nenhuma | Equipe para incidentes que nenhuma regra ou serviço atribui |
+| Default team | nenhuma (vem marcado quando você cria a primeira equipe) | Equipe para incidentes que nenhuma regra ou serviço atribui. Os problemas do Davis não trazem equipe: sem uma equipe padrão ou regras de roteamento, eles não acionam ninguém. Também é definida a partir de uma equipe (**New team**, **Edit team** ou o *Receive all unrouted alerts* da checklist). Excluir a equipe padrão limpa essa configuração. |
 | Default escalation policy | nenhuma | Política quando nem a regra, nem o serviço, nem a equipe têm uma. Sem política, ninguém é acionado. |
 | Fallback priority | P3 | Último passo da ordem de prioridade |
 

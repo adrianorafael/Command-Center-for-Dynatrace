@@ -39,7 +39,7 @@ and using **Strato**, the Dynatrace design system.
 | **Storage** | Dynatrace App State. No external database. Provider secrets stay in the Credential Vault. |
 | **Demo mode** | Per browser: sample data everywhere, nothing read or written, nothing sent. Off: only real data. |
 
-Current version: **2.1.1** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **2.2.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentation
 
@@ -63,7 +63,7 @@ Also in Portuguese (BR) in [docs/guides/pt-BR](docs/guides/pt-BR/) and Spanish i
 | Incident timeline and audit | Append-only timeline per incident: who, when, what |
 | On-call schedules, rotations, overrides | Layers (daily, weekly, every N hours), handoff time, time zone, weekday/time restrictions, overrides, leave/take on-call from the header |
 | Escalation policies | Ordered steps with delays, targets (schedule, user, whole team), optional forced channels, repeats; stops on acknowledgement |
-| Contact methods and personal rules | SMS, voice, WhatsApp, Telegram, Slack, Teams, IFTTT, webhook, with "priority up to Px → this method after N minutes" |
+| Contact methods and personal rules | SMS, voice, WhatsApp, Telegram, Slack, Teams, IFTTT, webhook, with optional rules "for priorities P1 to Px → this method after N minutes" |
 | Routing / alert rules | Services plus ordered rules (first match wins), with a rule tester |
 | Maintenance and quiet hours | Davis maintenance windows suppress paging (configurable); team quiet hours hold or downgrade less urgent pages |
 | War rooms / bridges | Meeting link, linked incidents, notebooks, post-mortem template |
@@ -144,7 +144,8 @@ npm run lint          # ESLint incl. security and secret rules
 npm run check         # lint + typecheck + test + build
 ```
 
-Offline preview in demo mode: `npx dt-app build && node scripts/preview-server.mjs --port 4173`, then open
+Offline preview in demo mode (add `?demo=empty` to start with no data and walk through the first-time setup):
+`npx dt-app build && node scripts/preview-server.mjs --port 4173`, then open
 `http://127.0.0.1:4173/ui/`. `node scripts/screenshot.mjs ./out` takes one screenshot per route.
 
 | Script | Description |

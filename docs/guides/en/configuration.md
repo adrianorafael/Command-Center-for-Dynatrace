@@ -44,7 +44,7 @@ Used when no routing rule, event property or service decides.
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| Default team | none | Team for incidents that no rule or service assigns |
+| Default team | none (ticked by default when you create the first team) | Team for incidents that no rule or service assigns. Davis problems carry no team: without a default team or routing rules they page nobody. Also set from a team (**New team**, **Edit team**, or the checklist's *Receive all unrouted alerts*). Deleting the default team clears it. |
 | Default escalation policy | none | Policy when neither the rule, the service nor the team has one. Without a policy nobody is paged. |
 | Fallback priority | P3 | Last step of the priority order |
 

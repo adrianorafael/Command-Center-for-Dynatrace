@@ -152,18 +152,26 @@ proveedor, así que no se pierde nada. Luego usa **Send test** con una direcció
 
 ## Paso 7 — Personas, calendarios, políticas y enrutamiento
 
-1. **Teams** → crea un equipo → **Add people** (escribe al menos 3 caracteres de un nombre o correo electrónico) →
-   define los roles.
-2. Para cada persona: **Contact methods** (teléfono en E.164, chat ID de Telegram, una etiqueta para Slack/Teams/IFTTT,
-   una clave de enrutamiento para el webhook) y **notification rules**, por ejemplo "P1–P2: voz ahora, SMS después de
-   5 minutos".
-3. **On-call → Schedules** → capas, rotación, hora de traspaso y zona horaria. La vista previa de cobertura muestra los
-   huecos.
-4. **Escalations** → una política, por ejemplo: paso 1 la persona de guardia del calendario después de 0 minutos,
-   paso 2 el equipo completo después de 10 minutos, repetir una vez. La sección **Simulation** muestra a quién se notifica y cuándo.
-5. **Services** → un servicio con un equipo propietario, una política y una prioridad predeterminada. Luego agrega
-   **routing rules** y usa **Test a rule**.
-6. **Settings → Routing defaults** → el equipo y la política que se usan cuando nada más decide.
+La página del equipo te guía: su lista de verificación **Ready to page?** siempre resalta el siguiente paso.
+
+1. **Teams → New team**: escribe un nombre y deja **Default team** (equipo predeterminado) marcado. El equipo recibe
+   entonces toda alerta que ninguna regla de enrutamiento envía a otro lugar. Esto importa porque los problemas de
+   Davis no traen equipo.
+2. **Add people**: primero se ofrece tu propio usuario; para los demás, escribe al menos 3 caracteres de un nombre o
+   correo electrónico.
+3. **Add contact methods**: hay una fila lista para cada persona (teléfono en E.164, chat ID de Telegram, un nombre
+   para Slack/Teams/IFTTT, una clave de enrutamiento para el webhook). **Save and next** pasa a la siguiente persona.
+   Las reglas de notificación son opcionales, por ejemplo "P1–P2: voz ahora, SMS después de 5 minutos".
+4. **Create schedule**: el calendario se abre con el nombre del equipo y con sus personas en la rotación. Ajusta el
+   tipo de rotación y la hora de traspaso si hace falta, y guarda. La vista previa de cobertura muestra los huecos y
+   los próximos traspasos.
+5. **Create policy**: la política se abre con la persona de guardia primero y el equipo completo después de 10
+   minutos. Guárdala. La sección **Simulation** muestra a quién se notifica y cuándo.
+6. Opcional: **Services** y las **routing rules** envían ciertas alertas a otros equipos; **Test a rule** las
+   comprueba. **Settings → Routing defaults** muestra el equipo y la política predeterminados.
+
+Desde una app vacía, esto lleva unos 20 clics y campos escritos para un equipo de tres personas. Un problema de Davis
+se enruta entonces al equipo y a su política de escalamiento (compruébalo con **Services → Test a rule**).
 
 Detalles de cada pantalla: [guía del usuario](user-guide.md).
 

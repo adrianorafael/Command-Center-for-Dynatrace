@@ -57,7 +57,7 @@ de las confirmaciones.
 ámbar, **P4** azul y **P5** gris. Significados: P1 crítico (caída grave o impacto en clientes), P2 alto (un servicio
 está degradado), P3 moderado (requiere atención pronto), P4 bajo (puede esperar al horario laboral), P5 informativo.
 La prioridad no decide *si* se avisa a alguien: eso lo decide la política de escalamiento, y una regla de enrutamiento
-puede suprimir. La prioridad selecciona las reglas de notificación de las personas ("para prioridad hasta P2…") y el
+puede suprimir. La prioridad selecciona las reglas de notificación de las personas ("para las prioridades P1–P2…") y el
 comportamiento de las horas de silencio.
 
 **Estado de la notificación (entrega)**
@@ -185,19 +185,30 @@ Una war room (sala de crisis) es un enlace de reunión más los incidentes que a
 
 | Pestaña | Contenido |
 | --- | --- |
-| Now | Una tarjeta por equipo: quién está de guardia y hasta cuándo, sus métodos de contacto (en gris cuando no están configurados), quién sigue, y cada capa. *No one is on call* viene con **Add override**. Debajo: *Upcoming shifts* (Gantt: turnos en verde, overrides en un color aparte, huecos en ámbar, un marcador *Now*). Filtros: Team, Range (24 h, 7 days, 14 days). |
-| Schedules | Nombre, equipo, zona horaria, capas, de guardia ahora, próximo traspaso, cobertura para los próximos 7 días. Edit, Duplicate, Delete. |
+| Now | Una tarjeta por equipo: quién está de guardia y hasta cuándo, sus métodos de contacto (en gris cuando no están configurados), quién sigue, y cada capa. *No one is on call* viene con **Add override**. Mientras todavía no hay ningún equipo, la página dice *Start with a team* (empieza por un equipo). Debajo: *Upcoming shifts* (Gantt: turnos en verde, overrides en un color aparte, huecos en ámbar, un marcador *Now*). Filtros: Team, Range (24 h, 7 days, 14 days). |
+| Schedules | Nombre, equipo, zona horaria, capas, de guardia ahora, próximo traspaso, cobertura para los próximos 7 días (en %). Edit, Duplicate, Delete. |
 | Overrides | Quién cubre, a quién, calendario, desde, hasta, motivo. Próximos o pasados. Remove. |
 
 **Editor de calendarios** ![Schedule editor](../../screenshots/schedule-editor.png)
 
+Un calendario nuevo ya viene listo para guardar: lleva el nombre de su equipo, las personas del equipo a las que se
+avisa ya están en la rotación, y empieza hoy, de modo que alguien queda de guardia de inmediato.
+
 - **Schedule**: nombre, equipo, zona horaria (los traspasos y las restricciones la siguen, incluido el horario de
   verano).
-- **Layers**: cada capa tiene un nombre, una rotación (*Daily*, *Weekly*, o *Custom* con una duración de turno de
-  1–672 horas), un inicio, una hora de traspaso (HH:mm), opcionalmente *Only during specific hours* (días de la semana
-  y desde/hasta), y participantes en orden de rotación (arrastra para reordenar). **Las capas posteriores tienen
-  precedencia sobre las anteriores**, y los overrides prevalecen sobre todas las capas.
-- **Coverage preview** (1, 2 o 4 semanas): *Full coverage* o *N gaps, … uncovered*, con una fila *Final schedule*.
+- **Rotation** (rotación): primero van las *People in the rotation* (personas en la rotación), en el orden en que se
+  turnan (arrastra para reordenar). *Add from the team* agrega a un miembro del equipo con un clic; *Add someone else*
+  busca entre todos los usuarios. Después vienen el *Rotation type* (*Daily*, *Weekly*, o *Custom* con una duración de
+  turno de 1–672 horas), la *Handoff time* (HH:mm) y cuándo empieza la rotación (*Rotation starts*). Una frase debajo
+  de esos campos dice cuándo cambian las personas, por ejemplo *People swap every Fri at 09:00 (America/Sao_Paulo)*;
+  el día de la semana es el del primer traspaso en la zona horaria del calendario. *Only during specific hours* limita
+  la rotación a días de la semana y horas.
+- **Add layer** (opcional) agrega una segunda rotación para ciertas horas, por ejemplo noches o fines de semana. Con
+  varias capas, cada una tiene un nombre, **la capa que está más abajo en la lista es la que queda de guardia donde
+  sus horas se superponen**, y los overrides prevalecen sobre todas las capas.
+- **Coverage preview** (1, 2 o 4 semanas): *Full coverage* o *N gaps, … uncovered*, el Gantt con una fila *Final
+  schedule*, y **Who is on call, from when**: los próximos traspasos en forma de lista, en la zona horaria del
+  calendario.
 
 **New override**: calendario, quién cubre, desde, hasta (predeterminado: la próxima hora completa, durante 8 horas),
 motivo. Una frase de vista previa dice exactamente qué va a ocurrir.
@@ -209,11 +220,23 @@ motivo. Una frase de vista previa dice exactamente qué va a ocurrir.
 - **Lista de equipos**: nombre, miembros, de guardia ahora, política de escalamiento, servicios, incidentes abiertos
   por prioridad. Un equipo que todavía usan políticas, reglas o servicios no se puede eliminar hasta que se quiten esas
   referencias.
+- **New team**: un nombre y una descripción opcional. **Default team** (equipo predeterminado) viene marcado mientras
+  no existe ningún equipo predeterminado: el equipo predeterminado recibe toda alerta que ninguna regla de
+  enrutamiento envía a otro lugar. Los problemas de Davis no traen equipo; por eso, sin un equipo predeterminado o
+  reglas de enrutamiento, no avisan a nadie. **Edit team** también define la política de escalamiento predeterminada
+  del equipo.
 - **Pestañas del detalle del equipo**: *Members*, *On-call*, *Escalation*, *Quiet hours*, *Services*.
-- **Ready to page?** Una lista de verificación de 5 pasos, cada uno con un botón para corregirlo: personas a las que se
-  avisa, métodos de contacto, un calendario de guardia, una política de escalamiento y alertas enrutadas al equipo.
-- **Add people**: escribe al menos 3 letras de un nombre o un correo electrónico. Los resultados provienen de Dynatrace
-  IAM: usuarios activos de la cuenta propietaria del entorno. Roles:
+- **Ready to page?** Una lista de verificación de 5 pasos, en orden: personas a las que se avisa, métodos de contacto,
+  un calendario de guardia, una política de escalamiento y alertas enrutadas al equipo. El siguiente paso tiene el
+  botón resaltado; los pasos que dependen de que haya personas no muestran botón. El paso 5 queda hecho cuando el
+  equipo es el equipo predeterminado o cuando una regla de enrutamiento habilitada le envía alertas. Un servicio por
+  sí solo no basta: solo llegan los eventos que lo nombran en `cc.service`. Su botón es *Receive all unrouted alerts*
+  mientras no existe un equipo predeterminado; después, *Add routing rule*. Con los cinco pasos hechos, la lista
+  todavía advierte cuando un canal que usa el equipo no tiene ningún proveedor encendido, o cuando el motor nunca se
+  ha ejecutado.
+- **Add people**: primero se ofrece tu propio usuario. Para los demás, escribe al menos 3 letras de un nombre o un
+  correo electrónico. Los resultados provienen de Dynatrace IAM: usuarios activos de la cuenta propietaria del entorno
+  (no se encuentra a quien nunca inició sesión). Roles:
 
 | Rol | ¿Recibe avisos? | Pensado para |
 | --- | --- | --- |
@@ -224,15 +247,18 @@ motivo. Una frase de vista previa dice exactamente qué va a ocurrir.
 Los roles son orientativos: App State no tiene permisos por clave, así que técnicamente cualquier usuario de la app
 puede cambiar la configuración.
 
-- **Contact methods** (persona → *Edit contact methods*): canal, dirección y etiqueta, más **Send test** por método.
-  Formatos de dirección: teléfono en E.164 con el código de país (SMS, voz, WhatsApp); chat ID de Telegram; cualquier
-  etiqueta para Slack, Teams e IFTTT (su webhook o applet decide el destino, y los mensajes muestran el nombre de la
-  persona); una clave de enrutamiento para el webhook o el custom workflow. Los números de teléfono y los chat IDs son legibles para cualquier usuario de la app. Se
-  enmascaran en las listas. El correo electrónico no es un canal aparte: envía correos a través de un gateway de
-  webhook.
-- **When I'm paged** (reglas de notificación): *método*, *después de N minutos* (contados desde que se dispara el paso)
-  y *para prioridad hasta Px*. Una persona con métodos pero sin reglas recibe todos los métodos de inmediato. Un paso
-  con canales forzados usa el primer método de cada canal, sin demora.
+- **Contact methods** (persona → *Add* o *Edit*): el panel se abre con una fila lista para completar: canal, la
+  dirección y una etiqueta opcional, más **Send test**. El campo de la dirección lleva el nombre del canal: *Phone
+  number* en E.164 con el código de país (SMS, voz, WhatsApp); *Chat ID* (Telegram); *Name in the message* (Slack,
+  Teams e IFTTT: su webhook o applet decide el destino); *Routing key* (webhook o custom workflow). Las filas que se
+  dejan vacías se ignoran. Desde la lista de verificación, **Save and next** pasa a la siguiente persona sin método
+  de contacto. Los números de teléfono y los chat IDs son legibles para cualquier usuario de la app. Se enmascaran en
+  las listas. El correo electrónico no es un canal aparte: envía correos a través de un gateway de webhook.
+- **Notification rules (optional)** (reglas de notificación, opcionales): sin reglas, se usan todos los métodos de
+  contacto a la vez. Una regla dice: *use* (usar) este método *after N minutes* (después de N minutos, contados desde
+  que se dispara el paso) *for priorities* (para las prioridades) P1 a Px, o todas. Cuando una persona tiene reglas,
+  solo le avisan los incidentes cubiertos por alguna regla; el panel indica qué prioridades quedan fuera. Un paso con
+  canales forzados usa el primer método de cada canal, sin demora.
 - **Quiet hours** (horas de silencio): ventanas (días, desde/hasta, zona horaria; una ventana puede cruzar la
   medianoche) durante las cuales los incidentes **menos urgentes** que una prioridad se **retienen** (sin avisos hasta
   que termina la ventana) o se avisan solo por canales de **baja urgencia** (Slack, Teams, Telegram, IFTTT, webhook).
@@ -242,19 +268,24 @@ puede cambiar la configuración.
 
 ![Escalations](../../screenshots/escalations.png) ![Policy editor](../../screenshots/policy-editor.png)
 
-- **Lista**: nombre, equipo, pasos (`N · summary`), repetición, usada por, último disparo. Eliminar una política hace
-  que sus incidentes recurran a la política predeterminada de su equipo o, si no la hay, a la política predeterminada
-  de Settings.
-- **Editor**: los pasos se ejecutan en orden hasta que alguien reconoce. Cada paso espera una cantidad de minutos
-  (0–1440) **contados desde el paso anterior** y luego notifica a sus destinos: *On-call of schedule*, *Team (all
-  responders)*, que significa todos los que no son observadores, incluidos los administradores, o un *User*. Los
-  *Channels* son opcionales: déjalos vacíos para usar las reglas de notificación de cada persona (recomendado). Los
-  canales sin un proveedor configurado están deshabilitados.
+- **Lista**: nombre, equipo, pasos (a quién se notifica en cada paso y la espera entre ellos, por ejemplo *on-call of
+  Payments on-call → 10 min → team Payments*), repetición, usada por, último disparo. Eliminar una política hace que
+  sus incidentes recurran a la política predeterminada de su equipo o, si no la hay, a la política predeterminada de
+  Settings.
+- **Editor**: una política nueva ya viene lista para guardar. Lleva el nombre de su equipo; el paso 1 notifica a quien
+  está de guardia en el calendario del equipo, y el paso 2, al equipo completo después de 10 minutos (sin calendario:
+  al equipo completo de inmediato). Los pasos se ejecutan en orden hasta que alguien reconoce. Cada paso espera una
+  cantidad de minutos (0–1440) **contados desde el paso anterior** y luego notifica a sus destinos: *On-call of
+  schedule*, *Team (all responders)*, que significa todos los que no son observadores, incluidos los
+  administradores, o un *User*. **Add step** agrega un paso que notifica al equipo completo después de 5 minutos. A
+  cada persona se le notifica por sus propios métodos de contacto; **Force channels** abre el campo *Channels* para
+  cambiar eso en un paso. Los canales sin un proveedor encendido están deshabilitados.
 - **Repeat**: *Repeat policy if nobody acknowledges* 1–5 veces. Cada repetición comienza después de la demora del
   último paso (5 minutos si esa demora es 0). Cuando se completan todas las repeticiones, la política queda
   **agotada** (exhausted) y el incidente permanece triggered.
-- **Simulation** (siempre visible en el editor): *If an incident is triggered now* lista, minuto a minuto, a quién se avisaría y por qué canales, y
-  advierte cuando un paso no avisa a nadie (un hueco en el calendario o un equipo vacío).
+- **Simulation** (siempre visible en el editor): *If an incident is triggered now* lista, minuto a minuto, a quién se
+  avisaría. Advierte cuando un paso no avisa a nadie (un hueco en el calendario o un equipo vacío), nombra a las
+  personas que todavía no tienen método de contacto, e indica cuando no pasa nada después del único paso.
 
 La precisión de tiempo es igual al intervalo del motor: un paso se dispara en la primera ejecución del motor después de
 su vencimiento. En el entorno trial, con un intervalo de 1 minuto, cada paso de una política de prueba de cuatro pasos
@@ -267,17 +298,19 @@ se disparó dentro del minuto siguiente a su vencimiento.
 | Pestaña | Contenido |
 | --- | --- |
 | Services | Servicio, equipo, política de escalamiento (o *Team default*), reglas, incidentes abiertos, ruido de los últimos 7 días |
-| Routing rules (N) | Reglas ordenadas (arrastra para reordenar). **Gana la primera regla habilitada que coincide.** Una regla nueva se coloca encima de la primera regla comodín (una regla sin condiciones). Columnas: #, nombre, condiciones, acciones, habilitada, coincidencias en 24 h. La última fila, fija, es la ruta predeterminada. |
+| Routing rules (N) | Reglas ordenadas (arrastra para reordenar). **Gana la primera regla habilitada que coincide.** Una regla nueva se coloca encima de la primera regla comodín (una regla sin condiciones). Columnas: #, nombre, condiciones, acciones, coincidencias en 24 h y un interruptor que enciende o apaga la regla. La última fila, fija, es la ruta predeterminada; advierte cuando no hay equipo predeterminado. En esta pestaña, el botón de la página es **New rule**. |
 | Test a rule | Carga una alerta reciente o un ejemplo, edita el JSON, **Run test**: muestra la regla que coincidió (o la más cercana), cada condición ✔/✖, y el servicio, equipo, política y prioridad resultantes con su origen |
 | Priority mapping | Prioridad por categoría de Davis y por severidad, más el valor de respaldo |
 
 **Editor de reglas**: nombre, habilitada, *Match all / any*, condiciones (campo, operador, valor, *Not*), y **Then**:
-servicio, equipo, política de escalamiento, prioridad (o *Use priority mapping*), agregar tags, y *Suppress (create the incident, page nobody)* (crear el incidente sin avisar a nadie). Los
+servicio, equipo, política de escalamiento, prioridad (o *Use priority mapping*), agregar tags, y *Suppress (create the incident, page nobody)* (crear el incidente sin avisar a nadie). Abierta desde la lista de verificación de un equipo (*Add routing rule*), la
+regla ya viene con nombre y apunta a ese equipo, de modo que solo falta la condición. Los
 campos, los operadores y el orden de enrutamiento se listan en la
 [referencia de alertas](alerts-reference.md#cómo-una-alerta-se-convierte-en-incidente).
 
-**Service**: nombre (los eventos lo referencian por nombre o ID en `cc.service`), descripción, equipo propietario,
-política de escalamiento (vacía = la predeterminada del equipo) y prioridad predeterminada.
+**Service**: nombre (los eventos lo referencian por nombre o ID en `cc.service`; las demás alertas, como los problemas
+de Davis, necesitan una regla de enrutamiento), descripción, equipo propietario, política de escalamiento (vacía = la
+predeterminada del equipo) y prioridad predeterminada.
 
 ## Integrations
 
@@ -315,7 +348,8 @@ significa antes de las 06:00. Ambos usan la zona horaria de tu navegador.
 
 ## Help
 
-**Get started** se marca solo a partir de tus datos: crear un equipo, un calendario, una política de escalamiento,
-configurar un proveedor, instalar el workflow del motor (existe un heartbeat), y enviar un evento de prueba (existe un
+**Get started** tiene cinco pasos y se marca solo a partir de tus datos: crear un equipo, completar la lista de
+verificación *Ready to page?* del equipo (se marca cuando un equipo tiene los cinco pasos hechos), encender un
+proveedor, instalar el workflow del motor (existe un heartbeat), y enviar un evento de prueba (existe un
 incidente). Luego vienen conceptos, flujo de trabajo de la Console, envío de eventos, notificaciones, atajos de
 teclado, resolución de problemas y privacidad.

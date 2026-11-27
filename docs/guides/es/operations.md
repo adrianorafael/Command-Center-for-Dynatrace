@@ -216,6 +216,7 @@ fetch dt.davis.events, from: now() - 72h
 | Pestaña Workflows: *Installed as a standard workflow* | El intent create-workflow no tiene campo de tipo. Elimina ese workflow y sube el JSON descargado, o ejecuta `scripts/install-workflow.mjs`. |
 | Pestaña Workflows: *Update available* | La app se actualizó. Reinstala y luego elimina el workflow anterior. |
 | No aparecen incidentes | Settings → Event sources; verifica que el evento llegó a Grail (`fetch dt.davis.events` en un Notebook) y que su tipo abre un problema. Si no, activa la fuente de eventos de Davis. |
+| Un incidente queda sin equipo y no se avisa a nadie | Ninguna regla de enrutamiento coincidió y no hay equipo predeterminado. Los problemas de Davis no traen equipo. Abre el equipo y selecciona *Receive all unrouted alerts* en su lista de verificación **Ready to page?** (o defínelo en Settings → Routing defaults), o agrega una regla de enrutamiento. La lista también muestra qué más le falta al equipo. |
 | El enrutamiento ignora `cc.service` | El nombre o el ID no coincide con un servicio, o una regla anterior definió otro servicio. Usa Services → Test a rule. |
 | Una notificación **falló** | Incidente → Notifications muestra el error del proveedor. Causas habituales: falta el host en External requests, una entrada del vault que el actor no puede leer, tipo de credencial incorrecto, teléfono que no está en E.164, API key de Twilio sin *Account SID*. |
 | Una notificación muestra **No result** | La ejecución terminó antes de que la llamada respondiera. Se reintenta hasta *Delivery attempts*. |

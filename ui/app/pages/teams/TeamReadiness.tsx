@@ -25,6 +25,8 @@ export const TeamReadiness = ({
   const ready = done === items.length;
   const next = items.findIndex((x) => !x.done);
   const [expanded, setExpanded] = useState(false);
+  // Say "some" when other channels still work: the warning must not claim more than is true.
+  const cantSend = delivery.some((d) => d.all) ? "messages can't go out yet" : "some messages can't be sent yet";
   const deliveryRows = delivery.map((d) => (
     <Flex key={d.to} alignItems="center" gap={12}>
       <Flex style={{ width: 20, flexShrink: 0 }} justifyContent="center">
@@ -49,7 +51,7 @@ export const TeamReadiness = ({
               </Flex>
               <Text>
                 {delivery.length
-                  ? `All ${items.length} team steps are done, but messages can't go out yet.`
+                  ? `All ${items.length} team steps are done, but ${cantSend}.`
                   : `Ready to page: all ${items.length} setup steps are done.`}
               </Text>
             </Flex>
@@ -72,7 +74,7 @@ export const TeamReadiness = ({
         {ready ? (
           <Flex alignItems="center" gap={8}>
             {delivery.length ? <WarningIcon style={{ color: Colors.Icon.Warning.Default }} /> : <SuccessIcon style={{ color: Colors.Icon.Success.Default }} />}
-            <Text>{delivery.length ? "The team is set up, but messages can't go out yet." : "This team is ready to receive pages."}</Text>
+            <Text>{delivery.length ? `The team is set up, but ${cantSend}.` : "This team is ready to receive pages."}</Text>
           </Flex>
         ) : (
           <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>

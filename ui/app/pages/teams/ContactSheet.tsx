@@ -189,6 +189,7 @@ export const ContactSheet = ({
                         setMethod(i, { ...m, channel: v, address });
                       }}
                     >
+                      <Select.Trigger width="176px" />
                       <Select.Content>
                         {CHANNELS.map((c) => (
                           <Select.Option key={c} value={c}>
@@ -269,6 +270,7 @@ export const ContactSheet = ({
                 value={r.methodId}
                 onChange={(v) => v && setDraft({ ...draft, rules: draft.rules.map((x, j) => (j === i ? { ...x, methodId: v } : x)) })}
               >
+                <Select.Trigger width="240px" />
                 <Select.Content>
                   {draft.methods.map((m) => (
                     <Select.Option key={m.id} value={m.id}>
@@ -293,6 +295,7 @@ export const ContactSheet = ({
                 value={r.maxPriority}
                 onChange={(v) => v && setDraft({ ...draft, rules: draft.rules.map((x, j) => (j === i ? { ...x, maxPriority: v as Priority } : x)) })}
               >
+                <Select.Trigger width="150px" />
                 <Select.Content>
                   {PRIORITIES.map((p) => (
                     <Select.Option key={p} value={p}>

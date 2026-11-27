@@ -10,6 +10,7 @@ import { useAppData } from "../../hooks/AppDataContext";
 import { PageTitle } from "../../components/PageTitle";
 import { SendEventSnippets } from "../../components/CopyCode";
 import { EVENT_FIELDS, TOKEN_SCOPE } from "../../components/snippets";
+import { teamReadiness } from "../teams/readiness";
 
 const TOC = [
   { id: "get-started", label: "Get started" },
@@ -26,9 +27,9 @@ const CONCEPTS = `
 - **Incident**: one alert from Davis or the Events API after deduplication. It moves from *Triggered* to *Acknowledged* to *Resolved*; *Snoozed* hides it until a time, then it triggers again.
 - **Priority**: P1 (critical) to P5 (informational). Set by a routing rule, the event's \`cc.priority\`, the service default, or the priority mapping. Priority doesn't decide *whether* someone is paged (the escalation policy does, and a routing rule can suppress); it selects people's notification rules and quiet-hours behaviour.
 - **Team**: Dynatrace users with a role. *Team admins* edit the team and get paged, *Responders* get paged, *Observers* only watch and are never paged.
-- **Schedule**: who is on call, built from **layers**. Each layer rotates its members daily, weekly or every N hours, optionally only in certain hours. Later layers win; **overrides** win over everything.
+- **Schedule**: who is on call. A **rotation** makes its people take turns daily, weekly or every N hours, optionally only in certain hours. A schedule can have more rotations (**layers**), for example for nights or weekends: where their hours overlap, the layer further down the list is on call. **Overrides** win over everything.
 - **Escalation policy**: ordered steps. Each step waits a number of minutes, then notifies an on-call schedule, a whole team, or a person. It can repeat; it stops as soon as someone acknowledges.
-- **Service and routing rule**: rules are checked top to bottom and the first match decides service, team, policy and priority, or suppresses the alert.
+- **Service and routing rule**: rules are checked top to bottom and the first match decides service, team, policy and priority, or suppresses the alert. An alert that no rule or service assigns goes to the **default team**. Davis problems carry no team: without a default team or a routing rule they page nobody.
 `;
 
 const CONSOLE = `
@@ -56,6 +57,7 @@ The app never sees secrets: it only stores vault IDs. Delivery results come back
 
 const TROUBLE = `
 - **No incidents appear**: check that a source is on in Settings and that events arrive (Integrations → Inbound). The engine workflow must be running: a banner on the Console tells you when its heartbeat is late (older than two intervals plus one minute).
+- **An incident has no team and nobody was paged**: no routing rule matched and there is no default team. Open the team and select **Receive all unrouted alerts** in its *Ready to page?* checklist, or add a routing rule in Services. The same checklist shows what else the team is missing.
 - **A notification failed**: open the incident's Notifications tab for the provider error. Common causes are a missing host in External requests, a vault entry the workflow actor can't read (make the actor its owner), the wrong credential type, or an invalid phone number (use E.164).
 - **The workflow isn't installed or is outdated**: in Integrations → Workflows select **Reinstall in Workflows** (or upload the downloaded JSON), then delete the old workflow.
 - **Permission errors**: the app needs the scopes listed in Settings → Permissions, and your user needs IAM access to the app.
@@ -85,18 +87,25 @@ const Section = ({ id, title, children }: { id: string; title: string; children:
 );
 
 export const HelpPage = () => {
-  const { data } = useAppData();
+  const { data, userName } = useAppData();
   const location = useLocation();
   useEffect(() => {
     const id = location.hash.replace("#", "");
     if (id) window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   }, [location.hash]);
 
+  // The team steps (people, contacts, schedule, policy, routing) live in the team's own checklist: one link here.
+  const teams = data?.teams ?? [];
+  const readyTeam = data ? teams.find((t) => teamReadiness(t, data, userName).every((i) => i.done)) : undefined;
+  const openTeam = readyTeam ?? teams[0];
   const steps = [
-    { done: (data?.teams.length ?? 0) > 0, label: "Create a team", to: "/teams" },
-    { done: (data?.schedules.length ?? 0) > 0, label: "Create a schedule", to: "/on-call?tab=schedules" },
-    { done: (data?.policies.length ?? 0) > 0, label: "Create an escalation policy", to: "/escalations" },
-    { done: !!data?.settings.providers.some((p) => p.enabled), label: "Configure a notification provider", to: "/integrations?tab=outbound" },
+    { done: teams.length > 0, label: "Create a team", to: teams.length ? "/teams" : "/teams?new=1" },
+    {
+      done: !!readyTeam,
+      label: "Finish the team's “Ready to page?” checklist: people, contact methods, schedule, escalation policy, routing",
+      to: openTeam ? `/teams/${openTeam.id}` : "/teams",
+    },
+    { done: !!data?.settings.providers.some((p) => p.enabled), label: "Switch on a notification provider", to: "/integrations?tab=outbound" },
     { done: !!data?.heartbeat, label: "Install the engine workflow", to: "/integrations?tab=workflows" },
     { done: (data?.incidents.length ?? 0) > 0, label: "Send a test event", to: "/integrations" },
   ];
@@ -116,7 +125,7 @@ export const HelpPage = () => {
           </Flex>
           <Flex flexDirection="column" gap={32}>
             <Section id="get-started" title="Get started">
-              <Paragraph>Six steps take you from an empty app to paging people. Completed steps are checked from the app's current data.</Paragraph>
+              <Paragraph>Five steps take you from an empty app to paging people. Completed steps are checked from the app's current data.</Paragraph>
               <Surface padding={16}>
                 <Flex flexDirection="column" gap={12}>
                   {steps.map((s, i) => (

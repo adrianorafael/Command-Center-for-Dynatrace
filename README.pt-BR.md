@@ -39,7 +39,7 @@ e usando o **Strato**, o design system da Dynatrace.
 | **Armazenamento** | Dynatrace App State. Nenhum banco de dados externo. Os segredos dos provedores ficam no Credential Vault. |
 | **Modo demo** | Por navegador: dados de exemplo em todo lugar, nada é lido nem escrito, nada é enviado. Desativado: somente dados reais. |
 
-Versão atual: **2.1.1** — veja o [CHANGELOG.md](CHANGELOG.md).
+Versão atual: **2.2.0** — veja o [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentação
 
@@ -63,7 +63,7 @@ Também disponível em inglês em [docs/guides/en](docs/guides/en/) e em espanho
 | Linha do tempo e auditoria do incidente | Linha do tempo somente de acréscimo (append-only) por incidente: quem, quando, o quê |
 | Escalas de plantão, rodízios, substituições | Camadas (diária, semanal, a cada N horas), horário de passagem de plantão, fuso horário, restrições de dia da semana/horário, substituições, sair/assumir o plantão pelo cabeçalho |
 | Políticas de escalonamento | Passos ordenados com atrasos, alvos (escala, usuário, equipe inteira), canais forçados opcionais, repetições; para no reconhecimento |
-| Métodos de contato e regras pessoais | SMS, voz, WhatsApp, Telegram, Slack, Teams, IFTTT, webhook, com "prioridade até Px → este método após N minutos" |
+| Métodos de contato e regras pessoais | SMS, voz, WhatsApp, Telegram, Slack, Teams, IFTTT, webhook, com regras opcionais "para as prioridades P1 a Px → este método após N minutos" |
 | Roteamento / regras de alerta | Serviços mais regras ordenadas (a primeira correspondência vence), com um testador de regras |
 | Manutenção e quiet hours | Janelas de manutenção do Davis suprimem o acionamento (configurável); as quiet hours da equipe retêm ou rebaixam acionamentos menos urgentes |
 | War rooms / pontes | Link de reunião, incidentes vinculados, notebooks, modelo de post-mortem |
@@ -145,7 +145,8 @@ npm run lint          # ESLint incl. security and secret rules
 npm run check         # lint + typecheck + test + build
 ```
 
-Prévia offline em modo demo: `npx dt-app build && node scripts/preview-server.mjs --port 4173` e depois abra
+Prévia offline em modo demo (acrescente `?demo=empty` para começar sem dados e percorrer a configuração inicial):
+`npx dt-app build && node scripts/preview-server.mjs --port 4173` e depois abra
 `http://127.0.0.1:4173/ui/`. `node scripts/screenshot.mjs ./out` tira uma captura de tela por rota.
 
 | Script | Descrição |
