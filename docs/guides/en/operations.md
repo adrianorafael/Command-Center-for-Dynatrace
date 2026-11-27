@@ -55,7 +55,7 @@ code, so what the Console shows right after an action matches what the engine wi
 | Design | Workflow hours | Function invocations | Verdict |
 | --- | --- | --- | --- |
 | Version 2 before this change: a **standard** workflow `tick` → 8 senders → `report` | 1 per hour of the workflow's lifetime, whether or not it does anything | Measured: about 690 per hour (≈ 11.5 per minute) | Replaced |
-| One **simple** workflow per built-in integration, triggered by events | none | One invocation per notification, plus an event ingest per notification to trigger it | Not used for the built-in providers: they need no workflow at all, and an integration that is off has nothing to install. Offered as the optional **Custom workflow** integration, run directly by the engine (no event ingest). |
+| One **simple** workflow per integration, run by the engine per notification (current, in addition) | none | One extra workflow run per notification of that integration | ✅ Each integration switched on gets its own workflow (one confirmation). The engine still reads alerts and escalates; it hands each notification to the integration's workflow and falls back to a direct send when that workflow can't be run. |
 | **One simple workflow, one action, interval trigger** (current) | **none** | Measured: **1 per run** (60 per hour at 1 minute) | ✅ |
 
 Sources: *Create a simple workflow* ("without consuming workflow hours") and *Workflows concepts* (simple workflows "do
@@ -87,6 +87,7 @@ billing event.
 | Engine runs = function invocations (`ACTION`) | ≈ 43,200 | ≈ 21,600 | ≈ 8,640 |
 | Workflow hours | 0 | 0 | 0 |
 | Grail queries | 1–8 per run (below) | same | same |
+| Integration workflow runs | one per notification of a linked integration | same | same |
 
 **Grail queries per run**: Q1 problems (when the Davis problems source is on, the default), Q4 event properties of the problems Q1 returned (one per 100 event IDs, at most
 5), Q2 Davis events and Q3 generic events (only when turned on). The UI runs **no** DQL: open tabs read only App State.

@@ -57,7 +57,7 @@ mesmo código, então o que o Console mostra logo após uma ação corresponde a
 | Desenho | Workflow hours | Invocações de função | Veredito |
 | --- | --- | --- | --- |
 | Versão 2 antes desta mudança: um workflow **standard** `tick` → 8 remetentes → `report` | 1 por hora de vida do workflow, faça ele algo ou não | Medido: cerca de 690 por hora (≈ 11,5 por minuto) | Substituído |
-| Um **simple workflow** por integração nativa (built-in), disparado por eventos | nenhuma | Uma invocação por notificação, mais uma ingestão de evento por notificação para dispará-lo | Não usado para os provedores integrados: eles não precisam de nenhum workflow, e uma integração desativada não tem nada a instalar. Oferecido como a integração opcional **Custom workflow**, executada diretamente pelo motor (sem ingestão de evento). |
+| Um **simple workflow** por integração, executado pelo motor a cada notificação (atual, adicional) | nenhuma | Uma execução de workflow extra por notificação daquela integração | ✅ Cada integração ativada ganha o seu próprio workflow (uma confirmação). O motor continua lendo os alertas e escalonando; ele entrega cada notificação ao workflow da integração e recorre a um envio direto quando esse workflow não pode ser executado. |
 | **Um simple workflow, uma ação, gatilho de intervalo** (atual) | **nenhuma** | Medido: **1 por execução** (60 por hora a 1 minuto) | ✅ |
 
 Fontes: *Create a simple workflow* ("without consuming workflow hours") e *Workflows concepts* (simple workflows "do
@@ -89,6 +89,7 @@ produziu nenhum evento de billing de workflow.
 | Execuções do motor = invocações de função (`ACTION`) | ≈ 43.200 | ≈ 21.600 | ≈ 8.640 |
 | Workflow hours | 0 | 0 | 0 |
 | Consultas ao Grail | 1–8 por execução (abaixo) | igual | igual |
+| Execuções de workflows de integração | uma por notificação de uma integração vinculada | igual | igual |
 
 **Consultas ao Grail por execução**: Q1 problems (quando a origem Davis problems está ativada, o padrão), Q4
 propriedades de eventos dos problems que a Q1 retornou (uma a cada

@@ -35,11 +35,11 @@ and using **Strato**, the Dynatrace design system.
 | **Console** | Live incident table with KPI tiles, filters, bulk actions and keyboard shortcuts; incident details with timeline, escalation progress, notification ledger, entities and notes. |
 | **On-call** | Teams of **Dynatrace users** (picked from IAM), layered rotating schedules with overrides, escalation policies with steps and repeats, personal contact methods, notification rules and team quiet hours. |
 | **War rooms** | A meeting link plus the incidents it handles and its Dynatrace Notebooks, including a generated post-mortem notebook. |
-| **Outbound** | One **simple workflow** (*Command Center · Engine*) runs the app's own action every 1, 2 or 5 minutes and consumes no workflow hours. Each integration has an On/Off switch; a **Custom workflow** integration hands notifications to a prefilled workflow you own and edit. |
+| **Outbound** | One **simple workflow** (*Command Center · Engine*) runs the app's own action every 1, 2 or 5 minutes and consumes no workflow hours. Each integration has an On/Off switch; switching one on creates **its own workflow** (*Command Center · Slack*, …) with one confirmation in the Workflows app, and that workflow sends its notifications. A **Custom workflow** integration hands notifications to a prefilled workflow you own and edit. |
 | **Storage** | Dynatrace App State. No external database. Provider secrets stay in the Credential Vault. |
 | **Demo mode** | Per browser: sample data everywhere, nothing read or written, nothing sent. Off: only real data. |
 
-Current version: **2.0.0** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **2.1.1** — see [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentation
 
@@ -87,7 +87,8 @@ Then, in the app:
    Enable the Workflows **Authorization settings** for the actor.
 2. **Credential Vault** entries for your providers. Add their hosts to **External requests**.
 3. **Integrations → Outbound** → switch on the providers you use (Twilio, IFTTT, Slack, Teams, Telegram, webhook or
-   your own custom workflow) → **Send test**.
+   your own custom workflow). Each one opens the Workflows app with its own workflow filled in: save it, come back,
+   and Command Center links it. Then **Send test**.
 4. **Teams**, **On-call**, **Escalations**, **Services** → people, schedules, a policy, routing.
 5. Send an event (the token needs `openpipeline:events.davis:ingest`):
 

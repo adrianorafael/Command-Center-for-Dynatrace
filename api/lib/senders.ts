@@ -31,9 +31,19 @@ export interface SenderDeps {
   fetch: typeof fetch;
   readCredential: (vaultId: string) => Promise<Credential>;
   now?: () => number;
+  /** Called for each notification handed to an integration's own workflow (no result yet). */
+  onHandOff?: (key: string) => void;
 }
 
 type SendFn = (n: NotificationRequest, provider: ProviderView, cred: Credential, deps: SenderDeps) => Promise<string | undefined>;
+
+/**
+ * Per-integration workflow: a built-in provider whose params.workflowId is set is sent by its own simple workflow
+ * ("Command Center · <provider>", one task: this app's send-notification action). The engine runs that workflow
+ * with the notification as params; the action sends and records the result in the ledger itself. If the run is
+ * refused, the engine sends directly so nobody misses a page.
+ */
+export const PROVIDER_WORKFLOW_PARAM = "workflowId";
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -214,9 +224,7 @@ const sendWebhook: SendFn = async (n, provider, cred, deps) => {
  * "Sent" means the run was accepted; what the workflow does afterwards is the customer's.
  */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const sendViaWorkflow: SendFn = async (n, provider, _cred, deps) => {
-  const id = (provider.params?.workflowId ?? "").trim();
-  if (!UUID.test(id)) throw new Error("Custom workflow provider needs params.workflowId (the workflow UUID)");
+async function runWorkflow(deps: SenderDeps, id: string, n: NotificationRequest): Promise<string | undefined> {
   const res = await post(deps, `/platform/automation/v1/workflows/${id}/run`, {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ params: { source: "command-center", version: 1, notification: n } }),
@@ -224,7 +232,35 @@ const sendViaWorkflow: SendFn = async (n, provider, _cred, deps) => {
   if (!res.ok) throw await httpError(res);
   const json = (await res.json().catch(() => ({}))) as { id?: string };
   return json?.id;
+}
+
+const sendViaWorkflow: SendFn = async (n, provider, _cred, deps) => {
+  const id = (provider.params?.workflowId ?? "").trim();
+  if (!UUID.test(id)) throw new Error("Custom workflow provider needs params.workflowId (the workflow UUID)");
+  return runWorkflow(deps, id, n);
 };
+
+/** Sends one notification directly through its provider (vault secret + provider API). */
+export async function deliverDirect(n: NotificationRequest, provider: ProviderView, deps: SenderDeps, creds = new Map<string, Credential>()): Promise<DeliveryResult> {
+  const now = deps.now ?? Date.now;
+  const at = now();
+  let cred: Credential | null = null;
+  try {
+    if (!provider.enabled) throw new Error(`provider ${provider.id} is disabled`);
+    let ref: string | undefined;
+    if (provider.kind === "workflow") {
+      ref = await sendViaWorkflow(n, provider, {}, deps);
+    } else {
+      if (!provider.credentialVaultId) throw new Error(`provider ${provider.id} has no credential vault entry`);
+      if (!creds.has(provider.id)) creds.set(provider.id, await deps.readCredential(provider.credentialVaultId));
+      cred = creds.get(provider.id) ?? null;
+      ref = await SENDERS[n.channel](n, provider, cred ?? {}, deps);
+    }
+    return { key: n.key, status: "sent", ...(ref ? { providerRef: String(ref).slice(0, 100) } : {}), at };
+  } catch (e) {
+    return { key: n.key, status: "failed", error: safeError(e, secretValues(cred)), at };
+  }
+}
 
 export const SENDERS: Record<Channel, SendFn> = {
   sms: sendSms,
@@ -254,25 +290,23 @@ export async function sendAll(
   for (const channel of Object.keys(SENDERS) as Channel[]) {
     for (const n of batches[channel] ?? []) {
       if (now() > deadline - REQUEST_TIMEOUT_MS) return results;
-      const at = now();
-      let cred: Credential | null = null;
-      try {
-        const provider = providers.find((p) => p.id === n.providerId);
-        if (!provider) throw new Error(`provider ${n.providerId} is not configured`);
-        if (!provider.enabled) throw new Error(`provider ${n.providerId} is disabled`);
-        let ref: string | undefined;
-        if (provider.kind === "workflow") {
-          ref = await sendViaWorkflow(n, provider, {}, deps);
-        } else {
-          if (!provider.credentialVaultId) throw new Error(`provider ${provider.id} has no credential vault entry`);
-          if (!creds.has(provider.id)) creds.set(provider.id, await deps.readCredential(provider.credentialVaultId));
-          cred = creds.get(provider.id) ?? null;
-          ref = await SENDERS[channel](n, provider, cred ?? {}, deps);
-        }
-        results.push({ key: n.key, status: "sent", ...(ref ? { providerRef: String(ref).slice(0, 100) } : {}), at });
-      } catch (e) {
-        results.push({ key: n.key, status: "failed", error: safeError(e, secretValues(cred)), at });
+      const provider = providers.find((p) => p.id === n.providerId);
+      if (!provider) {
+        results.push({ key: n.key, status: "failed", error: `provider ${n.providerId} is not configured`, at: now() });
+        continue;
       }
+      const ownWorkflow = provider.kind !== "workflow" && provider.enabled ? (provider.params?.[PROVIDER_WORKFLOW_PARAM] ?? "").trim() : "";
+      if (UUID.test(ownWorkflow)) {
+        try {
+          // Handed to the integration's own workflow: its action records the result in the ledger.
+          await runWorkflow(deps, ownWorkflow, n);
+          deps.onHandOff?.(n.key);
+          continue;
+        } catch {
+          // The workflow could not be run (deleted, no permission): send directly so nobody misses a page.
+        }
+      }
+      results.push(await deliverDirect(n, provider, deps, creds));
     }
   }
   return results;

@@ -130,3 +130,16 @@ describe("custom integration workflow", () => {
     expect(String(task.input?.url)).toMatch(/^https:\/\/example\.com\//);
   });
 });
+
+describe("per-integration workflow", () => {
+  it("is a SIMPLE on-demand workflow whose task is the app's send-notification action for that provider", async () => {
+    const { buildProviderWorkflow, PROVIDER_WORKFLOW_TASK } = await import("../workflows/definition");
+    const wf = buildProviderWorkflow("my.command.center", { id: "slack", name: "Slack" });
+    expect(wf.title).toBe("Command Center · Slack");
+    expect(wf.type).toBe("SIMPLE");
+    expect(wf).not.toHaveProperty("trigger");
+    const task = (wf.tasks ?? {})[PROVIDER_WORKFLOW_TASK] as { action?: string; input?: Record<string, unknown> };
+    expect(task.action).toBe("my.command.center:send-notification");
+    expect(task.input).toEqual({ providerId: "slack", notification: "{{ execution().params.notification }}" });
+  });
+});

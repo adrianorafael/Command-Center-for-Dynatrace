@@ -18,7 +18,7 @@ import { workflowsClient } from "@dynatrace-sdk/client-automation";
 import { functions } from "@dynatrace-sdk/app-utils";
 import { sendIntent } from "@dynatrace-sdk/navigation";
 import type { EngineTickRequest, Settings } from "../../domain/contracts";
-import { CUSTOM_WORKFLOW_TITLE, ENGINE_DEFINITION_VERSION, ENGINE_WORKFLOW_TITLE, actionId, buildCustomWorkflow, buildEngineWorkflow, buildEngineWorkflowCreate } from "./definition";
+import { buildProviderWorkflow, providerWorkflowTitle, CUSTOM_WORKFLOW_TITLE, ENGINE_DEFINITION_VERSION, ENGINE_WORKFLOW_TITLE, actionId, buildCustomWorkflow, buildEngineWorkflow, buildEngineWorkflowCreate } from "./definition";
 
 export interface ExecutionSummary {
   id: string;
@@ -83,6 +83,8 @@ export interface EngineRunSummary {
   sent: number;
   failed: number;
   deferred: number;
+  /** Handed to an integration's own workflow (its action records the result). */
+  handedOff?: number;
   errors: string[];
   skipped?: string;
 }
@@ -183,6 +185,20 @@ export function exportCustomWorkflow(appId: string): WorkflowExport {
 /** Opens the Workflows app with the custom-integration workflow prefilled (create workflow intent). */
 export function openCustomWorkflowIntent(appId: string): void {
   sendIntent(buildCustomWorkflow(appId));
+}
+
+/** Per-integration workflow: JSON file and intent. */
+export function exportProviderWorkflow(appId: string, provider: { id: string; name: string }): WorkflowExport {
+  return { fileName: `command-center-${provider.id}.workflow.json`, json: `${JSON.stringify(buildProviderWorkflow(appId, provider), null, 2)}\n` };
+}
+export function openProviderWorkflowIntent(appId: string, provider: { id: string; name: string }): void {
+  sendIntent(buildProviderWorkflow(appId, provider));
+}
+/** Workflows titled "Command Center · <provider name>", newest first. */
+export async function findProviderWorkflows(providerName: string, client: AutomationClientLike = defaultClient): Promise<CustomWorkflowInfo[]> {
+  const title = providerWorkflowTitle(providerName);
+  const list = await client.getWorkflows({ search: title, limit: 20 });
+  return list.results.filter((w) => w.title === title).map((w) => ({ id: w.id, ...(w.type ? { type: w.type } : {}) }));
 }
 
 export interface CustomWorkflowInfo {

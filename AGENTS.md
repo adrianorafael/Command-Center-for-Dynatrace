@@ -30,7 +30,7 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 ## Project specifics
 
 - **App id:** `my.command.center` (keep the `my.` prefix — unsigned app). **Name:** `Command Center`.
-- **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.0.0); every release is
+- **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.1.1); every release is
   recorded in `CHANGELOG.md`. Versions must increase monotonically per environment or `dt-app deploy` is rejected.
 - **Scopes (11):** `storage:buckets:read`, `storage:events:read`, `state:app-states:read|write|delete`,
   `iam:users:read`, `automation:workflows:read`, `automation:workflows:run` (custom workflow provider),
@@ -76,6 +76,9 @@ Rules that keep the layers honest:
   changing it, run `node scripts/gen-workflow-templates.mjs` and bump `ENGINE_DEFINITION_VERSION` so installed
   workflows show "Update available". A unit test fails if the checked-in template drifts.
 - Senders (`api/lib/senders.ts`) never retry inside a run — the ledger retries with a new attempt number.
+- Integration workflows: a built-in provider with `params.workflowId` is sent by its own simple workflow whose task is
+  the app action `send-notification` (`actions/send-notification.action.ts`); the engine runs it per notification
+  (hand-off, no result) and falls back to a direct send if the run is refused. The action writes the ledger result.
 - Provider kind `workflow` ("Custom workflow") runs a customer-owned workflow with the notification as run params;
   it needs no vault entry. One enabled provider per channel (validated). New default providers are appended to
   stored settings by `mergeSettings`.

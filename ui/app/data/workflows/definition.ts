@@ -127,3 +127,39 @@ export function buildCustomWorkflow(appId: string): Pick<WorkflowCreate, "title"
     },
   };
 }
+
+// ─── Per-integration workflows (one per built-in provider) ─────────────────────
+
+export const SEND_NOTIFICATION_ACTION = "send-notification";
+export const PROVIDER_WORKFLOW_TASK = "send";
+
+export function providerWorkflowTitle(providerName: string): string {
+  return `Command Center · ${providerName}`;
+}
+
+/**
+ * The workflow of one integration: SIMPLE, on demand (no trigger), one task — this app's send-notification action
+ * with the provider id and the notification passed through from the run params. Created by the person when the
+ * integration is switched on (Workflows "create workflow" intent, or JSON upload); the engine then runs it once per
+ * notification of that provider.
+ */
+export function buildProviderWorkflow(appId: string, provider: { id: string; name: string }): Pick<WorkflowCreate, "title" | "description" | "type" | "isPrivate" | "tasks"> {
+  return {
+    title: providerWorkflowTitle(provider.name),
+    description:
+      `Sends Command Center (${appId}) notifications through the "${provider.name}" integration. Command Center runs ` +
+      "this workflow once per notification; settings and secrets stay in the Command Center app and the Credential Vault.",
+    type: "SIMPLE",
+    isPrivate: false,
+    tasks: {
+      [PROVIDER_WORKFLOW_TASK]: {
+        name: PROVIDER_WORKFLOW_TASK,
+        action: `${appId}:${SEND_NOTIFICATION_ACTION}`,
+        description: `Send one notification through ${provider.name}`,
+        input: { providerId: provider.id, notification: "{{ execution().params.notification }}" },
+        position: { x: 0, y: 1 },
+        predecessors: [],
+      },
+    },
+  };
+}

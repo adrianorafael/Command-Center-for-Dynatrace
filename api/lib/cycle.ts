@@ -27,6 +27,8 @@ export interface CycleResult {
   failed: number;
   /** Planned but not attempted before the deadline (retried on a later cycle). */
   deferred: number;
+  /** Handed to an integration's own workflow, which records the result itself. */
+  handedOff?: number;
   errors: string[];
 }
 
@@ -56,12 +58,19 @@ export async function runEngineCycle(request: EngineTickRequest, deps: CycleDeps
   const base = { ok: tick.ok, tickAt: tick.tickAt, counts: tick.counts, errors: [...tick.errors], ...(tick.skipped ? { skipped: tick.skipped } : {}) };
   if (!tick.ok || planned === 0) return { ...base, sent: 0, failed: 0, deferred: 0 };
 
-  const results = await sendAll(tick.batches, tick.providers, started + CYCLE_BUDGET_MS, deps);
+  let handedOff = 0;
+  const results = await sendAll(tick.batches, tick.providers, started + CYCLE_BUDGET_MS, {
+    ...deps,
+    onHandOff: (key) => {
+      handedOff++;
+      deps.onHandOff?.(key);
+    },
+  });
   const sent = results.filter((r) => r.status === "sent").length;
   const failed = results.length - sent;
   if (results.length > 0) {
     const report = await runDeliveryReport({ results }, { repo: deps.repo, now: deps.now });
     base.errors.push(...report.errors);
   }
-  return { ...base, sent, failed, deferred: planned - results.length };
+  return { ...base, sent, failed, deferred: planned - results.length - handedOff, ...(handedOff ? { handedOff } : {}) };
 }

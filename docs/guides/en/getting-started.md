@@ -116,8 +116,10 @@ Then:
    engine's action reads Grail, App State and the Credential Vault with the actor's permissions.
 2. **Authorization settings.** In the Workflows app → **Settings → Authorization settings**, enable for the actor the
    permissions the engine uses: `storage:buckets:read`, `storage:events:read`, `state:app-states:read`,
-   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` and, if you use the Custom
-   workflow integration, `automation:workflows:run`. On the trial environment
+   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` and, for integration
+   workflows and the Custom workflow integration, `automation:workflows:run`. The actor of each integration workflow
+   needs `state:app-states:read`, `state:app-states:write` and `credential-vault:entries:read`: its action reads the
+   provider settings, reads the secret and records the result. On the trial environment
    all permissions were enabled for the actor, so the minimal set was not isolated.
 3. Back in Command Center select **Refresh**. If the workflow was found by its title, select **Save this ID**. The
    status turns green (**Installed · simple workflow**) and **Last engine run** updates within one interval.
@@ -129,7 +131,13 @@ Use it to test without waiting for the schedule.
 
 **Integrations → Outbound**: each provider card has an **On/Off** switch, and only providers that are on are used.
 Turning one on the first time opens **Configure**: paste the vault entry ID, fill the non-secret parameters, save.
-Then use **Send test** with one address. One provider per channel can be on.
+One provider per channel can be on.
+
+When a built-in provider is switched **on**, the Workflows app opens with **its own workflow** filled in
+(*Command Center · <provider>*, a simple workflow whose task is the app's *Send Command Center notification* action).
+Save it there. Back in Integrations → Outbound, Command Center finds it by its title and links it; the card then says
+*Sent by its workflow*. Until it is linked, the engine sends that provider's notifications itself, so nothing is lost.
+Then use **Send test** with one address. Details: [integrations](integrations.md#integration-workflows).
 
 | Provider | Parameters |
 | --- | --- |

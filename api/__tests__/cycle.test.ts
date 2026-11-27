@@ -114,6 +114,25 @@ describe("senders", () => {
     expect(r[0].status).toBe("failed");
   });
 
+  it("a built-in provider linked to its own workflow is handed to that workflow (no result yet)", async () => {
+    const f = okFetch({ id: "exec-2" });
+    const handed: string[] = [];
+    const wf = "00000000-0000-4000-8000-0000000000c2";
+    const d = { ...deps(f, { user: SID, password: "tok" }), onHandOff: (k: string) => handed.push(k) };
+    const r = await sendAll({ sms: [note()] }, [provider({ params: { from: "+15550000001", workflowId: wf } })], NOW + 60_000, d);
+    expect(f.mock.calls[0][0]).toBe(`/platform/automation/v1/workflows/${wf}/run`);
+    expect(r).toEqual([]);
+    expect(handed).toEqual([note().key]);
+    expect(d.readCredential).not.toHaveBeenCalled();
+  });
+
+  it("falls back to a direct send when the integration's workflow cannot be run", async () => {
+    let call = 0;
+    const f = vi.fn(async () => (call++ === 0 ? new Response("gone", { status: 404 }) : new Response(JSON.stringify({ sid: "SM9" }), { status: 201 })));
+    const r = await sendAll({ sms: [note()] }, [provider({ params: { from: "+15550000001", workflowId: "00000000-0000-4000-8000-0000000000c2" } })], NOW + 60_000, { fetch: f as unknown as typeof fetch, readCredential: async () => ({ user: SID, password: "tok" }), now: () => NOW });
+    expect(r[0]).toMatchObject({ status: "sent", providerRef: "SM9" });
+  });
+
   it("never leaks secrets or URLs in error text", async () => {
     expect(safeError(new Error("bad token secret-token at https://api.twilio.com/x"), ["secret-token"])).toBe("bad token *** at <url>");
     const f = vi.fn(async () => new Response("echo secret-token", { status: 401 }));

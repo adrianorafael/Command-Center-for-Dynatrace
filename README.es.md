@@ -35,11 +35,11 @@ y usando **Strato**, el sistema de diseño de Dynatrace.
 | **Consola** | Tabla de incidentes en vivo con mosaicos de KPI, filtros, acciones masivas y atajos de teclado; detalles del incidente con línea de tiempo, progreso del escalamiento, registro de notificaciones, entidades y notas. |
 | **Guardias** | Equipos de **usuarios de Dynatrace** (elegidos desde IAM), calendarios rotativos por capas con overrides (reemplazos), políticas de escalamiento con pasos y repeticiones, métodos de contacto personales, reglas de notificación y horas de silencio por equipo. |
 | **War rooms** | Un enlace de reunión más los incidentes que atiende y sus Dynatrace Notebooks, incluido un notebook de post-mortem generado. |
-| **Salida** | Un único **simple workflow** (*Command Center · Engine*) ejecuta la acción propia de la app cada 1, 2 o 5 minutos y no consume horas de workflow. Cada integración tiene un interruptor On/Off; una integración **Custom workflow** entrega las notificaciones a un workflow precompletado que es tuyo y que tú editas. |
+| **Salida** | Un único **simple workflow** (*Command Center · Engine*) ejecuta la acción propia de la app cada 1, 2 o 5 minutos y no consume horas de workflow. Cada integración tiene un interruptor On/Off; al activar una se crea **su propio workflow** (*Command Center · Slack*, …) con una confirmación en la app Workflows, y ese workflow envía sus notificaciones. Una integración **Custom workflow** entrega las notificaciones a un workflow precompletado que es tuyo y que tú editas. |
 | **Almacenamiento** | Dynatrace App State. Sin base de datos externa. Los secretos de los proveedores permanecen en el Credential Vault. |
 | **Modo demo** | Por navegador: datos de ejemplo en todas partes, nada se lee ni se escribe, nada se envía. Desactivado: solo datos reales. |
 
-Versión actual: **2.0.0** — consulta [CHANGELOG.md](CHANGELOG.md).
+Versión actual: **2.1.1** — consulta [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentación
 
@@ -87,7 +87,8 @@ Luego, en la app:
    Habilita las **Authorization settings** de Workflows para el actor.
 2. Entradas del **Credential Vault** para tus proveedores. Agrega sus hosts a **External requests**.
 3. **Integrations → Outbound** → activa los proveedores que uses (Twilio, IFTTT, Slack, Teams, Telegram, webhook o
-   tu propio custom workflow) → **Send test**.
+   tu propio custom workflow). Cada uno abre la app Workflows con su propio workflow ya completado: guárdalo, vuelve,
+   y Command Center lo vincula. Luego **Send test**.
 4. **Teams**, **On-call**, **Escalations**, **Services** → personas, calendarios, una política, enrutamiento.
 5. Envía un evento (el token necesita `openpipeline:events.davis:ingest`):
 

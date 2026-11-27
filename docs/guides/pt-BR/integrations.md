@@ -13,7 +13,8 @@ saída: os oito canais, o que cada provedor recebe, a integração custom workfl
    de escalonamento que está vencido, as pessoas de plantão para os alvos desse passo e as regras de notificação de
    cada pessoa.
 2. Ele grava uma **entrada no registro (ledger)** (`planned`) por pessoa, passo, canal e tentativa.
-3. Logo após o planejamento, a mesma execução lê o segredo do provedor no Credential Vault e chama o provedor por
+3. Logo após o planejamento, a mesma execução envia: pelo workflow próprio da integração, quando há um vinculado
+   (abaixo); caso contrário, diretamente — ela lê o segredo do provedor no Credential Vault e chama o provedor por
    HTTPS (ou executa o seu custom workflow).
 4. O resultado é gravado de volta: `sent` (com a referência do provedor, quando uma é retornada) ou `failed` (com o
    erro do provedor; segredos e URLs são mascarados como `***` e `<url>`).
@@ -41,7 +42,24 @@ do seu início; o que sobrar é enviado na execução seguinte. O acionamento é
 Todo provedor começa **desativado** e tem uma chave **On/Off** no seu card. Um provedor só é usado enquanto está
 ativado e configurado (um ID de entrada do vault; para o custom workflow, um ID de workflow). Só pode haver um provedor
 ativado por canal: o webhook genérico e o custom workflow compartilham o canal *webhook*. Provedores desativados não
-custam nada e não precisam de workflow: todos os provedores integrados são enviados pelo único workflow do motor.
+custam nada, e nada deles é executado.
+
+## Integration workflows
+
+Cada integração nativa pode ter **o seu próprio workflow**, criado quando você a ativa:
+
+| Passo | O que acontece |
+| --- | --- |
+| Ativar (**on**) | O Command Center salva o provedor e abre o app Workflows com *Command Center · <provider>* já preenchido: um simple workflow, sem gatilho (sob demanda), uma tarefa — a ação do app **Send Command Center notification** com as entradas `providerId` e `notification` = `{{ execution().params.notification }}`. Você o salva (uma confirmação: o app não consegue criar workflows sozinho). |
+| De volta ao Command Center | Integrations → Outbound encontra o workflow pelo título e o vincula (o ID dele é armazenado no provedor). **Configure → Integration workflow** também oferece *Create its workflow*, *Download JSON*, *Find its workflow* e *Unlink*. |
+| Uma notificação está vencida | O motor executa esse workflow com a notificação como parâmetros de execução. A ação lê as configurações do provedor no Command Center e o segredo no Credential Vault, envia e grava *Sent* ou *Failed* no registro de notificações. Um envio com falha faz a execução do workflow falhar, então isso aparece no app Workflows. |
+| O workflow não pode ser executado | Excluído, ou sem permissão: o motor envia essa notificação diretamente, para que ninguém perca um acionamento. Até que um workflow seja vinculado, o motor também envia diretamente. |
+| Desativar (**off**) | O provedor e o seu workflow deixam de ser usados; o vínculo é mantido para quando você ativá-lo de novo. O app não consegue pausar nem excluir workflows: exclua-o no app Workflows se não precisar dele. |
+
+Cada notificação de uma integração vinculada é uma execução de workflow com uma invocação de ação, além da execução do motor que a planejou. Como simple
+workflows, eles não consomem workflow hours. Se um workflow foi criado como workflow *standard* (o intent
+create-workflow não tem campo de tipo), *Find its workflow* avisa e o vínculo automático o ignora; nesse caso, faça o
+upload do JSON baixado.
 
 ## O que cada provedor recebe
 
@@ -156,6 +174,7 @@ provedor) aparece na hora. Teste cada canal que você ativar, de ponta a ponta, 
 | --- | --- |
 | Webhook genérico | ✅ Verificado ao vivo em um ambiente trial: escalonamentos e testes entregues, resultados gravados no registro (ledger) |
 | Custom workflow | ✅ Verificado ao vivo em um ambiente trial: um teste e um escalonamento agendado executaram o workflow, que entregou o JSON completo da notificação ao receptor |
+| Integration workflows | ✅ Verificado ao vivo em um ambiente trial com o webhook genérico: o motor executou *Command Center · Generic webhook*, a ação dele leu o provedor e o segredo do vault e entregou; um erro do provedor (HTTP 429) fez a execução do workflow falhar com a mensagem do provedor |
 | Twilio SMS, voz, WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implementados a partir da documentação da API de cada fornecedor, **não exercitados ao vivo** (sem contas no ambiente de teste). Testes unitários cobrem as requisições de Twilio SMS e voz, Slack e Telegram. Teste cada provedor com *Send test*. |
 
 Respostas bidirecionais (reconhecer respondendo a um SMS ou a uma mensagem de chat) não estão implementadas. Reconheça
