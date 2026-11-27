@@ -1,3 +1,4 @@
+/** Shared confirmation dialog for deletes and other irreversible actions. */
 import React, { useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex } from "@dynatrace/strato-components/layouts";

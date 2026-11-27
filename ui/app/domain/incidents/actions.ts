@@ -32,7 +32,9 @@ import { incidentIdFor } from "../ids";
 import type { RouteDecision } from "../routing/match";
 import { setEngineState } from "./meta";
 
+/** Notes are cut to this many characters. */
 export const MAX_NOTE_LENGTH = 4000;
+/** `by` of an action whose author is unknown (no modificationInfo and no `by`). */
 export const UNKNOWN_ACTOR = "unknown";
 
 const STATUS_ACTIONS = new Set<IncidentAction["type"]>([
@@ -97,11 +99,13 @@ function clearAck(inc: Incident): void {
 
 // ─── applyAction ─────────────────────────────────────────────────────────────
 
+/** Options of applyAction / applyActionDetailed. */
 export interface ApplyOptions {
   /** Stable identity of the action (its `act.*` key) — enables idempotent folding. */
   actionId?: string;
 }
 
+/** Outcome of applying one action. */
 export interface ApplyResult {
   incident: Incident;
   applied: boolean;
@@ -290,6 +294,7 @@ export function sortActions<T extends PendingAction>(actions: T[]): T[] {
   });
 }
 
+/** Outcome of folding all pending actions of one incident. */
 export interface FoldResult {
   incident: Incident;
   /** Keys of the actions considered (all, applied or not — they can be deleted). */
@@ -385,6 +390,7 @@ export function createIncident(alert: Alert, route: RouteDecision, now: number):
   return inc;
 }
 
+/** Transition applyAlertUpdate made because of the source, if any. */
 export type SourceChange = "resolved" | "reopened" | undefined;
 
 /**

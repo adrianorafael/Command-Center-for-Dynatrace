@@ -9,13 +9,16 @@ import type { WorkflowCreate } from "@dynatrace-sdk/client-automation";
 import { defaultSettings } from "../domainPort";
 import { buildEngineWorkflowCreate, buildOnProblemWorkflowCreate } from "./definition";
 
+/** App id baked into the checked-in templates (see header). */
 export const TEMPLATE_APP_ID = "my.command.center";
 
+/** The engine workflow for the template file, built from default settings. */
 export function buildEngineTemplate(): WorkflowCreate {
   const settings = defaultSettings();
   return buildEngineWorkflowCreate({ appId: TEMPLATE_APP_ID, settings });
 }
 
+/** Exact file content (pretty JSON + trailing newline) that the drift test compares with the checked-in file. */
 export function engineTemplateJson(): string {
   return `${JSON.stringify(buildEngineTemplate(), null, 2)}\n`;
 }
@@ -25,6 +28,7 @@ export function buildOnProblemTemplate(): WorkflowCreate {
   return buildOnProblemWorkflowCreate({ appId: TEMPLATE_APP_ID, settings: defaultSettings() });
 }
 
+/** Exact file content of the "Engine on problem" template. */
 export function onProblemTemplateJson(): string {
   return `${JSON.stringify(buildOnProblemTemplate(), null, 2)}\n`;
 }

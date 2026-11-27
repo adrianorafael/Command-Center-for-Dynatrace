@@ -1,7 +1,5 @@
 # Integraciones — cómo salen las notificaciones
 
-🌐 [English](../en/integrations.md) · [Português (BR)](../pt-BR/integrations.md) · **Español**
-
 Los eventos de entrada se cubren en la [referencia de alertas](alerts-reference.md). Esta página cubre el lado de
 salida: los ocho canales, qué recibe cada proveedor, la integración custom workflow y cómo probarlos.
 
@@ -51,7 +49,7 @@ integración **puede** tener un workflow propio en su lugar; lo eliges por integ
 
 | Paso | Qué ocurre |
 | --- | --- |
-| Elegirlo | **Configure → Delivery → Through its own workflow** y luego **Create its workflow**. La app Workflows se abre con *Command Center · <provider>* ya completado: un simple workflow, sin trigger (bajo demanda), una tarea — la acción de la app **Send Command Center notification** con las entradas `providerId` y `notification` = `{{ execution().params.notification }}`. Tú lo guardas ahí (la app no puede crear workflows por sí misma). **Download JSON** entrega la misma definición para cargarla. Luego guarda la integración. |
+| Elegirlo | **Configure → Delivery → Through its own workflow** y luego **Create its workflow**. La app Workflows se abre con *Command Center · &lt;provider&gt;* ya completado: un simple workflow, sin trigger (bajo demanda), una tarea — la acción de la app **Send Command Center notification** con las entradas `providerId` y `notification` = `{{ execution().params.notification }}`. Tú lo guardas ahí (la app no puede crear workflows por sí misma). **Download JSON** entrega la misma definición para cargarla. Luego guarda la integración. |
 | De vuelta en Command Center | Integrations → Outbound encuentra el workflow por su título y lo vincula (su ID se guarda en el proveedor); **Find its workflow** hace lo mismo a mano. La tarjeta entonces dice *Sent by its workflow*. |
 | Vence una notificación | El motor ejecuta ese workflow con la notificación como parámetros de ejecución. La acción lee los ajustes del proveedor desde Command Center y el secreto desde el Credential Vault, envía, y escribe *Sent* o *Failed* en el registro de notificaciones. Un envío fallido hace fallar la ejecución del workflow, así que se ve en la app Workflows. |
 | El workflow no se puede ejecutar | Eliminado, o sin permiso: el motor envía esa notificación directamente, para que nadie se pierda un aviso. Hasta que haya un workflow vinculado, el motor también envía directamente. |

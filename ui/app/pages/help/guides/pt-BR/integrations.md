@@ -1,7 +1,5 @@
 # Integrações — como as notificações saem
 
-🌐 [English](../en/integrations.md) · **Português (BR)** · [Español](../es/integrations.md)
-
 Os eventos de entrada são tratados na [referência de alertas](alerts-reference.md). Esta página trata do lado de
 saída: os oito canais, o que cada provedor recebe, a integração custom workflow e como testá-los.
 
@@ -51,7 +49,7 @@ workflow próprio no lugar; você escolhe isso por integração:
 
 | Passo | O que acontece |
 | --- | --- |
-| Escolher | **Configure → Delivery → Through its own workflow** e depois **Create its workflow**. O app Workflows abre com *Command Center · <provider>* já preenchido: um simple workflow, sem gatilho (sob demanda), uma tarefa — a ação do app **Send Command Center notification** com as entradas `providerId` e `notification` = `{{ execution().params.notification }}`. Você o salva lá (o app não consegue criar workflows sozinho). **Download JSON** entrega a mesma definição para upload. Depois salve a integração. |
+| Escolher | **Configure → Delivery → Through its own workflow** e depois **Create its workflow**. O app Workflows abre com *Command Center · &lt;provider&gt;* já preenchido: um simple workflow, sem gatilho (sob demanda), uma tarefa — a ação do app **Send Command Center notification** com as entradas `providerId` e `notification` = `{{ execution().params.notification }}`. Você o salva lá (o app não consegue criar workflows sozinho). **Download JSON** entrega a mesma definição para upload. Depois salve a integração. |
 | De volta ao Command Center | Integrations → Outbound encontra o workflow pelo título e o vincula (o ID dele é armazenado no provedor); **Find its workflow** faz o mesmo manualmente. O card passa a mostrar *Sent by its workflow*. |
 | Uma notificação está vencida | O motor executa esse workflow com a notificação como parâmetros de execução. A ação lê as configurações do provedor no Command Center e o segredo no Credential Vault, envia e grava *Sent* ou *Failed* no registro de notificações. Um envio com falha faz a execução do workflow falhar, então isso aparece no app Workflows. |
 | O workflow não pode ser executado | Excluído, ou sem permissão: o motor envia essa notificação diretamente, para que ninguém perca um acionamento. Até que um workflow seja vinculado, o motor também envia diretamente. |

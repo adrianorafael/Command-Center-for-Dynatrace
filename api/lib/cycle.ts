@@ -18,6 +18,7 @@ import { sendAll, type SenderDeps } from "./senders";
 /** Total budget for one cycle; the platform limit for an action/function invocation is 120 s. */
 export const CYCLE_BUDGET_MS = 100_000;
 
+/** What one cycle did (the action/function result). `skipped` is set when the tick did not run, e.g. "locked". */
 export interface CycleResult {
   ok: boolean;
   tickAt: number;
@@ -55,6 +56,7 @@ export function appBaseUrl(): string | undefined {
   }
 }
 
+/** Runs tick, send and report once; sends nothing when the tick failed, was skipped or planned nothing. */
 export async function runEngineCycle(request: EngineTickRequest, deps: CycleDeps): Promise<CycleResult> {
   const now = deps.now ?? Date.now;
   const started = now();

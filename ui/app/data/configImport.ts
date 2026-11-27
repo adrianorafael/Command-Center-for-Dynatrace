@@ -30,8 +30,10 @@ import {
 } from "../domain/validation/validate";
 import { KEY, type Store } from "./repository";
 
+/** `kind` marker that identifies a Command Center export file. */
 export const CONFIG_EXPORT_KIND = "command-center-config";
 
+/** The Settings → Backup file. `exportedAt` is an ISO timestamp. */
 export interface ConfigExport {
   kind: typeof CONFIG_EXPORT_KIND;
   schemaVersion: number;
@@ -50,6 +52,7 @@ export interface ImportProblem {
   message: string;
 }
 
+/** `written` / `failed` hold App State keys; `ok` only when there were no problems and no failed writes. */
 export interface ImportResult {
   ok: boolean;
   /** Validation problems — when present nothing was written. */
@@ -167,6 +170,7 @@ export function checkConfigExport(
   return { problems, settings };
 }
 
+/** Check, then write every entity (settings last). Writes are not atomic: see `failed` for a partial import. */
 export async function importConfig(
   store: Store,
   doc: unknown,

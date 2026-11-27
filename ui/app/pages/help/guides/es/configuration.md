@@ -1,7 +1,5 @@
 # Referencia de configuración — cada ajuste, función de la app y clave almacenada
 
-🌐 [English](../en/configuration.md) · [Português (BR)](../pt-BR/configuration.md) · **Español**
-
 Los ajustes son **para toda la app**: un cambio se aplica a todos los usuarios de la app en el entorno. Las únicas
 excepciones son los elementos marcados como *this browser* (este navegador), que se guardan de inmediato. Las secciones
 General, Event sources, Routing defaults, Paging engine y Data retention tienen cada una su propio botón **Save**. La

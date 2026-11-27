@@ -1,3 +1,4 @@
+/** Settings (route `/settings`): sources, routing defaults, engine, retention, export/import, permissions, about. */
 import { getAppVersion } from "@dynatrace-sdk/app-environment";
 import { describeErrors } from "../../components/format";
 import { FieldHint } from "../../components/FieldHint";
@@ -32,7 +33,7 @@ const SECTIONS = [
   { id: "about", label: "About" },
 ];
 
-/** Mirrors app.config.json scopes (owned by the lead). */
+/** Mirrors the scopes in app.config.json: keep both lists in sync. */
 const SCOPES = [
   { scope: "storage:buckets:read", enables: "Any Grail read" },
   { scope: "storage:events:read", enables: "Read Davis problems, Davis events and custom events" },

@@ -12,6 +12,7 @@
 
 import { queryExecutionClient } from "@dynatrace-sdk/client-query";
 
+/** One Grail record: field name → value as returned (timestamps are ISO strings). */
 export type GrailRecord = Record<string, unknown>;
 
 type QueryStateName = "NOT_STARTED" | "RUNNING" | "SUCCEEDED" | "RESULT_GONE" | "CANCELLED" | "FAILED";
@@ -54,10 +55,12 @@ export interface RunQueryOptions {
   client?: QueryClientLike;
 }
 
+/** Records only (truncation notices are dropped). */
 export type RunQuery = (query: string, options?: RunQueryOptions) => Promise<GrailRecord[]>;
 /** Engine dependency: either form is accepted (tests may return plain record arrays). */
 export type QueryRunner = (query: string, options?: RunQueryOptions) => Promise<GrailRecord[] | GrailResult>;
 
+/** A query that did not succeed or did not finish in time; `state` is the last query state seen. */
 export class GrailQueryError extends Error {
   constructor(
     message: string,
@@ -80,6 +83,7 @@ function records(r: ResultLike): GrailRecord[] {
  */
 const TRUNCATION_RE = /LIMIT|SCAN|SAMPL|TRUNCAT|PARTIAL/i;
 
+/** Notification types (or message heads) that mean the result is incomplete; "SAMPLED" for sampled results. */
 export function truncationNotices(r: { result?: ResultLike["result"] }): string[] {
   const g = r.result?.metadata?.grail;
   const out: string[] = [];
@@ -91,6 +95,10 @@ export function truncationNotices(r: { result?: ResultLike["result"] }): string[
   return out;
 }
 
+/**
+ * Execute and poll until the query ends or `timeoutMs` passes; each request waits at most 10 s server-side.
+ * Throws GrailQueryError unless the final state is SUCCEEDED.
+ */
 export async function runGrailQuery(query: string, options: RunQueryOptions = {}): Promise<GrailResult> {
   const client = options.client ?? (queryExecutionClient as unknown as QueryClientLike);
   const timeoutMs = options.timeoutMs ?? 30_000;
@@ -118,6 +126,10 @@ export async function runGrailQuery(query: string, options: RunQueryOptions = {}
   return { records: recs, truncated: notices.length > 0, notices };
 }
 
+/**
+ * The runner the engine and actions use. It returns records only, so Grail's truncation notices are lost here and
+ * asGrailResult can detect truncation only by record count.
+ */
 export const runQuery: RunQuery = async (query, options = {}) => (await runGrailQuery(query, options)).records;
 
 /** Normalise either runner result form. */

@@ -1,3 +1,4 @@
+/** Incident age cell of the Console table, coloured against the viewer's acknowledge target (UI prefs). */
 import React from "react";
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { Text } from "@dynatrace/strato-components/typography";

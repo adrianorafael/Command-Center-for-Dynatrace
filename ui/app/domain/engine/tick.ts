@@ -67,6 +67,7 @@ import { routeAlert } from "../routing/match";
 import { pagingState } from "../suppression";
 import { HOUR_MS } from "../time/tz";
 
+/** Everything one tick reads: stored state, this tick's alerts and the clock (`now`, epoch ms). */
 export interface TickInput {
   now: number;
   settings: Settings;
@@ -98,6 +99,7 @@ export interface TickInput {
   archived?: ReadonlySet<string> | ReadonlyMap<string, number>;
 }
 
+/** Same values as api/lib/sources.ts SourceHealth. */
 export type SourceQueryStatus = "ok" | "failed" | "truncated";
 
 export interface ArchiveWrite {
@@ -106,6 +108,7 @@ export interface ArchiveWrite {
   incident: Incident;
 }
 
+/** What the caller writes, in the order documented in api/lib/engine.ts, and what it sends (`batches`). */
 export interface TickOutput {
   /** Incidents to put (`inc.<id>`); excludes archived ones. */
   incidentsToWrite: Incident[];
@@ -126,9 +129,11 @@ export interface TickOutput {
   deferred: number;
 }
 
+/** An action whose incident is unknown is kept this long (its incident may appear later), then deleted. */
 export const ORPHAN_ACTION_MAX_AGE_MS = 24 * HOUR_MS;
 /** Refresh `lastSeenAt` of unchanged incidents at most this often (limits writes). */
 export const LAST_SEEN_REFRESH_MS = 10 * 60_000;
+/** Newest timeline entries kept in an archived copy. */
 export const ARCHIVE_TIMELINE_KEEP = 50;
 /** A resolved incident is archived only after its alert was absent from this many consecutive OK queries. */
 export const ARCHIVE_ABSENT_TICKS = 3;
@@ -151,6 +156,7 @@ function maxLedgerCycle(ledger: readonly NotificationRecord[], incidentId: strin
   return max;
 }
 
+/** One empty list per channel. */
 export function emptyBatches(): NotificationBatches {
   const b = {} as NotificationBatches;
   for (const c of CHANNELS) b[c] = [];
@@ -161,7 +167,7 @@ function sameJson(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-/** Slim copy stored in `arc.*`. */
+/** Slim copy stored in `arc.*`: no description, no routing fields, newest ARCHIVE_TIMELINE_KEEP timeline entries. */
 export function slimIncident(inc: Incident): Incident {
   const c = cloneIncident(inc);
   c.alert = { ...c.alert, fields: {} };
@@ -170,6 +176,7 @@ export function slimIncident(inc: Incident): Incident {
   return c;
 }
 
+/** The pure tick: steps 2–9 in the header order. Deterministic for a given input. */
 export function tick(input: TickInput): TickOutput {
   const { now, settings } = input;
   const archived = input.archived;

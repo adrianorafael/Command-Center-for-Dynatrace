@@ -1,3 +1,4 @@
+/** War rooms (route `/war-rooms`): open and closed rooms with their incidents and notebooks. */
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Flex, PageLayout } from "@dynatrace/strato-components/layouts";

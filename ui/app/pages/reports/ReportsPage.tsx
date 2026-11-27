@@ -1,3 +1,4 @@
+/** Reports (route `/reports`): response times, volume, noise and on-call load from daily rollups (or incidents). */
 import React, { useMemo, useState } from "react";
 import { Flex, Grid, PageLayout, Surface } from "@dynatrace/strato-components/layouts";
 import {

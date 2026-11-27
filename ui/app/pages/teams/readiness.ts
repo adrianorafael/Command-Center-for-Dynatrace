@@ -6,8 +6,10 @@ import type { Team } from "../../domain/contracts";
 import type { AppData } from "../../hooks/AppDataContext";
 import { CHANNEL_LABEL } from "../../components/channelLabels";
 
+/** Which setup step an item is about (also selects its fix button). */
 export type ReadinessFix = "members" | "contacts" | "schedule" | "policy" | "routing";
 
+/** One checklist line. */
 export interface ReadinessItem {
   key: ReadinessFix;
   title: string;
@@ -96,6 +98,7 @@ export function teamReadiness(team: Team, data: AppData, userName: (uid: string)
   ];
 }
 
+/** A problem outside the team that can stop its pages, with the place to fix it. */
 export interface DeliveryIssue {
   text: string;
   /** In-app path that fixes it. */

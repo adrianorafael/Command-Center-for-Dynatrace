@@ -49,3 +49,16 @@ describe("?demo=empty (offline preview): first-time setup from nothing", () => {
     resetAdaptersForTests();
   });
 });
+
+describe("demo heartbeat", () => {
+  it("is reported as fresh, so a long demo never warns that the engine is late", async () => {
+    const { withLiveDemoHeartbeat } = await import("../demoMode");
+    const { MemoryRepository } = await import("../memoryRepository");
+    const { KEY } = await import("../repository");
+    const seeded = new MemoryRepository([{ key: KEY.heartbeat, value: { lastTickAt: 0, durationMs: 5 } }, { key: "x", value: 1 }]);
+    const later = Date.UTC(2026, 10, 27, 15, 30, 42);
+    const r = withLiveDemoHeartbeat(seeded, () => later);
+    expect((await r.get<{ lastTickAt: number; durationMs: number }>(KEY.heartbeat))?.value).toEqual({ lastTickAt: Date.UTC(2026, 10, 27, 15, 30, 0), durationMs: 5 });
+    expect((await r.get<number>("x"))?.value).toBe(1);
+  });
+});

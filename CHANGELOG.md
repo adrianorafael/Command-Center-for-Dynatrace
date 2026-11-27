@@ -11,6 +11,20 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+### Changed
+- **Help holds the full documentation** in English, Portuguese (BR) and Spanish. The six guides (getting started,
+  user guide, alerts reference, integrations, configuration, operations) open inside the app, with a table of
+  contents, links between guides that stay in the app, and a language selector. The language follows the browser
+  language until you choose one; the choice is remembered in this browser, and a guide's address
+  (`/help?doc=…&lang=…`) carries the guide and the language, so it can be shared. Each language loads only when it is
+  opened. The overview (Get started, concepts, sending events, shortcuts, troubleshooting) stays in English.
+- **GitHub is English only**: `README.pt-BR.md` and `README.es.md` are removed, and the Portuguese and Spanish guides
+  moved from `docs/guides/pt-BR` and `docs/guides/es` to `ui/app/pages/help/guides/`. The markdown stays the source:
+  `node scripts/gen-help-content.mjs` generates the in-app modules, and a unit test fails when they drift.
+- Guides: the Console's **Show** tabs (Open, Triggered, Acknowledged, Snoozed, Resolved, All, with counts) replace the
+  Status filter; **Add people** keeps picked people in a *Selected (n)* list; a built-in provider's **Configure** shows
+  the host to allow in *External requests*, and a refused host reads *Host not allowed* (new troubleshooting row).
+
 ## [2.3.0] - 2026-11-27
 
 Lower running cost. Every workflow task execution is one billed function call, whatever starts the workflow, so this

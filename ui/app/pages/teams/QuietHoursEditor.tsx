@@ -1,3 +1,4 @@
+/** Quiet hours tab of the team detail page. */
 import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";

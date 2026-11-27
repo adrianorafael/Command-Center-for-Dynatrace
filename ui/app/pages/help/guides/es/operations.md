@@ -1,7 +1,5 @@
 # Operaciones — arquitectura, costo, resolución de problemas y límites
 
-🌐 [English](../en/operations.md) · [Português (BR)](../pt-BR/operations.md) · **Español**
-
 ## Arquitectura
 
 ```mermaid
@@ -313,6 +311,7 @@ fetch dt.davis.problems, from: now() - 2h
 | Un incidente queda sin equipo y no se avisa a nadie | Ninguna regla de enrutamiento coincidió y no hay equipo predeterminado. Los problemas que Davis detecta por sí solo no traen equipo (solo los eventos que tú envías pueden nombrar un servicio en `cc.service`). Abre el equipo y selecciona *Receive all unrouted alerts* en su lista de verificación **Ready to page?** (o defínelo en Settings → Routing defaults), o agrega una regla de enrutamiento. La lista también muestra qué más le falta al equipo. |
 | *Engine on problem* está instalado pero parece no ejecutarse | Los simple workflows no muestran lista de ejecuciones: revisa **Integrations → Workflows → Last engine run** justo después de que se abra un problema. Un disparador nuevo necesita unos minutos antes de activarse. Su actor necesita los mismos permisos que el del motor, y el disparador tiene que estar encendido. |
 | El enrutamiento ignora `cc.service` | El nombre o el ID no coincide con un servicio, o una regla anterior definió otro servicio. Usa Services → Test a rule. |
+| *Host not allowed: &lt;host&gt;* en una notificación o en la tarjeta de un proveedor | Dynatrace rechazó la llamada porque el host no está en la lista de hosts permitidos. Agrega el host en Settings → General → Environment management → External requests (Integrations → Configure muestra cuál), luego **Send test**. La app no puede cambiar esa lista por sí misma. |
 | Una notificación **falló** | Incidente → Notifications muestra el error del proveedor. Causas habituales: falta el host en External requests, una entrada del vault que el actor no puede leer, tipo de credencial incorrecto, teléfono que no está en E.164, API key de Twilio sin *Account SID*. |
 | Una notificación muestra **No result** | La ejecución terminó antes de que la llamada respondiera. Se reintenta hasta *Delivery attempts*. |
 | *Run engine now* dice *Engine is already running* | Una ejecución programada tiene el lease. Espera unos segundos y vuelve a intentarlo. |

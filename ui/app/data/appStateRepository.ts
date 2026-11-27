@@ -42,6 +42,7 @@ export interface StateClientLike {
 
 const KEY_PATTERN = /^[a-z0-9._-]{1,200}$/;
 
+/** Throws for a key App State would reject, before any request is made. */
 export function assertValidKey(key: string): void {
   if (!KEY_PATTERN.test(key)) {
     throw new Error(`Invalid app-state key (allowed: [a-z0-9._-], ≤ 200 chars): ${key.slice(0, 60)}`);
@@ -80,6 +81,7 @@ function parse<T>(key: string, raw: string | undefined): T | undefined {
   }
 }
 
+/** Repository over App State. get/delete treat a missing key as undefined / success; values are JSON text. */
 export class AppStateRepository implements Repository {
   constructor(private readonly client: StateClientLike = stateClient as unknown as StateClientLike) {}
 

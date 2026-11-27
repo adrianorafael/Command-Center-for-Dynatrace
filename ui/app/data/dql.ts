@@ -11,6 +11,7 @@
  *    (not on the problem), and `fieldsKeep` omits fields that are absent on a record.
  *  - Q3 PARSED and executed without error but returned no records (no generic events with the
  *    convention were ingested) → semantics ⚠️ UNVALIDATED.
+ *  - Q5 (one problem's newest status, for the Problem trigger) — evidence at buildProblemStatusQuery.
  *  - Davis tables hold one record per status change: every query dedups by event.id keeping the
  *    newest record BEFORE filtering on status, so a stale ACTIVE cannot outlive a CLOSED.
  *
@@ -19,6 +20,7 @@
 
 import type { Settings } from "../domain/contracts";
 
+/** `| limit` of every list query; a result this long counts as truncated (asGrailResult). */
 export const DQL_LIMIT = 1000;
 
 /** Clamp an hour lookback to 1…720 h (integer). */
@@ -35,6 +37,7 @@ export function safeEventTypes(types: readonly string[]): string[] {
   return [...new Set(types.map((t) => t.trim()).filter((t) => EVENT_TYPE_RE.test(t)))];
 }
 
+/** Allow-list event / problem ids (e.g. "P-…", Davis event ids); duplicates removed. */
 export function safeEventIds(ids: readonly string[]): string[] {
   return [...new Set(ids.filter((t) => EVENT_ID_RE.test(t)))];
 }
@@ -151,6 +154,7 @@ export function buildProblemStatusQuery(problemId: string): string | undefined {
   ].join("\n");
 }
 
+/** Splits `items` into arrays of at most `size` (Q4 id batches). */
 export function chunk<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));

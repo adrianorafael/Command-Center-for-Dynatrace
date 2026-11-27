@@ -1,3 +1,4 @@
+/** App-wide banners shown above the page content: demo mode and a late paging engine. */
 import { engineStaleAfterMs } from "../domain/contracts";
 import React from "react";
 import { useNavigate } from "react-router-dom";

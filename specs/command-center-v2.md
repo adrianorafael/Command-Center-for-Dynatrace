@@ -29,7 +29,8 @@ This amendment supersedes every part of this spec that describes the engine as a
 - **Workflow visibility:** not private; simple workflows keep execution metadata only and the action returns counts.
 - **Measured** (trial tenant billing events): ≈ 690 function invocations per hour plus one workflow hour per hour for
   the standard design; one `ACTION` invocation per run for this design.
-- The user documentation (`docs/guides/{en,pt-BR,es}`) describes the current behaviour and wins over this spec where
+- The user documentation (`docs/guides/en`; translations in `ui/app/pages/help/guides/{pt-BR,es}`, shown in the
+  in-app Help) describes the current behaviour and wins over this spec where
   they differ.
 
 ## Amendment A2 (2026-11-27, 2.1.0) — one workflow per integration

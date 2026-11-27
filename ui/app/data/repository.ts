@@ -1,5 +1,5 @@
 /**
- * Repository port — FROZEN contract (lead-owned).
+ * Repository port — FROZEN contract: changing it changes every adapter and the stored key layout.
  *
  * Two adapters implement it: AppStateRepository (@dynatrace-sdk/client-state) and
  * MemoryRepository (demo mode + tests). The UI and the app functions only talk to this.
@@ -23,6 +23,7 @@ import type {
 } from "../domain/contracts";
 import type { WarRoom } from "../domain/warrooms";
 
+/** App State key of each entity. Ids are interpolated as-is; AppStateRepository rejects a key outside the schema. */
 export const KEY = {
   settings: "cfg.settings",
   rules: "rules.main",
@@ -42,6 +43,7 @@ export const KEY = {
   warRoom: (id: string) => `war.${id}`,
 } as const;
 
+/** List prefixes matching KEY; `rpt.` also matches rollup delta keys (`rpt.<day>.d.<rand>`). */
 export const PREFIX = {
   team: "team.",
   schedule: "sched.",
@@ -64,6 +66,7 @@ export interface Stored<T> {
   lastModifiedTime?: number;
 }
 
+/** Key-value port implemented by AppStateRepository and MemoryRepository. Last write wins (no compare-and-set). */
 export interface Repository {
   /** Generic key-value access (adapters JSON-encode values). */
   get<T>(key: string): Promise<Stored<T> | undefined>;

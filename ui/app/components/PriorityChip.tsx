@@ -1,8 +1,10 @@
+/** Priority chip, meanings and chart colours, so P1…P5 look the same everywhere. */
 import React from "react";
 import { Chip } from "@dynatrace/strato-components/content";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Priority } from "../domain/contracts";
 
+/** One-line meaning of each priority, for tooltips and selects. */
 export const PRIORITY_MEANING: Record<Priority, string> = {
   P1: "Critical: major outage or customer impact",
   P2: "High: a service is degraded",

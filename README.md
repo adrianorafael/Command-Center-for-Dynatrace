@@ -1,6 +1,6 @@
 # Command Center for Dynatrace
 
-🌐 **English** · [Português (BR)](README.pt-BR.md) · [Español](README.es.md) — 🔗 **Project page:** https://adrianorafael.github.io/Command-Center-for-Dynatrace/
+🔗 **Project page:** https://adrianorafael.github.io/Command-Center-for-Dynatrace/
 
 **Command Center for Dynatrace** is an app created and maintained by [@adrianorafael](https://github.com/adrianorafael) on GitHub.
 
@@ -52,7 +52,7 @@ Current version: **2.3.0** — see [CHANGELOG.md](CHANGELOG.md).
 | [Configuration](docs/guides/en/configuration.md) | Every setting with its default, app functions for automation, stored data |
 | [Operations](docs/guides/en/operations.md) | Architecture, the simple-workflow cost study with measurements, troubleshooting, security, what is verified |
 
-Also in Portuguese (BR) in [docs/guides/pt-BR](docs/guides/pt-BR/) and Spanish in [docs/guides/es](docs/guides/es/).
+The same guides are in the app's **Help** page in English, Portuguese (BR) and Spanish, with a language selector.
 
 ## What it replaces
 
@@ -159,6 +159,9 @@ Offline preview in demo mode (add `?demo=empty` to start with no data and walk t
 | `node scripts/gen-workflow-templates.mjs [--check]` | Regenerate or check the two engine workflow files in `workflow-templates/` |
 | `node scripts/preview-server.mjs` | Serve the built UI offline in demo mode |
 | `node scripts/screenshot.mjs` | Screenshot every route of the offline preview |
+| `node scripts/doc-screenshots.mjs` | Re-capture the documentation screenshots in `docs/screenshots/` (dark theme) |
+| `node scripts/record-demo.mjs` + `bash scripts/edit-demo.sh` | Record the demo-mode product tour with a visible cursor, then cut it with ffmpeg into `docs/media/command-center-demo.mp4` (title card, chapters, poster) |
+| `node scripts/gen-help-content.mjs [--check]` | Regenerate or check the in-app Help guides (English, Portuguese, Spanish) from their markdown |
 
 Deploying to another environment: edit `environmentUrl`, `npx dt-app auth`, `npx dt-app deploy`, then repeat the
 engine install, vault entries and allowlist. App State does not migrate: use **Settings → Export and import**.
@@ -174,7 +177,8 @@ ui/app/domain/                   pure TypeScript core: routing, schedules, escal
 ui/app/data/                     App State, DQL builders, IAM directory, notebooks, workflow definition
 ui/app/pages/                    console, war rooms, on-call, teams, escalations, services, integrations, reports, settings, help
 workflow-templates/              generated engine workflows (interval, on problem) + trial-only alert simulator
-docs/                            project page, guides in three languages, screenshots
+docs/                            project page, guides (English), screenshots
+scripts/gen-help-content.mjs     builds the in-app Help from the guides (en; pt-BR and es live in ui/app/pages/help/guides)
 specs/, design/                  specification and screen design
 ```
 

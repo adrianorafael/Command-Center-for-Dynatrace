@@ -52,6 +52,7 @@ export interface ProblemTriggerDeps extends CycleDeps {
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const upper = (v: unknown): string => (typeof v === "string" ? v.trim().toUpperCase() : "");
 
+/** Waits for the triggering problem (see header), runs up to PROBLEM_MAX_CYCLES cycles, and returns the last result. */
 export async function runProblemTriggeredCycle(input: ProblemTriggerInput | undefined, deps: ProblemTriggerDeps): Promise<CycleResult> {
   const now = deps.now ?? Date.now;
   const sleep = deps.sleep ?? pause;

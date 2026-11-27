@@ -1,3 +1,4 @@
+/** Console dialogs that collect input before an action is appended (reassign, snooze, priority, note, bulk resolve). */
 import React, { useEffect, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex } from "@dynatrace/strato-components/layouts";
@@ -9,8 +10,10 @@ import { useAppData } from "../../hooks/AppDataContext";
 import { PRIORITY_MEANING, PriorityChip } from "../../components/PriorityChip";
 import { msToIso, pickerToMs } from "../../components/format";
 
+/** Which dialog to show. */
 export type ModalKind = "reassign" | "snooze" | "priority" | "note" | "resolve-many";
 
+/** A dialog request for one or more incidents (`ids`). */
 export interface ModalRequest {
   kind: ModalKind;
   ids: string[];

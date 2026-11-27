@@ -30,6 +30,7 @@ import {
   type CivilDate,
 } from "../time/tz";
 
+/** One rotation shift of a layer (epoch ms). */
 export interface LayerShift {
   layerId: string;
   /** Shift number since the anchor (0 = first). */
@@ -40,6 +41,7 @@ export interface LayerShift {
   end: number;
 }
 
+/** Who is on call and why (layer or override). */
 export interface OnCall {
   uid: string;
   source: "layer" | "override";
@@ -52,6 +54,7 @@ export interface OnCall {
 
 type Length = { kind: "days"; days: number } | { kind: "hours"; ms: number };
 
+/** Shift length of a layer: whole local days, or elapsed hours for non-day custom lengths (see header). */
 export function rotationLength(layer: RotationLayer): Length {
   switch (layer.rotation.type) {
     case "daily":

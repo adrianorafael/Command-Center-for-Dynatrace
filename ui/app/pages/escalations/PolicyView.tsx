@@ -1,3 +1,4 @@
+/** Read-only policy views: the step list and the "who would be paged when" simulation. */
 import React, { useMemo } from "react";
 import { Flex, Container } from "@dynatrace/strato-components/layouts";
 import { AvatarGroup } from "@dynatrace/strato-components/content";

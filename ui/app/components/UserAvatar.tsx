@@ -1,3 +1,4 @@
+/** Person and assignee display (avatar + name), resolved through the app's user cache. */
 import React from "react";
 import { Avatar } from "@dynatrace/strato-components/content";
 import { Text } from "@dynatrace/strato-components/typography";
@@ -18,6 +19,7 @@ export const UserAvatar = ({ uid, subtitle, size = "small" }: { uid: string; sub
   );
 };
 
+/** An incident's assignee (a person or a team), or "Unassigned". */
 export const AssigneeView = ({ assignee }: { assignee?: Assignee }) => {
   const { data } = useAppData();
   if (!assignee) return <Text style={{ color: Colors.Text.Neutral.Subdued }}>Unassigned</Text>;

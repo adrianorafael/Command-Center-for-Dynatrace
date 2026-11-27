@@ -1,7 +1,5 @@
 # Operações — arquitetura, custo, solução de problemas e limites
 
-🌐 [English](../en/operations.md) · **Português (BR)** · [Español](../es/operations.md)
-
 ## Arquitetura
 
 ```mermaid
@@ -310,6 +308,7 @@ fetch dt.davis.problems, from: now() - 2h
 | Um incidente fica sem equipe e ninguém é acionado | Nenhuma regra de roteamento correspondeu e não há equipe padrão. Os problemas que o Davis detecta sozinho não trazem equipe (só os eventos que você envia podem citar um serviço em `cc.service`). Abra a equipe e selecione *Receive all unrouted alerts* na checklist **Ready to page?** dela (ou defina em Settings → Routing defaults), ou adicione uma regra de roteamento. A checklist também mostra o que mais falta para a equipe. |
 | O *Engine on problem* está instalado, mas parece não rodar | Simple workflows não mostram lista de execuções: confira **Integrations → Workflows → Last engine run** logo depois que um problema abrir. Um gatilho novo precisa de alguns minutos antes de disparar. O ator dele precisa das mesmas permissões do ator do motor, e o gatilho tem que estar ligado. |
 | O roteamento ignora `cc.service` | O nome ou ID não corresponde a um serviço, ou uma regra anterior definiu outro serviço. Use Services → Test a rule. |
+| *Host not allowed: &lt;host&gt;* numa notificação ou no card de um provedor | A Dynatrace recusou a chamada porque o host não está na lista de permissões. Adicione o host em Settings → General → Environment management → External requests (Integrations → Configure mostra qual), depois **Send test**. O app não consegue alterar essa lista sozinho. |
 | Uma notificação **falhou** (Failed) | Incidente → Notifications mostra o erro do provedor. Causas comuns: host ausente em External requests, uma entrada do vault que o ator não consegue ler, tipo de credencial errado, telefone fora do padrão E.164, API key do Twilio sem *Account SID*. |
 | Uma notificação mostra **No result** | A execução terminou antes de a chamada retornar. Ela é tentada novamente até *Delivery attempts*. |
 | *Run engine now* diz *Engine is already running* | Uma execução agendada está com o lease. Aguarde alguns segundos e tente de novo. |

@@ -1,7 +1,5 @@
 # Getting started — install, permissions and the paging engine
 
-🌐 **English** · [Português (BR)](../pt-BR/getting-started.md) · [Español](../es/getting-started.md)
-
 This guide takes you from an empty environment to a first test page. Allow about 30 minutes. Each step tells you
 what is verified and what is not, so you know what to check yourself.
 
@@ -94,6 +92,12 @@ Entry settings:
 | Telegram | `api.telegram.org` |
 | Generic webhook | The host of your endpoint |
 
+**Integrations → Configure** of a built-in provider shows the same host in an *External requests* box (Teams and
+generic webhook: the host of the URL in the vault entry). The app does not read or change this list itself (that
+would need extra settings permissions). When Dynatrace refuses a host, the notification records *Host not allowed:
+&lt;host&gt;. Add it in Settings → General → Environment management → External requests.* and the provider card shows *Host
+not allowed: add it to External requests*.
+
 ## Step 5 — Install the engine workflow
 
 The engine is one **simple workflow** named **Command Center · Engine**. It has a single task, the app's own action
@@ -149,7 +153,7 @@ The engine sends the notifications of a switched-on provider itself, in the run 
 nothing to create in the Workflows app and no extra function call. Use **Send test** with one address.
 
 Optional: **Configure → Delivery → Through its own workflow** sends a provider's notifications through a simple
-workflow of its own (*Command Center · <provider>*). Each delivery is then a workflow execution you can see in the
+workflow of its own (*Command Center · &lt;provider&gt;*). Each delivery is then a workflow execution you can see in the
 Workflows app, for one more function call per notification. Details:
 [integrations](integrations.md#integration-workflows).
 

@@ -1,5 +1,5 @@
 /**
- * App-wide data layer: one Store (B's createStore over the demo or App State repository),
+ * App-wide data layer: one Store (data/store.ts createStore over the demo or App State repository),
  * a snapshot of every collection, polling refresh, and mutations with optimistic incident
  * updates (the same effectiveIncident reducer the engine uses).
  */
@@ -27,6 +27,7 @@ import type { Store, Stored } from "../data/repository";
 import { createAppStore, effectiveIncident, getCurrentUser, isDemoActive, loadDirectoryUsers } from "./domain";
 import { errorMessage } from "../components/format";
 
+/** Snapshot of every collection, reloaded on each poll. */
 export interface AppData {
   settings: Settings;
   teams: Team[];
@@ -46,8 +47,10 @@ export interface AppData {
 
 /** Distributive omit so each action variant keeps its own fields. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+/** An operator action as a page submits it; act() fills in incident, time, client and author. */
 export type ActionPayload = DistributiveOmit<IncidentAction, "schemaVersion" | "incidentId" | "at" | "clientId" | "by">;
 
+/** What useAppData() returns. `now` (epoch ms) ticks every 15 s so ages re-render without a refetch. */
 export interface AppDataContextValue {
   store: Store;
   demo: boolean;
@@ -94,6 +97,7 @@ const ACTION_VERB: Record<string, [string, string]> = {
   tag: ["Tags updated", "update tags of"],
 };
 
+/** Loads everything once, then polls every `refreshSec` (paused while `setPaused(true)`). */
 export const AppDataProvider = ({ children }: { children: React.ReactNode }) => {
   const [store] = useState<Store>(() => createAppStore());
   const [demo] = useState<boolean>(() => isDemoActive());
@@ -387,13 +391,14 @@ const UndoButton = ({ onUndo, label = "Undo" }: { onUndo: () => void; label?: st
   <Button onClick={onUndo}>{label}</Button>
 );
 
+/** The app data context; throws outside AppDataProvider. */
 export function useAppData(): AppDataContextValue {
   const v = useContext(Ctx);
   if (!v) throw new Error("useAppData must be used inside <AppDataProvider>");
   return v;
 }
 
-/** Bump rev and stamp schemaVersion before writing a config object. */
+/** Copy with `rev` bumped, before writing a config object (schemaVersion is left as it is). */
 export function nextRev<T extends { rev: number }>(obj: T): T {
   return { ...obj, rev: (obj.rev ?? 0) + 1 };
 }

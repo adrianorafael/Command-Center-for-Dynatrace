@@ -1,3 +1,4 @@
+/** Inbound "send an event" code snippets (content in ./snippets.ts), shown on Integrations and Help. */
 import React, { useState } from "react";
 import { CodeSnippet } from "@dynatrace/strato-components/content";
 import { Tabs, Tab } from "@dynatrace/strato-components/navigation";

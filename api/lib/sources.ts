@@ -18,6 +18,7 @@ import {
 import { asGrailResult, describeError, type GrailRecord, type QueryRunner } from "../../ui/app/data/grail";
 import type { AlertSource } from "../../ui/app/domain/contracts";
 
+/** Health of one inbound source in a tick; the engine passes it to the domain as `sourceStatus`. */
 export type SourceHealth = "ok" | "failed" | "truncated";
 
 export interface SourceRecords {
@@ -83,6 +84,10 @@ function startedAt(p: GrailRecord): number | undefined {
   return Number.isFinite(t) ? t : undefined;
 }
 
+/**
+ * Runs Q1–Q3 in parallel, then Q4 for the problems' event ids, holds back young problems whose routing properties are
+ * missing, and copies `cc.*` onto the rest. `timeoutMs` applies to each query.
+ */
 export async function fetchSources(
   settings: Settings,
   runQuery: QueryRunner,

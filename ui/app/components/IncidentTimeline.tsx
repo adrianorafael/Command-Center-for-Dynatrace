@@ -1,3 +1,4 @@
+/** Incident history in the details panel: one icon and line of text per timeline entry type. */
 import React, { useMemo, useState } from "react";
 import { Flex, Container, Divider } from "@dynatrace/strato-components/layouts";
 import { Text } from "@dynatrace/strato-components/typography";

@@ -9,8 +9,10 @@ import type React from "react";
 import { useSyncExternalStore } from "react";
 import { showToast } from "@dynatrace/strato-components/notifications";
 
+/** Categories the viewer can mute separately (Settings → Notifications). */
 export type NotificationCategory = "incident" | "action" | "error" | "engine";
 
+/** Label of each category in the preferences UI. */
 export const CATEGORY_LABEL: Record<NotificationCategory, string> = {
   incident: "New P1/P2 incidents",
   action: "Confirmations of my actions",
@@ -18,6 +20,7 @@ export const CATEGORY_LABEL: Record<NotificationCategory, string> = {
   engine: "Paging engine health",
 };
 
+/** One entry of the header bell list; `at` is epoch ms. */
 export interface AppNotification {
   id: number;
   at: number;
@@ -30,6 +33,7 @@ export interface AppNotification {
   read: boolean;
 }
 
+/** Per-browser notification preferences. */
 export interface NotificationPrefs {
   /** false = silenced: notifications are only counted in the header bell. */
   popups: boolean;
@@ -76,6 +80,7 @@ function subscribe(l: () => void): () => void {
   return () => listeners.delete(l);
 }
 
+/** Input of notify(); `lifespan` is the pop-up duration in ms (default 4 s). */
 export interface NotifyOptions {
   category: NotificationCategory;
   type: AppNotification["type"];
@@ -114,14 +119,17 @@ export function notify(o: NotifyOptions): void {
   }
 }
 
+/** Marks every bell entry read. */
 export function markAllRead(): void {
   emit({ ...state, items: state.items.map((i) => (i.read ? i : { ...i, read: true })) });
 }
 
+/** Empties the bell list. */
 export function clearNotifications(): void {
   emit({ ...state, items: [] });
 }
 
+/** Saves the preferences (best effort) and applies them at once. */
 export function setNotificationPrefs(prefs: NotificationPrefs): void {
   try {
     window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
@@ -131,6 +139,7 @@ export function setNotificationPrefs(prefs: NotificationPrefs): void {
   emit({ ...state, prefs });
 }
 
+/** Subscribes a component to the bell list and preferences. */
 export function useNotifications(): State & { unread: number } {
   const s = useSyncExternalStore(subscribe, () => state, () => state);
   return { ...s, unread: s.items.filter((i) => !i.read).length };

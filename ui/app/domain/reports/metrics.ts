@@ -6,8 +6,10 @@
 import { PRIORITIES, SCHEMA_VERSION, type DailyRollup, type Incident, type Priority } from "../contracts";
 import { utcDay } from "../keys";
 
+/** Counts to add into one day's rollup. */
 export type RollupDelta = Omit<DailyRollup, "schemaVersion">;
 
+/** All-zero rollup for `day` (yyyy-mm-dd, UTC). */
 export function emptyRollup(day: string): DailyRollup {
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -28,12 +30,14 @@ export function emptyRollup(day: string): DailyRollup {
   };
 }
 
+/** All-zero delta for `day`. */
 export function emptyDelta(day: string): RollupDelta {
   const { schemaVersion: _v, ...rest } = emptyRollup(day);
   void _v;
   return rest;
 }
 
+/** True when adding `d` would change nothing (callers then skip the write). */
 export function isEmptyDelta(d: RollupDelta): boolean {
   return (
     d.created === 0 &&
@@ -113,6 +117,7 @@ export const rollupRecord = {
 
 // ─── aggregate views ─────────────────────────────────────────────────────────
 
+/** Totals and per-day series for the Reports page. Durations in ms. */
 export interface MetricsSummary {
   from: string;
   to: string;

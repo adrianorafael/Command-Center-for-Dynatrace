@@ -1,3 +1,4 @@
+/** "Go off call / take the shift" from the header: creates a schedule override on the person's behalf. */
 import { markCreated } from "./NewItemHighlight";
 import React, { useMemo, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -27,6 +28,7 @@ export function suggestReplacement(s: Schedule, me: string, now: number): string
   return scheduleParticipants(s).find((u) => u !== me);
 }
 
+/** Which switch was asked for and on which schedules. */
 export type OnCallSwitchRequest = { mode: "off" | "on"; scheduleIds: string[] };
 
 /**

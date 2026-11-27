@@ -1,5 +1,7 @@
+/** Console filter model: read/written as URL search params, applied to incidents without React. */
 import type { Incident, IncidentStatus, Priority } from "../../domain/contracts";
 
+/** Every Console filter; an empty list means "no filter" on that field. */
 export interface ConsoleFilters {
   status: IncidentStatus[];
   priority: Priority[];
@@ -13,10 +15,34 @@ export interface ConsoleFilters {
   q: string;
 }
 
+/** Status filter of a fresh Console: open, not snoozed. */
 export const DEFAULT_STATUS: IncidentStatus[] = ["triggered", "acknowledged"];
+
+/**
+ * The status tabs above the incident table ("Show"). Each tab is a fixed set of statuses; the URL keeps the plain
+ * `status=` list, so bookmarks and links from other pages keep working. A list that matches no tab (an old
+ * bookmark) shows no tab as selected and still filters.
+ */
+export const STATUS_VIEWS: { id: string; label: string; status: IncidentStatus[] }[] = [
+  { id: "open", label: "Open", status: DEFAULT_STATUS },
+  { id: "triggered", label: "Triggered", status: ["triggered"] },
+  { id: "acknowledged", label: "Acknowledged", status: ["acknowledged"] },
+  { id: "snoozed", label: "Snoozed", status: ["snoozed"] },
+  { id: "resolved", label: "Resolved", status: ["resolved"] },
+  // An empty status list means "no status filter".
+  { id: "all", label: "All", status: [] },
+];
+
+/** The tab whose statuses equal the current filter (order-insensitive), if any. */
+export function statusViewOf(status: readonly IncidentStatus[]): string | undefined {
+  const all = ["triggered", "acknowledged", "snoozed", "resolved"];
+  const norm = (l: readonly string[]) => (l.length === 0 || all.every((x) => l.includes(x)) ? "*" : [...new Set(l)].sort().join(","));
+  return STATUS_VIEWS.find((v) => norm(v.status) === norm(status))?.id;
+}
 
 const KEYS = ["status", "priority", "team", "assignee", "service", "source", "escalation"] as const;
 
+/** Filters from URL search params (missing keys → defaults). */
 export function readFilters(params: URLSearchParams): ConsoleFilters {
   const list = (k: string) => (params.get(k) ?? "").split(",").filter(Boolean);
   const status = params.has("status") ? (list("status") as IncidentStatus[]) : DEFAULT_STATUS;
@@ -32,6 +58,7 @@ export function readFilters(params: URLSearchParams): ConsoleFilters {
   };
 }
 
+/** Writes the filters into a copy of the params: empty lists are removed, `status` is always written. */
 export function writeFilters(params: URLSearchParams, f: ConsoleFilters): URLSearchParams {
   const next = new URLSearchParams(params);
   for (const k of KEYS) {
@@ -48,6 +75,7 @@ export function writeFilters(params: URLSearchParams, f: ConsoleFilters): URLSea
   return next;
 }
 
+/** True when nothing differs from the default view (the "Clear filters" state). */
 export function isDefaultFilter(f: ConsoleFilters): boolean {
   return (
     f.status.length === DEFAULT_STATUS.length &&
@@ -62,12 +90,14 @@ export function isDefaultFilter(f: ConsoleFilters): boolean {
   );
 }
 
+/** Escalation filter value of an incident: "1"…"n", "exhausted" or "none". */
 export function escalationKey(inc: Incident): string {
   if (inc.escalation.exhausted) return "exhausted";
   if (inc.escalation.lastStepIndex < 0) return "none";
   return String(inc.escalation.lastStepIndex + 1);
 }
 
+/** The incidents that pass every filter. */
 export function applyFilters(
   incidents: Incident[],
   f: ConsoleFilters,
@@ -107,6 +137,7 @@ export function applyFilters(
 }
 
 export const PRIORITY_RANK: Record<Priority, number> = { P1: 1, P2: 2, P3: 3, P4: 4, P5: 5 };
+/** Display name of each alert source. */
 export const SOURCE_LABEL: Record<string, string> = {
   "davis-problem": "Davis problem",
   "davis-event": "Davis event",

@@ -44,6 +44,7 @@ import { incidentUrl, renderMessage } from "./templates";
  */
 export const PLAN_CATCHUP_MS = 60 * MINUTE_MS;
 
+/** Lookup data the planner needs besides the incident itself. */
 export interface PlanContext {
   now: number;
   settings: Settings;
@@ -55,6 +56,7 @@ export interface PlanContext {
   appBaseUrl?: string;
 }
 
+/** One way to reach a user: channel, method and delay after the firing (ms). */
 export interface ContactChoice {
   channel: Channel;
   method: ContactMethod;
@@ -105,6 +107,7 @@ export function contactChoices(
   return Array.from(byChannel.values());
 }
 
+/** Why someone could not be paged; turned into timeline entries / errors by the tick. */
 export interface PlanIssue {
   incidentId: string;
   uid?: string;
@@ -115,6 +118,7 @@ export interface PlanIssue {
   key?: string;
 }
 
+/** A ledger record the tick may accept (subject to the per-tick cap). */
 export interface CandidateRequest {
   record: NotificationRecord;
   /** When this request became due (firing dueAt + rule delay). */
@@ -268,6 +272,7 @@ export function planIncidentNotifications(
 
 // ─── ledger failure path ─────────────────────────────────────────────────────
 
+/** Result of processLedger. */
 export interface LedgerOutcome {
   /** Existing records changed (planned → timeout). */
   updated: NotificationRecord[];
@@ -335,7 +340,7 @@ export function processLedger(
   return { updated, retries, finalFailures };
 }
 
-/** Strip ledger-only fields → the payload handed to the workflow. */
+/** Strip ledger-only fields → the request handed to the senders (and, on hand-off, to an integration's workflow). */
 export function toRequest(rec: NotificationRecord): NotificationRequest {
   const req: NotificationRequest = {
     key: rec.key,

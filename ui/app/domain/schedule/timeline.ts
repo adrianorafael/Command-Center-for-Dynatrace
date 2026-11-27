@@ -8,6 +8,7 @@ import type { RotationLayer, Schedule } from "../contracts";
 import { addDays, civilDate, parseHHmm, safeTimeZone, zonedToUtc } from "../time/tz";
 import { layerOnCallAt, layerShiftAt, onCallAt } from "./resolve";
 
+/** `uid` is on call over [from, to) (epoch ms), from a layer or an override. */
 export interface ShiftSegment {
   uid: string;
   from: number;
@@ -122,6 +123,7 @@ export function overrideTimeline(schedule: Schedule, from: number, to: number): 
     }));
 }
 
+/** Result of onCallNowAndNext; either may be missing (nobody on call / no change in the horizon). */
 export interface OnCallNowNext {
   current?: ShiftSegment;
   next?: ShiftSegment;

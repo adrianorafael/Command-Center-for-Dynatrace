@@ -1,6 +1,7 @@
 /**
- * delivery-report: apply the workflow's DeliveryResult[] to the notification ledger and the daily
- * rollup through the pure domain `applyDeliveryResults`.
+ * delivery-report: apply DeliveryResult[] to the notification ledger and the daily rollup through the pure domain
+ * `applyDeliveryResults`. Called by the engine cycle after its own sends (api/lib/cycle.ts) and by the
+ * send-notification action for a notification handed to an integration's workflow.
  *
  * Tolerant by design: unknown keys (e.g. reason 'test' requests, expired records) are counted,
  * never thrown. Only records that are still awaiting a report (status planned/timeout, planned
@@ -34,6 +35,7 @@ export interface DeliveryReportResponse {
   errors: string[];
 }
 
+/** Results beyond this count in one report are dropped (and reported as excess). */
 export const MAX_RESULTS = 1000;
 /** A result is accepted for records planned at most this long ago (a run takes ≤ 2 min). */
 export const REPORT_WINDOW_MS = 24 * 3600_000;
@@ -53,6 +55,7 @@ function awaitingReport(r: NotificationRecord, now: number): boolean {
   return (r.status === "planned" || r.status === "timeout") && now - r.plannedAt <= REPORT_WINDOW_MS;
 }
 
+/** Validates `payload.results` and writes the accepted ones; never throws for bad input (see header). */
 export async function runDeliveryReport(
   payload: unknown,
   deps: { repo: Repository; now?: () => number },

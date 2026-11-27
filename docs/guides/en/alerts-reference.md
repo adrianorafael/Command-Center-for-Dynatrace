@@ -1,7 +1,5 @@
 # Alerts reference — sending events to Command Center
 
-🌐 **English** · [Português (BR)](../pt-BR/alerts-reference.md) · [Español](../es/alerts-reference.md)
-
 Command Center has **no inbound endpoint of its own**. Everything arrives through Dynatrace: Davis problems, Davis
 events and generic events stored in Grail. The engine reads them with DQL on every run and turns them into
 **incidents**. This page explains the three paths, the JSON formats, every field the app reads and the `cc.*`

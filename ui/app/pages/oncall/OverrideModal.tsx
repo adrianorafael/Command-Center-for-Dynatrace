@@ -1,3 +1,4 @@
+/** Dialog that creates a schedule override. */
 import { markCreated } from "../../components/NewItemHighlight";
 import React, { useEffect, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";

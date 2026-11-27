@@ -2,7 +2,7 @@
  * Alert de-duplication (spec §H3 decision 2):
  * - Davis events owned by a fetched problem (`dt.davis.event_ids`) are dropped; their `cc.*`
  *   fields and tags are merged into the owning problem first, because the problem record does
- *   not carry Events API properties (lead's live-tenant note) — this lets routing rules on
+ *   not carry Events API properties (observed on a trial tenant, see data/dql.ts) — this lets routing rules on
  *   `fields.cc.service` etc. match problems raised by custom events.
  * - Davis events flagged `dt.davis.is_frequent_event` are dropped.
  * - Alerts with the same dedupKey collapse into one (latest activity wins).
@@ -10,6 +10,7 @@
 
 import type { Alert } from "../contracts";
 
+/** Grail fields the rules read (kept in Alert.fields by normalize). */
 export const EVENT_IDS_FIELD = "dt.davis.event_ids";
 export const FREQUENT_FIELD = "dt.davis.is_frequent_event";
 
@@ -31,12 +32,13 @@ export interface DedupResult {
   collapsed: number;
 }
 
-/** Problem event ids per problem dedupKey. */
+/** Davis event ids linked to one problem alert (flattened comma-separated into fields by normalize). */
 export function problemEventIds(problem: Alert): string[] {
   const raw = problem.fields[EVENT_IDS_FIELD];
   return raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
 }
 
+/** Applies the three rules in the header; the counters say how many alerts each rule removed. */
 export function dedupAlerts(alerts: Alert[]): DedupResult {
   const owner = new Map<string, Alert>();
   for (const a of alerts) {

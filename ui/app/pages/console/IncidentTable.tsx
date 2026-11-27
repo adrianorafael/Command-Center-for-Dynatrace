@@ -1,3 +1,4 @@
+/** The Console's incident table: columns, row and bulk actions, preview and the per-browser column choice. */
 import React, { useMemo, useState } from "react";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -41,6 +42,7 @@ import { SNOOZE_PRESETS, useIncidentCommands } from "./useIncidentCommands";
 import type { ModalRequest } from "./ActionModals";
 import { incidentLink, problemUrl } from "./links";
 
+/** An incident plus the display fields the table sorts and filters on. */
 export interface IncidentRow extends Incident {
   ageMs: number;
   rank: number;

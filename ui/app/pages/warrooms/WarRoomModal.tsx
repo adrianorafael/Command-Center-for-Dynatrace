@@ -1,3 +1,4 @@
+/** Dialog that opens or edits a war room: meeting link, related incidents and notebooks. */
 import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex } from "@dynatrace/strato-components/layouts";
@@ -15,6 +16,7 @@ import { notify } from "../../hooks/notifications";
 import { errorMessage } from "../../components/format";
 import { createPostmortemNotebook, listNotebooks, type NotebookRef } from "../../data/notebooks";
 
+/** Open the dialog to create a room (optionally from an incident) or to edit one. */
 export type WarRoomRequest = { mode: "create"; incidentId?: string } | { mode: "edit"; room: WarRoom };
 
 /** Incidents that probably share a cause with `src`: same root-cause entity, else same service started within 30 minutes. */

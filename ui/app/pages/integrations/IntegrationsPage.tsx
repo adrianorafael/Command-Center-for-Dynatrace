@@ -1,3 +1,7 @@
+/**
+ * Integrations (route `/integrations`): Inbound (how to send events), Outbound (notification providers, their
+ * delivery choice and tests) and Workflows (engine workflow status and installation, external hosts to allow).
+ */
 import { FieldHint } from "../../components/FieldHint";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -13,6 +17,7 @@ import { notify } from "../../hooks/notifications";
 import { DownloadIcon, KeyIcon, PlayIcon, RefreshIcon, FlowIcon } from "@dynatrace/strato-icons";
 import type { Timeseries } from "@dynatrace/strato-components/charts";
 import { engineStaleAfterMs, type ProviderConfig, type Settings } from "../../domain/contracts";
+import { EXTERNAL_REQUESTS_PATH, hostToAllow, isHostNotAllowed } from "../../domain/outboundHosts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { exportCustomWorkflowDefinition, exportProviderWorkflowDefinition, findCustomWorkflowIds, findProviderWorkflowIds, openCustomWorkflowInstall, openProviderWorkflowInstall, exportWorkflowDefinition, getEngineStatus, openEngineInstallIntent, runEngineNow, validateProvider, workflowsAppUrl, exportOnProblemWorkflowDefinition, getOnProblemWorkflowStatus, openOnProblemInstall, type EngineWorkflowStatus, type OnProblemWorkflowStatus } from "../../hooks/domain";
 import { Cell, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
@@ -454,6 +459,12 @@ const ProviderSheet = ({ provider, onClose }: { provider?: ProviderConfig; onClo
             {err(`params.${p.key}`) && <Text>{err(`params.${p.key}`)}</Text>}
           </FormField>
         ))}
+        {hostToAllow(draft.kind) && (
+          <MessageContainer variant="primary">
+            <MessageContainer.Title>External requests</MessageContainer.Title>
+            <MessageContainer.Description>{hostToAllow(draft.kind)}</MessageContainer.Description>
+          </MessageContainer>
+        )}
         {draft.kind !== "workflow" && <DeliveryFields draft={draft} setDraft={setDraft} error={err("params.workflowId")} />}
         {draft.kind !== "workflow" && (
           <Flex alignItems="center" gap={4}>
@@ -619,6 +630,8 @@ const OutboundTab = () => {
                   <Health status="neutral">Not configured</Health>
                 ) : !p.enabled ? (
                   <Health status="neutral">Off</Health>
+                ) : failed && isHostNotAllowed(last?.error) ? (
+                  <Health status="critical">Host not allowed: add it to External requests</Health>
                 ) : failed ? (
                   <Health status="critical">Last delivery failed</Health>
                 ) : (
@@ -944,7 +957,7 @@ const WorkflowsTab = () => {
                 “simple”), or ask an admin to run scripts/install-workflow.mjs.
               </Text>
               <Text>In Workflows → Settings → Authorization settings, enable the permissions for the workflow actor (the person who deploys it, or a service user).</Text>
-              <Text>Add the provider hosts below to Settings → General → External requests.</Text>
+              <Text>Add the hosts of the providers you switch on to {EXTERNAL_REQUESTS_PATH} (table below). Dynatrace refuses calls to any other host; a refused send shows “Host not allowed” on the provider.</Text>
               <Text>Store each provider secret in the Credential Vault (scope AppEngine, owned by the workflow actor) and enter its ID under Providers.</Text>
               <Text>Select Refresh: the status turns green and the engine heartbeat updates within one interval.</Text>
             </List>

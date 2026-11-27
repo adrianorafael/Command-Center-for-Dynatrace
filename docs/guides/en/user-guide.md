@@ -1,8 +1,8 @@
 # User guide — every screen, icon and status
 
-🌐 **English** · [Português (BR)](../pt-BR/user-guide.md) · [Español](../es/user-guide.md)
-
+<!-- app:omit -->
 Screenshots were taken in **demo mode** with sample data.
+<!-- /app:omit -->
 
 ## Header
 
@@ -97,9 +97,12 @@ The Console is the NOC screen: every open incident, newest first.
 | Assigned to me | Open incidents assigned to you | Filters on Assignee = me |
 | Open incidents | All open incidents, split by priority | — |
 
-**Filters**: search (title, ID, entity, tag), Status (default *Triggered + Acknowledged*), Priority, Team, Assignee
-(*Me*, *Unassigned*, members), Service, Source, Escalation level (*Not started*, *Step N*, *Exhausted*) and Created
-(time frame). All filters except the time frame are part of the URL, so a NOC view can be bookmarked.
+**Show** (tabs above the table): *Open* (Triggered + Acknowledged, the default), *Triggered*, *Acknowledged*,
+*Snoozed*, *Resolved* and *All*. Each tab shows a count that follows the other filters.
+
+**Filters**: search (title, ID, entity, tag), Priority, Team, Assignee (*Me*, *Unassigned*, members), Service, Source,
+Escalation level (*Not started*, *Step N*, *Exhausted*) and Created (time frame). All filters except the time frame
+are part of the URL, and so is the **Show** tab (`status=…`), so a NOC view can be bookmarked.
 
 **Columns**: Priority, Status (and *until …* when snoozed), Incident (title, `#display ID · first entity`), Age (red
 with a clock icon when a **triggered** incident is older than the acknowledge target), Service, Team, Assignee,
@@ -223,7 +226,8 @@ says exactly what will happen.
   warns when a channel the team uses has no provider switched on, or when the engine has never run.
 - **Add people**: your own user is offered first. For others, type at least 3 letters of a name or an email. Results
   come from Dynatrace IAM: active users of the account that owns the environment (people who never signed in are not
-  found). Roles:
+  found). People you pick stay in a **Selected (n)** list under the results, each with **Remove**, across several
+  searches. Roles:
 
 | Role | Paged? | Meant for |
 | --- | --- | --- |
@@ -298,7 +302,7 @@ priority.
 | Tab | Content |
 | --- | --- |
 | Inbound ![Inbound](../../screenshots/integrations.png) | Each source with its status (*Receiving*, *Quiet > 1 h*, *Turned off*, *Never seen*), last event, incidents in 24 h and **Show events**. Copy-ready snippets (curl, PowerShell, Python, Dynatrace Workflow) and the fields the app reads. |
-| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | The nine providers (eight built-in plus **Custom workflow**), each with an **On/Off** switch: *Not configured*, *Off*, *Configured* or *Last delivery failed*, sent/failed counts, *Sent by the engine* (the default) or *Sent by its workflow*, **Configure** (vault entry ID or workflow ID, parameters, **Delivery**) and **Send test**. Under **Delivery** you choose who sends a built-in provider: *By the engine* (no extra cost) or *Through its own workflow* (one more function call per notification). One provider per channel can be on. |
+| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | The nine providers (eight built-in plus **Custom workflow**), each with an **On/Off** switch: *Not configured*, *Off*, *Configured*, *Last delivery failed* or *Host not allowed: add it to External requests*, sent/failed counts, *Sent by the engine* (the default) or *Sent by its workflow*, **Configure** (vault entry ID or workflow ID, parameters, **Delivery**, and for a built-in provider the host to allow under *External requests*) and **Send test**. Under **Delivery** you choose who sends a built-in provider: *By the engine* (no extra cost) or *Through its own workflow* (one more function call per notification). One provider per channel can be on. |
 | Workflows ![Workflows](../../screenshots/integrations-workflow.png) | Engine status (*Not installed*, *Installed · simple workflow*, *Update available*, *Installed as a standard workflow…*), the last engine run, **Run every**, **Install in Workflows**, **Download JSON**, **Run engine now**, **Refresh**, the setup steps and the hosts to allow. A second card, **Command Center · Engine on problem**, installs the optional workflow that runs the engine when Davis opens or closes a problem (*Optional · not installed*, *Installed · simple workflow*, *Installed, but its trigger is switched off*). |
 
 Details: [integrations](integrations.md) and [getting started](getting-started.md).
@@ -332,3 +336,8 @@ zone.
 checklist (ticked when one team has all five steps done), switch on a provider, install the engine workflow (a
 heartbeat exists), and send a test event (an incident exists). Then come concepts,
 Console workflow, sending events, notifications, keyboard shortcuts, troubleshooting and privacy.
+
+The menu on the left also lists the six guides (getting started, user guide, alerts reference, integrations,
+configuration, operations). The language selector shows them in English, Português (BR) or Español; the choice is
+remembered in this browser, and a guide's address carries the guide and the language, so it can be shared. Get started
+and the sections after it are in English.

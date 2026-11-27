@@ -22,7 +22,9 @@ export interface Directory {
   resolve(uids: readonly string[]): Promise<DirectoryUser[]>;
 }
 
+/** IAM rejects a partialString shorter than this (see header). */
 export const SEARCH_MIN_CHARS = 3;
+/** IAM accepts at most this many uuids per lookup (see header). */
 export const RESOLVE_BATCH = 25;
 
 interface RestUserLike {
@@ -32,6 +34,7 @@ interface RestUserLike {
   surname?: string;
 }
 
+/** The one IAM client method used, so tests can inject a fake. */
 export interface IamClientLike {
   getActiveUsersForOrganizationalLevel(config: {
     levelType: string;
@@ -42,11 +45,13 @@ export interface IamClientLike {
   }): Promise<{ results?: RestUserLike[] }>;
 }
 
+/** Display name is "name surname", falling back to the email, then the uid. */
 export function toDirectoryUser(u: RestUserLike): DirectoryUser {
   const name = [u.name, u.surname].filter((x) => x && x.trim()).join(" ").trim();
   return { uid: u.uid, name: name || u.email || u.uid, ...(u.email ? { email: u.email } : {}) };
 }
 
+/** Directory over the tenant's active IAM users (environment level). `resolve` makes one call per 25 uids. */
 export function createIamDirectory(
   client: IamClientLike = usersAndGroupsClient,
   levelId: () => string = getEnvironmentId,

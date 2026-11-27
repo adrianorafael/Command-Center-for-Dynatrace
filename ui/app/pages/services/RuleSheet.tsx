@@ -1,3 +1,4 @@
+/** Routing rule editor sheet and the text helpers that describe a rule in lists. */
 import { describeErrors } from "../../components/format";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useState } from "react";
@@ -13,6 +14,7 @@ import { useAppData } from "../../hooks/AppDataContext";
 import { RULE_FIELDS, validateRule } from "../../hooks/domain";
 import { IconButton } from "../../components/IconButton";
 
+/** Display text of each condition operator. */
 export const OP_LABEL: Record<ConditionOp, string> = {
   equals: "equals",
   contains: "contains",
@@ -23,11 +25,13 @@ export const OP_LABEL: Record<ConditionOp, string> = {
   gte: "≥",
 };
 
+/** One condition as text, e.g. `NOT title contains "disk"`. */
 export function conditionText(c: RuleCondition): string {
   const v = c.op === "exists" ? "" : ` "${c.value ?? ""}"`;
   return `${c.negate ? "NOT " : ""}${c.field} ${OP_LABEL[c.op]}${v}`;
 }
 
+/** All conditions of a rule joined with AND/OR; "Always" for a catch-all. */
 export function rulesSummary(r: RoutingRule): string {
   if (!r.conditions.length) return "Always";
   return r.conditions.map(conditionText).join(r.match === "all" ? " AND " : " OR ");

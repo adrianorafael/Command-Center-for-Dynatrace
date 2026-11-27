@@ -1,3 +1,4 @@
+/** Hook with the incident commands every Console control shares, so they behave the same everywhere. */
 import { useCallback } from "react";
 import { showToast } from "@dynatrace/strato-components/notifications";
 import { useAppData } from "../../hooks/AppDataContext";
@@ -15,7 +16,7 @@ export function useIncidentCommands() {
     (ids: string[], ms: number) => act(ids, { type: "snooze", until: Date.now() + ms }).then(() => undefined, () => undefined),
     [act],
   );
-  /** Escalate now = append the action, then run the engine workflow so the next step is sent at once. */
+  /** Escalate now = append the action, then run one engine cycle (engine-run) so the next step goes out at once. */
   const escalate = useCallback(
     async (ids: string[]) => {
       try {

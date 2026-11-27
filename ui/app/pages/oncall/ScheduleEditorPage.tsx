@@ -1,3 +1,4 @@
+/** Schedule editor: rotation layers, handoffs, restrictions and a debounced coverage preview. */
 import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useMemo, useState } from "react";

@@ -1,8 +1,10 @@
+/** Shared page header (breadcrumbs, title, subtitle, primary action) used by every page. */
 import React from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Flex, TitleBar } from "@dynatrace/strato-components/layouts";
 import { Breadcrumbs } from "@dynatrace/strato-components/navigation";
 
+/** One breadcrumb; without `to` it is the current page. */
 export interface Crumb {
   label: string;
   to?: string;

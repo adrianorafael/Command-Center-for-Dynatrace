@@ -1,3 +1,4 @@
+/** Links from an incident to other places: its app route, the Davis problem and the Workflows app. */
 import { getEnvironmentUrl } from "@dynatrace-sdk/app-environment";
 import type { Incident } from "../../domain/contracts";
 

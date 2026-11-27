@@ -1,3 +1,4 @@
+/** KPI tiles above the Console table; most tiles apply a filter when selected. */
 import React, { useMemo } from "react";
 import { Grid, Surface, Flex } from "@dynatrace/strato-components/layouts";
 import { MeterBarChart, MultiMeterBarChart, Sparkline, type Timeseries } from "@dynatrace/strato-components/charts";
@@ -33,8 +34,7 @@ function median(values: number[]): number | undefined {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
-/** Height of the SingleValue area under a tile header; header + gap + value ≈ the 110 px meter tiles. */
-/** Every tile: header (20 px icon + label), one value at the same type size, a fixed-height footer. */
+/** Every tile: header (icon + label), one value at the same type size, a fixed-height footer (px), so tiles line up. */
 const FOOTER_HEIGHT = 64;
 const SPARK_HEIGHT = 36;
 

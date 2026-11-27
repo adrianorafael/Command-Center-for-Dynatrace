@@ -1,7 +1,17 @@
-import React, { useEffect } from "react";
-import { Link as RouterLink, useLocation } from "react-router-dom";
+/**
+ * Help: the app's documentation.
+ *
+ * Without `?doc=` it shows the overview (the self-ticking Get started checklist, concepts, event snippets, shortcuts,
+ * troubleshooting); the Help menu links to its sections by `#id`. With `?doc=<guide>` it shows one of the six user
+ * guides, generated from the markdown in docs/guides/en (English) and guides/{pt-BR,es} (scripts/gen-help-content.mjs)
+ * and loaded lazily per language. `?lang=` makes a link open in the language it was shared in (guides/language.ts).
+ * The overview itself is English.
+ */
+import React, { useEffect, useState } from "react";
+import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface } from "@dynatrace/strato-components/layouts";
-import { KeyboardShortcut, Markdown } from "@dynatrace/strato-components/content";
+import { KeyboardShortcut, Markdown, MessageContainer, ProgressCircle } from "@dynatrace/strato-components/content";
+import { FormField, Label, Select } from "@dynatrace/strato-components/forms";
 import { SimpleTable } from "@dynatrace/strato-components/tables";
 import { Heading, Link, Paragraph, Text } from "@dynatrace/strato-components/typography";
 import { CircleIcon, SuccessIcon } from "@dynatrace/strato-icons";
@@ -11,6 +21,9 @@ import { PageTitle } from "../../components/PageTitle";
 import { SendEventSnippets } from "../../components/CopyCode";
 import { EVENT_FIELDS, TOKEN_SCOPE } from "../../components/snippets";
 import { teamReadiness } from "../teams/readiness";
+import { GuideView } from "./GuideView";
+import { GUIDE_IDS, isGuideId, LANGUAGES, type GuideId, type GuideSet, type Language } from "./guides/content";
+import { browserLanguages, helpHref, LABELS, LANGUAGE_NAMES, loadGuides, readStoredLanguage, resolveLanguage, storeLanguage } from "./guides/language";
 
 const TOC = [
   { id: "get-started", label: "Get started" },
@@ -58,7 +71,7 @@ The app never sees secrets: it only stores vault IDs. Delivery results come back
 const TROUBLE = `
 - **No incidents appear**: check that a source is on in Settings and that events arrive (Integrations → Inbound). The engine workflow must be running: a banner on the Console tells you when its heartbeat is late (older than two intervals plus one minute).
 - **An incident has no team and nobody was paged**: no routing rule matched and there is no default team. Open the team and select **Receive all unrouted alerts** in its *Ready to page?* checklist, or add a routing rule in Services. The same checklist shows what else the team is missing.
-- **A notification failed**: open the incident's Notifications tab for the provider error. Common causes are a missing host in External requests, a vault entry the workflow actor can't read (make the actor its owner), the wrong credential type, or an invalid phone number (use E.164).
+- **A notification failed**: open the incident's Notifications tab for the provider error. *Host not allowed: …* means the provider's host is missing in Settings → General → Environment management → External requests (Integrations → Configure shows which host). Other common causes are a vault entry the workflow actor can't read (make the actor its owner), the wrong credential type, or an invalid phone number (use E.164).
 - **The workflow isn't installed or is outdated**: in Integrations → Workflows select **Reinstall in Workflows** (or upload the downloaded JSON), then delete the old workflow.
 - **Permission errors**: the app needs the scopes listed in Settings → Permissions, and your user needs IAM access to the app.
 - **People can't be found in the user picker**: type at least 3 characters of the email or the first name. Only active users of the account that owns this environment are listed: people who were invited but never signed in are not found yet. If the picker says user search is unavailable, IAM returned 403: check that your user belongs to the Dynatrace account that owns this environment and may view users; ask your account admin.
@@ -86,13 +99,54 @@ const Section = ({ id, title, children }: { id: string; title: string; children:
   </Flex>
 );
 
+/** Loads one language's guides lazily; `undefined` while loading, `null` when the chunk failed to load. */
+function useGuides(lang: Language, wanted: boolean): GuideSet | null | undefined {
+  const [state, setState] = useState<{ lang: Language; guides: GuideSet | null } | undefined>();
+  useEffect(() => {
+    if (!wanted) return;
+    let alive = true;
+    loadGuides(lang).then(
+      (guides) => alive && setState({ lang, guides }),
+      () => alive && setState({ lang, guides: null }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [lang, wanted]);
+  return state?.lang === lang ? state.guides : undefined;
+}
+
 export const HelpPage = () => {
   const { data, userName } = useAppData();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [search] = useSearchParams();
+  const docParam = search.get("doc");
+  const doc: GuideId | undefined = isGuideId(docParam) ? docParam : undefined;
+  const lang = resolveLanguage({ query: search.get("lang"), stored: readStoredLanguage(), browser: browserLanguages() });
+  const labels = LABELS[lang];
+  const guides = useGuides(lang, !!doc);
+  const guide = doc && guides ? guides[doc] : undefined;
+
+  // Scroll to the anchor once the content is there (a guide arrives after its chunk loads); a new guide without an
+  // anchor starts at the top. Accented anchors (#passo-2--entenda-as-permissões) arrive percent-encoded.
   useEffect(() => {
-    const id = location.hash.replace("#", "");
-    if (id) window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-  }, [location.hash]);
+    let id = location.hash.replace(/^#/, "");
+    try {
+      id = decodeURIComponent(id);
+    } catch {
+      // malformed escape: use it as is
+    }
+    if (doc && !guide) return;
+    const target = id ? document.getElementById(id) : document.getElementById("help-top");
+    if (target) window.setTimeout(() => target.scrollIntoView({ behavior: id ? "smooth" : "auto", block: "start" }), 100);
+  }, [location.hash, doc, guide]);
+
+  const chooseLanguage = (next: Language | null) => {
+    if (!next || next === lang) return;
+    storeLanguage(next);
+    navigate(helpHref(next, doc), { replace: true });
+  };
 
   // The team steps (people, contacts, schedule, policy, routing) live in the team's own checklist: one link here.
   const teams = data?.teams ?? [];
@@ -112,81 +166,131 @@ export const HelpPage = () => {
 
   return (
     <PageLayout.Content>
-      <Flex flexDirection="column" gap={16} padding={16} style={{ maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+      <Flex id="help-top" flexDirection="column" gap={16} padding={16} style={{ maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         <PageTitle title="Help" subtitle="How Command Center turns Dynatrace alerts into incidents, pages and reports" />
-        <Grid gridTemplateColumns="200px minmax(0, 960px)" gap={32}>
+        <Grid gridTemplateColumns="220px minmax(0, 960px)" gap={32}>
           <Flex flexDirection="column" gap={8} style={{ position: "sticky", top: 16, alignSelf: "start" }}>
-            <Text textStyle="small-emphasized">On this page</Text>
-            {TOC.map((t) => (
-              <Link key={t.id} as={RouterLink} to={`/help#${t.id}`}>
-                {t.label}
-              </Link>
+            <FormField>
+              <Label>{labels.language}</Label>
+              <Select<Language> value={lang} onChange={chooseLanguage}>
+                <Select.Content>
+                  {LANGUAGES.map((l) => (
+                    <Select.Option key={l} value={l}>
+                      {LANGUAGE_NAMES[l]}
+                    </Select.Option>
+                  ))}
+                </Select.Content>
+              </Select>
+            </FormField>
+            <Link as={RouterLink} to={helpHref(lang)}>
+              {doc ? labels.overview : <Text textStyle="base-emphasized">{labels.overview}</Text>}
+            </Link>
+            {!doc &&
+              TOC.map((t) => (
+                <Flex key={t.id} paddingLeft={12}>
+                  <Link as={RouterLink} to={helpHref(lang, undefined, t.id)}>
+                    {t.label}
+                  </Link>
+                </Flex>
+              ))}
+            <Text textStyle="small-emphasized">{labels.guides}</Text>
+            {GUIDE_IDS.map((id) => (
+              <Flex key={id} flexDirection="column" gap={4}>
+                <Link as={RouterLink} to={helpHref(lang, id)} aria-current={id === doc ? "page" : undefined}>
+                  {id === doc ? <Text textStyle="base-emphasized">{labels.guideNames[id]}</Text> : labels.guideNames[id]}
+                </Link>
+                {id === doc && guide && (
+                  <Flex flexDirection="column" gap={4} paddingLeft={12} aria-label={labels.onThisPage}>
+                    {guide.headings
+                      .filter((h) => h.depth === 2)
+                      .map((h) => (
+                        <Link key={h.slug} as={RouterLink} to={helpHref(lang, id, h.slug)}>
+                          <Text textStyle="small">{h.text}</Text>
+                        </Link>
+                      ))}
+                  </Flex>
+                )}
+              </Flex>
             ))}
           </Flex>
-          <Flex flexDirection="column" gap={32}>
-            <Section id="get-started" title="Get started">
-              <Paragraph>Five steps take you from an empty app to paging people. Completed steps are checked from the app's current data.</Paragraph>
-              <Surface padding={16}>
-                <Flex flexDirection="column" gap={12}>
-                  {steps.map((s, i) => (
-                    <Flex key={s.label} gap={12} alignItems="center">
-                      {s.done ? (
-                        <SuccessIcon style={{ color: Colors.Icon.Success.Default }} aria-label="Done" />
-                      ) : (
-                        <CircleIcon style={{ color: Colors.Icon.Neutral.Subdued }} aria-label="To do" />
-                      )}
-                      <Text textStyle="base-emphasized">{i + 1}.</Text>
-                      <Link as={RouterLink} to={s.to}>
-                        {s.label}
-                      </Link>
-                    </Flex>
-                  ))}
-                </Flex>
-              </Surface>
-            </Section>
-            <Section id="concepts" title="Concepts">
-              <Markdown>{CONCEPTS}</Markdown>
-            </Section>
-            <Section id="console" title="Console workflow">
-              <Markdown>{CONSOLE}</Markdown>
-            </Section>
-            <Section id="inbound" title="Sending events (inbound)">
-              <Paragraph>
-                Davis problems arrive automatically. Any other tool posts events to the Dynatrace Events API v2 with a platform token that has the {TOKEN_SCOPE} permission; each event opens a Davis problem that carries its cc.* properties for routing. Use placeholders
-                below and keep tokens in your tool's secret store.
-              </Paragraph>
-              <SendEventSnippets />
-              <SimpleTable
-                data={EVENT_FIELDS}
-                columns={[
-                  { id: "field", header: "Event property", accessor: "field", width: 240 },
-                  { id: "usedFor", header: "Used for", accessor: "usedFor", width: 520 },
-                ]}
-              />
-            </Section>
-            <Section id="outbound" title="Notifications (outbound)">
-              <Markdown>{OUTBOUND}</Markdown>
-            </Section>
-            <Section id="shortcuts" title="Keyboard shortcuts">
-              <Paragraph>Console only, and never while you type in a field. Turn single-key shortcuts off in Settings → General.</Paragraph>
-              <Flex flexDirection="column" gap={8}>
-                {SHORTCUTS.map((s) => (
-                  <Flex key={s.keys} gap={16} alignItems="center">
-                    <Flex style={{ width: 120 }}>
-                      <KeyboardShortcut keys={s.keys} />
-                    </Flex>
-                    <Text>{s.action}</Text>
-                  </Flex>
-                ))}
+          {doc ? (
+            guide ? (
+              <GuideView guide={guide} lang={lang} />
+            ) : guides === null ? (
+              <MessageContainer variant="critical">
+                <MessageContainer.Description>{labels.loadFailed}</MessageContainer.Description>
+              </MessageContainer>
+            ) : (
+              <Flex justifyContent="center" padding={32}>
+                <ProgressCircle aria-label={labels.loading} />
               </Flex>
-            </Section>
-            <Section id="troubleshooting" title="Troubleshooting">
-              <Markdown>{TROUBLE}</Markdown>
-            </Section>
-            <Section id="privacy" title="Privacy">
-              <Markdown>{PRIVACY}</Markdown>
-            </Section>
-          </Flex>
+            )
+          ) : (
+    <Flex flexDirection="column" gap={32}>
+                <Section id="get-started" title="Get started">
+                  <Paragraph>Five steps take you from an empty app to paging people. Completed steps are checked from the app's current data.</Paragraph>
+                  <Surface padding={16}>
+                    <Flex flexDirection="column" gap={12}>
+                      {steps.map((s, i) => (
+                        <Flex key={s.label} gap={12} alignItems="center">
+                          {s.done ? (
+                            <SuccessIcon style={{ color: Colors.Icon.Success.Default }} aria-label="Done" />
+                          ) : (
+                            <CircleIcon style={{ color: Colors.Icon.Neutral.Subdued }} aria-label="To do" />
+                          )}
+                          <Text textStyle="base-emphasized">{i + 1}.</Text>
+                          <Link as={RouterLink} to={s.to}>
+                            {s.label}
+                          </Link>
+                        </Flex>
+                      ))}
+                    </Flex>
+                  </Surface>
+                </Section>
+                <Section id="concepts" title="Concepts">
+                  <Markdown>{CONCEPTS}</Markdown>
+                </Section>
+                <Section id="console" title="Console workflow">
+                  <Markdown>{CONSOLE}</Markdown>
+                </Section>
+                <Section id="inbound" title="Sending events (inbound)">
+                  <Paragraph>
+                    Davis problems arrive automatically. Any other tool posts events to the Dynatrace Events API v2 with a platform token that has the {TOKEN_SCOPE} permission; each event opens a Davis problem that carries its cc.* properties for routing. Use placeholders
+                    below and keep tokens in your tool's secret store.
+                  </Paragraph>
+                  <SendEventSnippets />
+                  <SimpleTable
+                    data={EVENT_FIELDS}
+                    columns={[
+                      { id: "field", header: "Event property", accessor: "field", width: 240 },
+                      { id: "usedFor", header: "Used for", accessor: "usedFor", width: 520 },
+                    ]}
+                  />
+                </Section>
+                <Section id="outbound" title="Notifications (outbound)">
+                  <Markdown>{OUTBOUND}</Markdown>
+                </Section>
+                <Section id="shortcuts" title="Keyboard shortcuts">
+                  <Paragraph>Console only, and never while you type in a field. Turn single-key shortcuts off in Settings → General.</Paragraph>
+                  <Flex flexDirection="column" gap={8}>
+                    {SHORTCUTS.map((s) => (
+                      <Flex key={s.keys} gap={16} alignItems="center">
+                        <Flex style={{ width: 120 }}>
+                          <KeyboardShortcut keys={s.keys} />
+                        </Flex>
+                        <Text>{s.action}</Text>
+                      </Flex>
+                    ))}
+                  </Flex>
+                </Section>
+                <Section id="troubleshooting" title="Troubleshooting">
+                  <Markdown>{TROUBLE}</Markdown>
+                </Section>
+                <Section id="privacy" title="Privacy">
+                  <Markdown>{PRIVACY}</Markdown>
+                </Section>
+              </Flex>
+          )}
         </Grid>
       </Flex>
     </PageLayout.Content>

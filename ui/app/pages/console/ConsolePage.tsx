@@ -1,10 +1,11 @@
+/** Console (routes `/` and `/incidents/:id`): KPI strip, filterable incident table, details panel, shortcuts. */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Flex, PageLayout } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { ProgressCircle } from "@dynatrace/strato-components/content";
 import { FilterBar, TimeframeSelector } from "@dynatrace/strato-components/filters";
-import { SearchInput, Select } from "@dynatrace/strato-components/forms";
+import { SearchInput, Select, ToggleButtonGroup } from "@dynatrace/strato-components/forms";
 import { Text } from "@dynatrace/strato-components/typography";
 import { RefreshAutoIcon, RefreshIcon } from "@dynatrace/strato-icons";
 import type { Timeframe } from "@dynatrace/strato-components/core";
@@ -13,7 +14,6 @@ import { useAppData } from "../../hooks/AppDataContext";
 import { readPrefs } from "../../hooks/prefs";
 import { PageTitle } from "../../components/PageTitle";
 import { PriorityChip } from "../../components/PriorityChip";
-import { STATUS_LABEL } from "../../components/StatusIndicator";
 import { EngineHealthBanner } from "../../components/Banners";
 import { ErrorMessage, SimpleEmpty } from "../../components/QueryState";
 import { IconButton } from "../../components/IconButton";
@@ -22,7 +22,7 @@ import { KpiStrip } from "./KpiStrip";
 import { IncidentTable } from "./IncidentTable";
 import { IncidentDetails } from "./IncidentDetails";
 import { ActionModals, type ModalRequest } from "./ActionModals";
-import { applyFilters, DEFAULT_STATUS, isDefaultFilter, readFilters, SOURCE_LABEL, writeFilters, type ConsoleFilters } from "./filters";
+import { applyFilters, DEFAULT_STATUS, isDefaultFilter, readFilters, SOURCE_LABEL, STATUS_VIEWS, statusViewOf, writeFilters, type ConsoleFilters } from "./filters";
 import { useIncidentCommands } from "./useIncidentCommands";
 
 const REFRESH_OPTIONS = [
@@ -81,6 +81,11 @@ export const ConsolePage = () => {
   const createdAfter = timeframe ? pickerToMs(timeframe.from) : undefined;
   const all = useMemo(() => data?.incidents ?? [], [data]);
   const visible = useMemo(() => applyFilters(all, filters, currentUser.uid, createdAfter), [all, filters, currentUser.uid, createdAfter]);
+  // Tab counts follow every other filter, so each tab says how many rows it would show.
+  const statusCounts = useMemo(() => {
+    const base = applyFilters(all, { ...filters, status: [] }, currentUser.uid, createdAfter);
+    return Object.fromEntries(STATUS_VIEWS.map((v) => [v.id, v.status.length ? base.filter((i) => v.status.includes(i.status)).length : base.length]));
+  }, [all, filters, currentUser.uid, createdAfter]);
   const active = activeId ? all.find((i) => i.id === activeId) : undefined;
 
   // Keyboard shortcuts (DESIGN §13), off while typing and switchable in Settings (WCAG 2.1.4).
@@ -206,7 +211,6 @@ export const ConsolePage = () => {
               <FilterBar
                 onFilterChange={() => undefined}
                 defaultPinnedState={{
-                  status: "pinned",
                   priority: "pinned",
                   team: "pinned",
                   assignee: "pinned",
@@ -217,17 +221,6 @@ export const ConsolePage = () => {
                   created: "pinned",
                 }}
               >
-                <FilterBar.Item name="status" label="Status">
-                  <Select multiple clearable name="status" value={filters.status} onChange={(v) => setFilters({ status: v ?? [] })}>
-                    <Select.Content>
-                      {(Object.keys(STATUS_LABEL) as (keyof typeof STATUS_LABEL)[]).map((s) => (
-                        <Select.Option key={s} value={s}>
-                          {STATUS_LABEL[s]}
-                        </Select.Option>
-                      ))}
-                    </Select.Content>
-                  </Select>
-                </FilterBar.Item>
                 <FilterBar.Item name="priority" label="Priority">
                   <Select multiple clearable name="priority" value={filters.priority} onChange={(v) => setFilters({ priority: v ?? [] })}>
                     <Select.Content>
@@ -305,6 +298,23 @@ export const ConsolePage = () => {
                 </FilterBar.Item>
               </FilterBar>
             </Flex>
+          </Flex>
+          {/* Status tabs of the table, same pattern as the "Show" bar of War rooms. */}
+          <Flex flexDirection="column" gap={4}>
+            <Text textStyle="small-emphasized">Show</Text>
+            <ToggleButtonGroup
+              value={statusViewOf(filters.status) ?? ""}
+              onChange={(v: string) => {
+                const view = STATUS_VIEWS.find((x) => x.id === v);
+                if (view) setFilters({ status: view.status });
+              }}
+            >
+              {STATUS_VIEWS.map((v) => (
+                <ToggleButtonGroup.Item key={v.id} value={v.id}>
+                  {`${v.label} (${statusCounts[v.id] ?? 0})`}
+                </ToggleButtonGroup.Item>
+              ))}
+            </ToggleButtonGroup>
           </Flex>
           <IncidentTable
             incidents={visible}

@@ -1,3 +1,4 @@
+/** Services (route `/services`): services, routing rules, a rule tester and the priority mapping. */
 import { markCreated } from "../../components/NewItemHighlight";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -160,10 +161,12 @@ interface RuleRow extends RoutingRule {
   matched24: number;
 }
 
+/** Draft of a new rule (one empty "title contains" condition), optionally routed to a service. */
 export function emptyRule(serviceId?: string): RoutingRule {
   return { id: newId("rule"), name: "", enabled: true, match: "all", conditions: [{ field: "title", op: "contains", value: "" }], then: serviceId ? { serviceId } : {} };
 }
 
+/** Routing rules table and editor; also embedded on a service's page (`onlyService`). */
 export const RulesTab = ({
   onlyService,
   newRequest,
@@ -342,6 +345,7 @@ const SAMPLE: Alert = {
   fields: { "cc.service": "checkout", "cc.priority": "P2" },
 };
 
+/** Paste an alert (or load a recent incident's alert) and see which rule matches and how it would be routed. */
 export const TestTab = () => {
   const { data } = useAppData();
   const recent = useMemo(() => [...(data?.incidents ?? [])].sort((a, b) => b.createdAt - a.createdAt).slice(0, 25), [data]);
@@ -547,6 +551,7 @@ const MappingTab = () => {
 
 // ─── New service modal + page ───────────────────────────────────────────────
 
+/** Draft of a new service (rev 0, not saved). */
 export function newService(teamId?: string): Service {
   return { schemaVersion: SCHEMA_VERSION, id: newId("service"), name: "", teamId: teamId ?? "", rev: 0 };
 }

@@ -1,3 +1,4 @@
+/** Details panel of one incident: actions, escalation progress, notification ledger, entities and timeline. */
 import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import { WarRoomModal, type WarRoomRequest } from "../warrooms/WarRoomModal";
 import { isSafeHttpsUrl, openRoomsForIncident } from "../../domain/warrooms";
