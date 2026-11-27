@@ -472,7 +472,7 @@ Strato UI ── reads App State, writes configuration + append-only operator ac
           <tr><td>Enabled sources</td><td><span class="tag dim">+1 query per source</span></td><td>Davis problems (Q1) always; Davis events (Q2) and generic events (Q3) off by default.</td></tr>
           <tr><td>Problems with events</td><td><span class="tag dim">+1 per 100 IDs</span></td><td>Q4 reads <code>cc.*</code> of linked events; at most 5 per run.</td></tr>
           <tr><td>Look-back</td><td><span class="tag dim">Medium</span></td><td>Q1 default 72 h; Q2/Q3 fixed 24 h; Q4 uses the problem look-back.</td></tr>
-          <tr><td>Open tabs / users</td><td><span class="tag green">No Grail cost</span></td><td>Each open tab reads App State every 30 s by default.</td></tr>
+          <tr><td>Open tabs / users</td><td><span class="tag green">No Grail cost</span></td><td>Each open tab reads App State every minute by default.</td></tr>
         </tbody>
       </table>
     </div>
