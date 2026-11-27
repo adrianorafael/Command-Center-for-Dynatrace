@@ -30,7 +30,7 @@ import { MIN_LOCK_TTL_SEC } from "../../ui/app/data/domainPort";
 import { withAttempt } from "../../ui/app/domain/keys";
 import { normalizeRecords } from "../../ui/app/domain/alerts/normalize";
 import { archiveResolvedBound, emptyBatches, tick } from "../../ui/app/domain/engine/tick";
-import { acquireLease, releaseLease, type EngineLock } from "./lease";
+import { acquireLease, leaseLost, releaseLease } from "./lease";
 import { fetchSources } from "./sources";
 import {
   APP_STATE_LIMIT_BYTES,
@@ -249,7 +249,7 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
     }
     previous = (await repo.get<EngineHeartbeatWithStorage>(KEY.heartbeat))?.value;
 
-    const stillHolder = async () => (await repo.get<EngineLock>(KEY.lock))?.value.holder === holder;
+    const stillHolder = async () => !(await leaseLost(repo, holder, now));
 
     const [teams, schedules, policies, services, rules, contacts, incidents, pendingActions, ledger, archiveRows, sources] =
       await Promise.all([
@@ -403,7 +403,7 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
   } finally {
     if (!skipped) {
       // Release first (always, verified by re-reading), then record the outcome.
-      const released = leased ? await releaseLease(repo, holder).catch(() => false) : true;
+      const released = leased ? await releaseLease(repo, holder, now).catch(() => false) : true;
       if (!released) errors.push("engine lease release could not be verified");
       await writeHeartbeat(repo, {
         schemaVersion: SCHEMA_VERSION,
