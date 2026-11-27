@@ -111,7 +111,7 @@ Screenshots on the [project page](https://adrianorafael.github.io/Command-Center
 
 - Open a war room from an incident (**Incident details → Open war room**): paste the meeting link (Teams, Zoom, Meet, Slack huddle; https only).
   Incidents that share the same root cause (or the same service, started within 30 minutes) are added automatically; add or remove any.
-- Notebooks: **Create post-mortem notebook** creates a Dynatrace Notebook (summary, timeline, root cause, impact, action items, plus
+- Notebooks: **Create post-mortem notebook** creates a Dynatrace Notebook named after the first incident (for example `P-26112613 · Post-mortem: …`) with a template (summary, timeline, root cause, impact, action items, plus
   a DQL section listing the room's problems) and attaches it; **Select an existing notebook** attaches any notebook you can access;
   any other https document can be added as a link. Uses the scopes `document:documents:read` and `document:documents:write`.
 - A war room can be opened from the incident details or from the row menu (**⋮ → Open war room…**) in the Console.

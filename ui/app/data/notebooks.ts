@@ -46,9 +46,19 @@ export async function listNotebooks(query = ""): Promise<NotebookRef[]> {
   return res.documents.map((d) => ({ id: d.id, name: d.name, url: linkFor(d.id) }));
 }
 
+/**
+ * Notebook name starts with the (first) incident number so it is easy to find later:
+ * "P-26112613 · Post-mortem: Payment gateway timeouts". Max 128 characters (Document Service limit).
+ */
+export function postmortemNotebookName(title: string, displayIds: readonly string[]): string {
+  const first = displayIds.find((d) => d.trim());
+  const clean = title.replace(/^Bridge:\s*/i, "").trim() || "War room";
+  return `${first ? `${first} · ` : ""}Post-mortem: ${clean}`.slice(0, 128);
+}
+
 /** Create a post-mortem notebook for a war room and return its reference. */
 export async function createPostmortemNotebook(title: string, displayIds: string[]): Promise<NotebookRef> {
-  const name = `Post-mortem: ${title}`.slice(0, 128);
+  const name = postmortemNotebookName(title, displayIds);
   if (isDemo()) return { id: `demo-${Date.now()}`, name, url: "https://notebooks.example.com/new-postmortem" };
   const content = new Blob([JSON.stringify(buildPostmortemNotebook(title, displayIds, uuid))], { type: "application/json" });
   const doc = await documentsClient.createDocument({ body: { name, type: "notebook", content } });
