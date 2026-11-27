@@ -14,7 +14,7 @@ Las capturas de pantalla se tomaron en **modo demo** con datos de ejemplo.
 | 🔔 **Campana** | Las últimas notificaciones de esta sesión, con un contador de no leídas (hasta `99+`). Estados del ícono: campana = nada nuevo, campana activa = elementos no leídos, campana tachada = pop-ups silenciados. Seleccionar un elemento abre aquello a lo que se refiere. Cerrar el menú marca todo como leído. |
 | 📞 **Indicador de guardia** | `You're on call` en un círculo verde cuando estás de guardia; si no, `On call: <name>` (+N si hay más personas) o `No one on call`. El menú lista quién está de guardia en cada equipo y hasta cuándo, y ofrece **Leave on-call now…** o **Take on-call now…** (más abajo). |
 | ⚙️ **Settings** | Abre [Settings](configuration.md). |
-| Menú de ayuda **?** | Primeros pasos, guía dentro de la app, envío de eventos, atajos de teclado, acerca de. |
+| Menú de ayuda **?** | Get started (primeros pasos), guía dentro de la app, envío de eventos, atajos de teclado, acerca de. |
 
 ### Notificaciones (campana y pop-ups)
 
@@ -199,7 +199,7 @@ Una war room (sala de crisis) es un enlace de reunión más los incidentes que a
   precedencia sobre las anteriores**, y los overrides prevalecen sobre todas las capas.
 - **Coverage preview** (1, 2 o 4 semanas): *Full coverage* o *N gaps, … uncovered*, con una fila *Final schedule*.
 
-**Nuevo override**: calendario, quién cubre, desde, hasta (predeterminado: la próxima hora completa, durante 8 horas),
+**New override**: calendario, quién cubre, desde, hasta (predeterminado: la próxima hora completa, durante 8 horas),
 motivo. Una frase de vista previa dice exactamente qué va a ocurrir.
 
 ## Teams
@@ -307,8 +307,8 @@ Se construyen a partir de resúmenes diarios (conservados 90 días). El rango de
 | Notification delivery | Proporción de notificaciones que aceptaron los proveedores |
 | On-call load | Por persona: horas de guardia, avisos, avisos fuera de horario, avisos nocturnos (00–06), reconocimientos, tiempo promedio de reconocimiento |
 
-*Fuera de horario* significa antes de las 08:00, desde las 18:00, o en fin de semana; *nocturno* significa antes de las
-06:00. Ambos usan la zona horaria de tu navegador.
+*Off-hours* (fuera de horario) significa antes de las 08:00, desde las 18:00, o en fin de semana; *night* (nocturno)
+significa antes de las 06:00. Ambos usan la zona horaria de tu navegador.
 
 ## Help
 
