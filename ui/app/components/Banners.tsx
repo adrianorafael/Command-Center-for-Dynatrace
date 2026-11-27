@@ -15,7 +15,7 @@ export const DemoModeBanner = () => {
     <Flex paddingX={16} paddingTop={8}>
       <MessageContainer variant="primary" style={{ width: "100%" }}>
         <MessageContainer.Description>
-          Demo mode: you're viewing sample incidents, teams, and schedules. Actions don't send notifications.
+          Demo mode: everything on screen is sample data and actions don't send notifications. Real paging keeps running in the background.
         </MessageContainer.Description>
         <MessageContainer.Actions>
           <Button onClick={() => navigate("/settings#general")}>Turn off demo mode</Button>

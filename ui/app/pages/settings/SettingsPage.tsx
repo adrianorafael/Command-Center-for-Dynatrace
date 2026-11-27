@@ -248,7 +248,11 @@ export const SettingsPage = () => {
             >
               Show sample data
             </Switch>
-            <FieldHint>Shows sample incidents, teams, and schedules in this browser. Actions don't send notifications and nothing is saved to the environment.</FieldHint>
+            <FieldHint>
+              On: every screen shows sample incidents, teams, schedules, war rooms and reports (in this browser only), for demos.
+              Nothing is read from or saved to the environment and no notification is sent. Off: everything you see is real data
+              from this environment; the app never mixes sample data with real data.
+            </FieldHint>
             {demo && isRuntimeMissing() && (
               <MessageContainer variant="warning">
                 <MessageContainer.Description>
