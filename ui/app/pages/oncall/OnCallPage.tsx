@@ -24,7 +24,6 @@ import { readPrefs, writePrefs } from "../../hooks/prefs";
 import {
   addWeeks,
   civilDate,
-  civilDateToPickerIso,
   formatCivilDate,
   formatDaysRange,
   pickedCivilDate,
@@ -148,6 +147,9 @@ export const OnCallCard = ({ schedule, onAddOverride }: { schedule: Schedule; on
   );
 };
 
+/** Value type of the Strato date picker (a "YYYY-MM-DD" string or TimeValue for `type="date"`). */
+type PickerValue = React.ComponentProps<typeof DateTimePicker>["value"];
+
 /** Week toolbar + week view of the shifts: the week lives in `?week=`, "workdays only" in browser prefs. */
 const ShiftsByWeek = ({ schedules }: { schedules: Schedule[] }) => {
   const { data, now } = useAppData();
@@ -161,10 +163,10 @@ const ShiftsByWeek = ({ schedules }: { schedules: Schedule[] }) => {
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({});
   // The picker shows the date that was picked; when the week changes some other way (buttons,
   // link) it falls back to the week's Sunday.
-  const [picked, setPicked] = useState<string | null>(() => civilDateToPickerIso(week));
+  const [picked, setPicked] = useState<PickerValue>(() => weekKey);
   useEffect(() => {
     const d = pickedCivilDate(picked, browserTimeZone());
-    if (!d || formatCivilDate(weekStartOfDate(d)) !== weekKey) setPicked(civilDateToPickerIso(week));
+    if (!d || formatCivilDate(weekStartOfDate(d)) !== weekKey) setPicked(weekKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekKey]);
   // weekKey (a string) instead of `week` (a new object every render) keeps the memo stable.
@@ -215,10 +217,10 @@ const ShiftsByWeek = ({ schedules }: { schedules: Schedule[] }) => {
             aria-label="Go to the week of a date"
             value={picked}
             onChange={(v) => {
+              // The picker reports every edited segment, including half-typed years ("0002-01-14"):
+              // keep its value as typed, and move the week only once the date is plausible.
+              setPicked(v);
               const d = pickedCivilDate(v, browserTimeZone());
-              // Keep what the person typed: forcing the week's Sunday back in on every keystroke
-              // would overwrite the segments they are still editing.
-              setPicked(d ? (typeof v === "string" ? v : (v?.absoluteDate ?? null)) : civilDateToPickerIso(week));
               if (d) goTo(d);
             }}
           />

@@ -19,7 +19,7 @@ export { firstHandoff } from "../domain/schedule/resolve";
 export { startOfLocalDay, weekdayInZone, civilDate, safeTimeZone } from "../domain/time/tz";
 export type { CivilDate } from "../domain/time/tz";
 export {
-  addWeeks, civilDateToPickerIso, daysRange, formatCivilDate, formatDaysRange, isInDays, pickedCivilDate, placeSpan, positionIn,
+  addWeeks, daysRange, formatCivilDate, formatDaysRange, isInDays, pickedCivilDate, placeSpan, positionIn,
   resolveWeekParam, weekDays, weekStartAt, weekStartOfDate,
 } from "../domain/time/week";
 export type { WeekDay } from "../domain/time/week";

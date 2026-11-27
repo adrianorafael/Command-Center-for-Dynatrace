@@ -71,7 +71,7 @@ ui/app/pages|components|hooks/   Strato UI. Consumes contracts.ts, the Repositor
 workflow-templates/   GENERATED engine workflow JSON files: interval and on-problem (node scripts/gen-workflow-templates.mjs)
                       + trial-only simulator.
 scripts/              install-workflow, gen-workflow-templates, gen-help-content, preview-server, screenshot,
-                      doc-screenshots, record-demo + edit-demo (demo video for docs/media).
+                      doc-screenshots (+ render-postmortem), record-demo + edit-demo (demo video for docs/media).
 docs/                 project page (index.html, icon.svg, screenshots/) and guides/en/ — the English guides, the source.
                       GitHub is English only. The translations live in the app: ui/app/pages/help/guides/{pt-BR,es}/
                       (the in-app Help shows all three). Update the three languages together, never document anything

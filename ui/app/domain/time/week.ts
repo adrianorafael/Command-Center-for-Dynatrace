@@ -143,11 +143,17 @@ export function formatDaysRange(days: readonly WeekDay[]): string {
   return `${f(first, { month: "short", day: "numeric" })} – ${last.date.day}, ${last.date.year}`;
 }
 
+/** Years the date picker may navigate to; anything else is a year still being typed ("0002"). */
+export const PICKER_MIN_YEAR = 1970;
+export const PICKER_MAX_YEAR = 2199;
+
 /**
  * Civil date chosen in a Strato `DateTimePicker type="date"` (a string or a `TimeValue`).
- * The picker works in the platform user's zone, which can differ from the display zone, so
- * the date is read from the ISO text itself when it carries a local date (an explicit offset
- * or no time part); only a UTC "Z" timestamp is converted, in `fallbackTimeZone`.
+ * With `type="date"` the picker reports a plain "YYYY-MM-DD" (seen in Strato 3.18), which is
+ * read as is. The picker otherwise works in the platform user's zone, which can differ from the
+ * display zone, so an ISO text with an explicit offset also keeps its own local date; only a UTC
+ * "Z" timestamp is converted, in `fallbackTimeZone`. Undefined for empty, invalid or implausible
+ * values (years outside PICKER_MIN_YEAR…PICKER_MAX_YEAR are a year still being typed).
  */
 export function pickedCivilDate(value: unknown, fallbackTimeZone: string): CivilDate | undefined {
   let text: string | undefined;
@@ -156,16 +162,7 @@ export function pickedCivilDate(value: unknown, fallbackTimeZone: string): Civil
   if (!text) return undefined;
   text = text.trim();
   const local = /^(\d{4}-\d{2}-\d{2})(?:$|T[\d:.]+(?:[+-]\d{2}:?\d{2})$)/.exec(text);
-  if (local) return parseCivilDate(local[1]);
-  const ts = Date.parse(text);
-  return Number.isFinite(ts) ? civilDate(ts, safeTimeZone(fallbackTimeZone)) : undefined;
-}
-
-/**
- * ISO string to hand the date picker for civil date `d`: noon UTC of that date. Any zone between
- * UTC−11 and UTC+11 shows it as the same calendar date, so the picker shows the week's day
- * whatever the platform user's zone is.
- */
-export function civilDateToPickerIso(d: CivilDate): string {
-  return new Date(Date.UTC(d.year, d.month - 1, d.day, 12)).toISOString();
+  const ts = local ? undefined : Date.parse(text);
+  const d = local ? parseCivilDate(local[1]) : Number.isFinite(ts) ? civilDate(ts as number, safeTimeZone(fallbackTimeZone)) : undefined;
+  return d && d.year >= PICKER_MIN_YEAR && d.year <= PICKER_MAX_YEAR ? d : undefined;
 }

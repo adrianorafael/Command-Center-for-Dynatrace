@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   addWeeks,
-  civilDateToPickerIso,
   daysRange,
   formatCivilDate,
   formatDaysRange,
@@ -123,7 +122,8 @@ describe("week: date picker values", () => {
     expect(pickedCivilDate("2026-11-25T00:00:00.000+09:00", "UTC")).toEqual({ year: 2026, month: 11, day: 25 });
     expect(pickedCivilDate("2026-11-25T00:00:00.000-08:00", "Asia/Tokyo")).toEqual({ year: 2026, month: 11, day: 25 });
     expect(pickedCivilDate({ absoluteDate: "2026-11-25T00:00:00-0300", value: "x", type: "iso8601" }, "UTC")).toEqual({ year: 2026, month: 11, day: 25 });
-    expect(pickedCivilDate("2026-11-25", "UTC")).toEqual({ year: 2026, month: 11, day: 25 });
+    // What Strato 3.18 actually emits for type="date".
+    expect(pickedCivilDate({ type: "iso8601", value: "2026-11-25", absoluteDate: "2026-11-25" }, "Asia/Tokyo")).toEqual({ year: 2026, month: 11, day: 25 });
   });
 
   it("converts a UTC timestamp in the fallback zone, and ignores empty values", () => {
@@ -133,8 +133,10 @@ describe("week: date picker values", () => {
     expect(pickedCivilDate("not a date", "UTC")).toBeUndefined();
   });
 
-  it("hands the picker noon UTC so nearby zones show the same calendar date", () => {
-    expect(civilDateToPickerIso({ year: 2026, month: 11, day: 22 })).toBe("2026-11-22T12:00:00.000Z");
+  it("ignores years that are still being typed", () => {
+    expect(pickedCivilDate({ type: "iso8601", value: "0002-01-14", absoluteDate: "0002-01-14" }, "UTC")).toBeUndefined();
+    expect(pickedCivilDate("0202-01-14", "UTC")).toBeUndefined();
+    expect(pickedCivilDate("2027-01-14", "UTC")).toEqual({ year: 2027, month: 1, day: 14 });
   });
 });
 
