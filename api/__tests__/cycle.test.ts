@@ -122,8 +122,8 @@ describe("senders", () => {
   it("vault reader calls the platform details endpoint and validates the id", async () => {
     const f = vi.fn(async () => new Response(JSON.stringify({ token: "t0ken", username: "u", password: "p" }), { status: 200 }));
     const read = vaultReader(f as unknown as typeof fetch);
-    expect(await read("CREDENTIAL_VAULT_ENTRY-C70778FF3D783AB4")).toEqual({ token: "t0ken", user: "u", password: "p" });
-    expect(String(f.mock.calls[0][0])).toBe("/platform/credential-vault/v1/entries/CREDENTIAL_VAULT_ENTRY-C70778FF3D783AB4/details");
+    expect(await read("CREDENTIAL_VAULT_ENTRY-0000000000000002")).toEqual({ token: "t0ken", user: "u", password: "p" });
+    expect(String(f.mock.calls[0][0])).toBe("/platform/credential-vault/v1/entries/CREDENTIAL_VAULT_ENTRY-0000000000000002/details");
     await expect(read("../../etc")).rejects.toThrow("invalid credential vault entry id");
   });
 });
