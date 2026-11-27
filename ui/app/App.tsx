@@ -2,6 +2,7 @@ import React from "react";
 import { PageLayout } from "@dynatrace/strato-components/layouts";
 import { ToastContainer } from "@dynatrace/strato-components/notifications";
 import { ShellHeader } from "./components/ShellHeader";
+import { TOAST_CLASS, ToastAnchor } from "./components/ToastPlacement";
 import { DemoModeBanner } from "./components/Banners";
 import { AppDataProvider } from "./hooks/AppDataContext";
 import { AppRoutes } from "./routes";
@@ -14,10 +15,12 @@ import { AppRoutes } from "./routes";
  */
 export const App = () => (
   <AppDataProvider>
-    <ToastContainer />
+    <ToastContainer className={TOAST_CLASS} />
     <PageLayout>
       <PageLayout.Header>
-        <ShellHeader />
+        <ToastAnchor>
+          <ShellHeader />
+        </ToastAnchor>
         <DemoModeBanner />
       </PageLayout.Header>
       <AppRoutes />
