@@ -201,10 +201,6 @@ curl -X POST "https://YOUR-ENVIRONMENT.live.dynatrace.com/api/v2/events/ingest" 
 The token needs `openpipeline:events.davis:ingest`. Within one engine interval the incident appears in the Console.
 The on-call person is then paged according to the policy. Acknowledge it in the Console to stop the escalation.
 
-On a **trial or test environment only**, `workflow-templates/command-center-alert-simulator.workflow.json` posts one or
-two synthetic `[SIM] …` alerts every 7 minutes. It is a standard workflow, so it consumes workflow hours, and it must
-never be imported into production.
-
 ## Demo mode
 
 **Settings → General → Demo mode → Show sample data** switches **this browser** to sample incidents, teams, schedules,

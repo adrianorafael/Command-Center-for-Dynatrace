@@ -76,11 +76,11 @@ Medido en el entorno trial, a partir de los eventos de facturación en `dt.syste
 | Invocaciones | 00:50 → 105, 01:00 → 120, 01:10 → 114 | 01:30 → 21, 01:40 → 11, 01:50 → 18 |
 | de las cuales `ACTION` (el motor) | — | 10 por ventana = 1 por minuto |
 
-Las invocaciones restantes en la columna nueva son el simulador de alertas solo para entornos trial (un standard
-workflow que ejecuta JavaScript) y nuestras propias llamadas de prueba a las funciones de la app.
+Las invocaciones restantes en la columna nueva son un generador de alertas de prueba que ejecutamos en el entorno trial
+(un standard workflow que ejecuta JavaScript, que no forma parte de la app) y nuestras propias llamadas de prueba a las funciones de la app.
 
 Horas de workflow, a partir de los eventos de facturación `Automation Workflow`: en la hora 01:00–02:00 UTC solo se
-facturó el simulador de alertas (un standard workflow). El motor basado en simple workflow, que se ejecutó cada minuto
+facturó ese generador de alertas de prueba (un standard workflow). El motor basado en simple workflow, que se ejecutó cada minuto
 en esa hora, no generó ningún evento de facturación de workflow.
 
 ### Por qué los workflows de integración se inician bajo demanda

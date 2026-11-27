@@ -209,10 +209,6 @@ El token necesita `openpipeline:events.davis:ingest`. Dentro de un intervalo del
 Console. Luego se avisa a la persona de guardia según la política. Reconócelo en la Console para detener el
 escalamiento.
 
-**Solo en un entorno trial o de pruebas**, `workflow-templates/command-center-alert-simulator.workflow.json` envía una
-o dos alertas sintéticas `[SIM] …` cada 7 minutos. Es un standard workflow, así que consume horas de workflow, y nunca
-debe importarse en producción.
-
 ## Modo demo
 
 **Settings → General → Demo mode → Show sample data** cambia **este navegador** a incidentes, equipos, calendarios,

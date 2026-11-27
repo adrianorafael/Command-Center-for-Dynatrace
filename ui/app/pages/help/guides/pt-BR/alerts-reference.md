@@ -38,8 +38,7 @@ Content-Type: application/json
   platform token e o OpenPipeline processe os eventos. É a única API documentada que cria Davis events, e é por isso
   que o Command Center a usa.
 - Dentro de um workflow do Dynatrace, uma tarefa JavaScript pode chamar o caminho relativo
-  `/platform/classic/environment-api/v2/events/ingest`. Ela é autenticada como o ator do workflow. O simulador de
-  alertas, só para trial, em `workflow-templates/` faz isso.
+  `/platform/classic/environment-api/v2/events/ingest`. Ela é autenticada como o ator do workflow.
 
 **Corpo**
 

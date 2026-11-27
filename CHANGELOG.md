@@ -11,6 +11,14 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+### Changed
+- Integrations → Inbound → **Show events** opens the Console on *All* with *Created* set to the last 24 hours (same
+  window as the "incidents in 24 h" count). Any link can do the same with `?created=<hours>h`.
+
+### Removed
+- The trial-only alert simulator workflow (`workflow-templates/command-center-alert-simulator.workflow.json`) and its
+  mentions: it is a test tool, not part of the app.
+
 ## [2.5.0] - 2026-11-27
 
 ### Added

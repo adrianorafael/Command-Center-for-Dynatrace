@@ -68,8 +68,7 @@ api/                  app functions engine-run, config, status, incidents, direc
                       the problem-triggered run, sources, lease, senders. They import the domain and data layers from
                       ui/app (shared code).
 ui/app/pages|components|hooks/   Strato UI. Consumes contracts.ts, the Repository/store and pure domain functions.
-workflow-templates/   GENERATED engine workflow JSON files: interval and on-problem (node scripts/gen-workflow-templates.mjs)
-                      + trial-only simulator.
+workflow-templates/   GENERATED engine workflow JSON files: interval and on-problem (node scripts/gen-workflow-templates.mjs).
 scripts/              install-workflow, gen-workflow-templates, gen-help-content, preview-server, screenshot,
                       doc-screenshots (+ render-postmortem), record-demo + edit-demo (demo video for docs/media).
 docs/                 project page (index.html, icon.svg, screenshots/) and guides/en/ — the English guides, the source.
