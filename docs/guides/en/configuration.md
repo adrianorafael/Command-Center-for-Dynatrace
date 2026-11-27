@@ -55,7 +55,7 @@ The priority mapping by severity and category is edited in **Services → Priori
 | Setting | Default | Range | Effect |
 | --- | --- | --- | --- |
 | Engine enabled | On | | Off pauses **all** paging. The engine still runs on schedule but does nothing. |
-| Engine workflow ID | Filled in by Integrations → Workflows | UUID | Lets the Workflows tab find and link the workflow. The interval (1, 2 or 5 minutes) is chosen at install; the app reads it back from the installed workflow. |
+| Engine workflow ID | Filled in by Integrations → Workflows | UUID | Lets the Workflows tab find and link the workflow. The interval (1, 2 or 5 minutes) is chosen at install; the app reads it back from the installed workflow. With the optional *Engine on problem* workflow installed, 5 minutes is enough for most teams. |
 | Max notifications per run | 100 | 1–500 | Notifications beyond this are planned again on the next run |
 | Delivery report timeout (seconds) | 180 | 30–3600 | A notification without a delivery result after this is marked *timeout* and retried |
 | Delivery attempts | 3 | 1–10 | Attempts per notification before it is marked failed |

@@ -36,6 +36,11 @@ export interface CycleDeps extends SenderDeps {
   repo: Repository;
   runQuery: QueryRunner;
   appBaseUrl?: string;
+  /**
+   * Absolute time (epoch ms) by which sending must stop. Default: this cycle's start + CYCLE_BUDGET_MS. A run that
+   * waits before its cycle (the Problem trigger) passes the invocation's own deadline, so sends never outlive it.
+   */
+  deadlineAt?: number;
 }
 
 /** Absolute UI base for links in messages; undefined when the runtime does not expose it. */
@@ -59,7 +64,7 @@ export async function runEngineCycle(request: EngineTickRequest, deps: CycleDeps
   if (!tick.ok || planned === 0) return { ...base, sent: 0, failed: 0, deferred: 0 };
 
   let handedOff = 0;
-  const results = await sendAll(tick.batches, tick.providers, started + CYCLE_BUDGET_MS, {
+  const results = await sendAll(tick.batches, tick.providers, deps.deadlineAt ?? started + CYCLE_BUDGET_MS, {
     ...deps,
     onHandOff: (key) => {
       handedOff++;

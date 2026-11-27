@@ -13,9 +13,9 @@ saída: os oito canais, o que cada provedor recebe, a integração custom workfl
    de escalonamento que está vencido, as pessoas de plantão para os alvos desse passo e as regras de notificação de
    cada pessoa.
 2. Ele grava uma **entrada no registro (ledger)** (`planned`) por pessoa, passo, canal e tentativa.
-3. Logo após o planejamento, a mesma execução envia: pelo workflow próprio da integração, quando há um vinculado
-   (abaixo); caso contrário, diretamente — ela lê o segredo do provedor no Credential Vault e chama o provedor por
-   HTTPS (ou executa o seu custom workflow).
+3. Logo após o planejamento, a mesma execução envia: ela lê o segredo do provedor no Credential Vault e chama o
+   provedor por HTTPS (ou executa o seu custom workflow). Uma integração que tem workflow próprio (abaixo) é
+   entregue a esse workflow.
 4. O resultado é gravado de volta: `sent` (com a referência do provedor, quando uma é retornada) ou `failed` (com o
    erro do provedor; segredos e URLs são mascarados como `***` e `<url>`).
 5. Uma notificação que falhou, ou que não teve resultado dentro de *Delivery report timeout* (`timeout`), é tentada
@@ -46,17 +46,20 @@ custam nada, e nada deles é executado.
 
 ## Integration workflows
 
-Cada integração nativa pode ter **o seu próprio workflow**, criado quando você a ativa:
+Por padrão, o próprio motor envia todas as integrações nativas, sem custo extra. Uma integração **pode** ter um
+workflow próprio no lugar; você escolhe isso por integração:
 
 | Passo | O que acontece |
 | --- | --- |
-| Ativar (**on**) | O Command Center salva o provedor e abre o app Workflows com *Command Center · <provider>* já preenchido: um simple workflow, sem gatilho (sob demanda), uma tarefa — a ação do app **Send Command Center notification** com as entradas `providerId` e `notification` = `{{ execution().params.notification }}`. Você o salva (uma confirmação: o app não consegue criar workflows sozinho). |
-| De volta ao Command Center | Integrations → Outbound encontra o workflow pelo título e o vincula (o ID dele é armazenado no provedor). **Configure → Integration workflow** também oferece *Create its workflow*, *Download JSON*, *Find its workflow* e *Unlink*. |
+| Escolher | **Configure → Delivery → Through its own workflow** e depois **Create its workflow**. O app Workflows abre com *Command Center · <provider>* já preenchido: um simple workflow, sem gatilho (sob demanda), uma tarefa — a ação do app **Send Command Center notification** com as entradas `providerId` e `notification` = `{{ execution().params.notification }}`. Você o salva lá (o app não consegue criar workflows sozinho). **Download JSON** entrega a mesma definição para upload. Depois salve a integração. |
+| De volta ao Command Center | Integrations → Outbound encontra o workflow pelo título e o vincula (o ID dele é armazenado no provedor); **Find its workflow** faz o mesmo manualmente. O card passa a mostrar *Sent by its workflow*. |
 | Uma notificação está vencida | O motor executa esse workflow com a notificação como parâmetros de execução. A ação lê as configurações do provedor no Command Center e o segredo no Credential Vault, envia e grava *Sent* ou *Failed* no registro de notificações. Um envio com falha faz a execução do workflow falhar, então isso aparece no app Workflows. |
 | O workflow não pode ser executado | Excluído, ou sem permissão: o motor envia essa notificação diretamente, para que ninguém perca um acionamento. Até que um workflow seja vinculado, o motor também envia diretamente. |
-| Desativar (**off**) | O provedor e o seu workflow deixam de ser usados; o vínculo é mantido para quando você ativá-lo de novo. O app não consegue pausar nem excluir workflows: exclua-o no app Workflows se não precisar dele. |
+| Voltar para o motor | **Configure → Delivery → By the engine** remove a escolha e o vínculo. O workflow em si continua no app Workflows: exclua-o lá se não precisar dele. |
+| Desativar (**off**) | O provedor e o seu workflow deixam de ser usados; o vínculo é mantido para quando você ativá-lo de novo. O app não consegue pausar nem excluir workflows. |
 
-Cada notificação de uma integração vinculada é uma execução de workflow com uma invocação de ação, além da execução do motor que a planejou. Como simple
+Cada notificação de uma integração com workflow próprio é uma execução de workflow com uma invocação de ação, além da
+execução do motor que a planejou; enviada pelo motor, ela não custa nenhuma invocação extra. Como simple
 workflows, eles não consomem workflow hours. Se um workflow foi criado como workflow *standard* (o intent
 create-workflow não tem campo de tipo), *Find its workflow* avisa e o vínculo automático o ignora; nesse caso, faça o
 upload do JSON baixado.

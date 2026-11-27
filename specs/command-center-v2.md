@@ -77,6 +77,37 @@ the *Ready to page?* checklist, the contact sheet, the schedule and policy edito
 - **Not verified on a tenant:** the flow was exercised in the offline preview only; see *Verified and not verified*
   in `docs/guides/en/operations.md`.
 
+## Amendment A4 (2026-11-27, 2.3.0) — the engine sends; optional Problem trigger
+
+At the owner's request (lowest running cost; an event-based trigger where it fits). Measured first: every workflow
+task execution is one billed function call whatever the trigger (Dynatrace licensing documentation; billing events of
+this app's actions and of Dynatrace's own HTTP request action on a trial tenant). This amendment supersedes A2's
+default and what this spec says about how notifications are handed to workflows.
+
+- **Delivery:** the engine sends built-in integrations itself, in the run it is already doing (no extra call). One
+  workflow per integration (A2) becomes opt-in per integration: the UI records the choice in
+  `provider.params.delivery = "workflow"` and links a workflow only then. The engine is unchanged: it hands off when
+  `params.workflowId` is set and otherwise sends directly. No contract change (`params` is a free string map).
+- **Engine on problem (optional):** a second SIMPLE workflow, `buildOnProblemWorkflow`, with a Problem trigger
+  (`davis-problem`, `triggerOn: "open-and-close"`, every category, `analysisReady: false`) and the same action
+  `run-engine`, with the input `problemId` / `problemStatus` from `event()`. It never replaces the interval workflow:
+  escalation steps, snooze ends, retries and the other sources need the clock.
+- **Problem-triggered run** (`api/lib/problemTrigger.ts`): one success test, "the incident of this problem is in the
+  state the trigger reported". The run checks it, polls one small query (Q5, the problem's newest status) every 5 s
+  for up to 40 s, runs a normal cycle once the problem is readable (at most two, 10 s apart), and ends when the test
+  passes or the wait runs out (the scheduled run then takes over). Sending is bound to the start of the invocation (`deadlineAt`).
+  Reason: on the trial tenant the trigger fired 1–12 s after the problem event, but the record was queryable only
+  30–40 s after its timestamp.
+- **Sources:** a problem younger than 90 s none of whose Davis events is readable yet is held back
+  (`HOLD_UNREADABLE_MS`), because routing happens once, at incident creation, and needs the events' `cc.*` properties.
+- **Q5** (`buildProblemStatusQuery`) executed on the trial tenant: ACTIVE, CLOSED and unknown-id cases.
+- No new scope. `contracts.ts` unchanged (`reason: "problem-trigger"` was already part of `EngineTickRequest`).
+- **Verified on the trial tenant:** the trigger, the wait, incident creation with the right team, resolution on
+  close, one billed invocation per firing (workflow created through the Automation API and updated with
+  `scripts/install-workflow.mjs --on-problem`). **Not verified:** installing this workflow through the intent or the
+  JSON upload; the Delivery choice in a signed-in session; a notification sent by a problem-triggered run (no provider
+  was switched on in those tests).
+
 ## Goal
 
 Replace dedicated event consoles (Splunk On-Call / VictorOps, Atlassian Opsgenie, Moogsoft) for a NOC team, natively on

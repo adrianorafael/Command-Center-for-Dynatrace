@@ -116,16 +116,28 @@ Then:
    engine's action reads Grail, App State and the Credential Vault with the actor's permissions.
 2. **Authorization settings.** In the Workflows app → **Settings → Authorization settings**, enable for the actor the
    permissions the engine uses: `storage:buckets:read`, `storage:events:read`, `state:app-states:read`,
-   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` and, for integration
-   workflows and the Custom workflow integration, `automation:workflows:run`. The actor of each integration workflow
-   needs `state:app-states:read`, `state:app-states:write` and `credential-vault:entries:read`: its action reads the
-   provider settings, reads the secret and records the result. On the trial environment
-   all permissions were enabled for the actor, so the minimal set was not isolated.
+   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` and, for an integration
+   that has its own workflow and for the Custom workflow integration, `automation:workflows:run`. The actor of an
+   integration's own workflow needs `state:app-states:read`, `state:app-states:write` and
+   `credential-vault:entries:read`: its action reads the provider settings, reads the secret and records the result.
+   On the trial environment all permissions were enabled for the actor, so the minimal set was not isolated.
 3. Back in Command Center select **Refresh**. If the workflow was found by its title, select **Save this ID**. The
    status turns green (**Installed · simple workflow**) and **Last engine run** updates within one interval.
 
 **Run engine now** runs one full cycle immediately through the app function `engine-run`, with your own permissions.
 Use it to test without waiting for the schedule.
+
+### Optional: run on problems
+
+The card **Command Center · Engine on problem** on the same tab installs a second simple workflow. It has a
+**Problem trigger** and the same action, so the engine also runs as soon as Davis opens or closes a problem and the
+first page does not wait for the next scheduled run. Install it like the engine: **Install in Workflows**,
+**Download JSON** and upload, or `node scripts/install-workflow.mjs --on-problem`. Its actor needs the same
+permissions as the engine's.
+
+Keep **Command Center · Engine** installed: escalation steps, snooze ends and retries need its interval. With both
+workflows a 5-minute interval is enough for most teams, which means fewer runs. What it does, what we measured and its
+limits: [operations](operations.md#running-on-problems).
 
 ## Step 6 — Configure the providers
 
@@ -133,11 +145,13 @@ Use it to test without waiting for the schedule.
 Turning one on the first time opens **Configure**: paste the vault entry ID, fill the non-secret parameters, save.
 One provider per channel can be on.
 
-When a built-in provider is switched **on**, the Workflows app opens with **its own workflow** filled in
-(*Command Center · <provider>*, a simple workflow whose task is the app's *Send Command Center notification* action).
-Save it there. Back in Integrations → Outbound, Command Center finds it by its title and links it; the card then says
-*Sent by its workflow*. Until it is linked, the engine sends that provider's notifications itself, so nothing is lost.
-Then use **Send test** with one address. Details: [integrations](integrations.md#integration-workflows).
+The engine sends the notifications of a switched-on provider itself, in the run it is already doing. There is
+nothing to create in the Workflows app and no extra function call. Use **Send test** with one address.
+
+Optional: **Configure → Delivery → Through its own workflow** sends a provider's notifications through a simple
+workflow of its own (*Command Center · <provider>*). Each delivery is then a workflow execution you can see in the
+Workflows app, for one more function call per notification. Details:
+[integrations](integrations.md#integration-workflows).
 
 | Provider | Parameters |
 | --- | --- |

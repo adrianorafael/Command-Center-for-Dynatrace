@@ -7,7 +7,7 @@
 
 import type { WorkflowCreate } from "@dynatrace-sdk/client-automation";
 import { defaultSettings } from "../domainPort";
-import { buildEngineWorkflowCreate } from "./definition";
+import { buildEngineWorkflowCreate, buildOnProblemWorkflowCreate } from "./definition";
 
 export const TEMPLATE_APP_ID = "my.command.center";
 
@@ -18,4 +18,13 @@ export function buildEngineTemplate(): WorkflowCreate {
 
 export function engineTemplateJson(): string {
   return `${JSON.stringify(buildEngineTemplate(), null, 2)}\n`;
+}
+
+/** The optional "Engine on problem" workflow (workflow-templates/command-center-engine-on-problem.workflow.json). */
+export function buildOnProblemTemplate(): WorkflowCreate {
+  return buildOnProblemWorkflowCreate({ appId: TEMPLATE_APP_ID, settings: defaultSettings() });
+}
+
+export function onProblemTemplateJson(): string {
+  return `${JSON.stringify(buildOnProblemTemplate(), null, 2)}\n`;
 }

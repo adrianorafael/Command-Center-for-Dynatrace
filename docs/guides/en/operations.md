@@ -16,6 +16,7 @@ flowchart LR
     subgraph WF["Simple workflow · Command Center · Engine<br/>every 1, 2 or 5 min"]
       A["Action: Run Command Center engine"]
     end
+    OP["Optional simple workflow<br/>Engine on problem<br/>(Problem trigger)"]
     subgraph APP["Command Center app"]
       UI["UI (React + Strato)"]
       F["App functions<br/>engine-run · config · status<br/>incidents · directory"]
@@ -27,6 +28,8 @@ flowchart LR
 
   T -->|POST event| API --> G
   DAVIS -->|opens problems| G
+  DAVIS -.problem opens or closes.-> OP
+  OP -.same action.-> A
   A -->|DQL| G
   A <--> S
   A -->|reads secret| CV
@@ -41,6 +44,8 @@ flowchart LR
 1. Take the engine lease (`lock.engine`) so that two runs never page twice. If another run holds it, this run is
    skipped (counted as `skippedLocked` in the heartbeat).
 2. Run the DQL queries of the enabled sources (Q1–Q4), normalise the records into alerts, de-duplicate and route them.
+   A new problem none of whose Davis events can be read yet is held back for up to 90 seconds (see
+   [Behaviour you should know](#behaviour-you-should-know)).
 3. Create or update incidents, apply operator actions in order, end snoozes that are due, evaluate escalation policies
    against the schedules, plan notifications and retries (failed or without a result) in the ledger, archive old
    resolved incidents and update the daily rollup. Write the heartbeat (`hb.engine`) and release the lease.
@@ -55,8 +60,9 @@ code, so what the Console shows right after an action matches what the engine wi
 | Design | Workflow hours | Function invocations | Verdict |
 | --- | --- | --- | --- |
 | Version 2 before this change: a **standard** workflow `tick` → 8 senders → `report` | 1 per hour of the workflow's lifetime, whether or not it does anything | Measured: about 690 per hour (≈ 11.5 per minute) | Replaced |
-| One **simple** workflow per integration, run by the engine per notification (current, in addition) | none | Measured: **1 per notification** of that integration (the workflow's task), failed sends included | ✅ Each integration switched on gets its own workflow (one confirmation). The engine still reads alerts and escalates; it hands each notification to the integration's workflow and falls back to a direct send when that workflow can't be run. |
-| **One simple workflow, one action, interval trigger** (current) | **none** | Measured: **1 per run** (60 per hour at 1 minute) | ✅ |
+| **One simple workflow, one action, interval trigger** (current) | **none** | Measured: **1 per run** (60 per hour at 1 minute) | ✅ The engine also sends, so a notification adds no invocation. |
+| A second simple workflow with a **Problem trigger** and the same action (optional) | none | Measured: **1 per firing**, about 2 per problem (it opens, it closes) | ✅ Optional. The first page does not wait for the interval, so a longer interval becomes practical. See [Running on problems](#running-on-problems). |
+| One **simple** workflow per integration, run by the engine per notification (optional, per integration) | none | Measured: **1 per notification** of that integration (the workflow's task), failed sends included | Optional since 2.3.0 (it was the default in 2.1 and 2.2). Each delivery is a workflow execution you can see. The engine falls back to a direct send when that workflow can't be run. |
 
 Sources: *Create a simple workflow* ("without consuming workflow hours") and *Workflows concepts* (simple workflows "do
 not generate any consumption of workflow hours") in the Dynatrace documentation. Simple workflows allow exactly one
@@ -94,10 +100,53 @@ workflow hours, one function call per notification. Measured on the trial enviro
 notification* action and Dynatrace's own *HTTP request* action (the custom workflow example) were each billed one
 invocation per run, failed sends included. The API call that starts a run left no billing event of its own.
 
-An integration without its own workflow is sent directly by the engine, inside the run it is already doing, with no
-extra invocation. Its own workflow adds one invocation per notification. In return, each delivery is an execution you
-can see in the Workflows app, and the sends do not share the time limit of the engine run (100 seconds; what is not
-sent in time waits for a later run).
+That is why the engine sends an integration directly unless you give it a workflow of its own (**Configure →
+Delivery**): the send happens inside the run the engine is already doing, with no extra invocation. Its own workflow
+adds one invocation per notification. In return, each delivery is an execution you can see in the Workflows app, and
+the sends do not share the time limit of the engine run (100 seconds; what is not sent in time waits for a later
+run).
+
+### Running on problems
+
+The optional workflow **Command Center · Engine on problem** is where an event trigger does fit: a Davis problem that
+opens or closes is an event Dynatrace produces by itself. It is a simple workflow with a **Problem trigger** (the
+problem opens or closes; every category) and one task, the same engine action. The trigger passes the problem's ID
+and status to the action.
+
+Measured on the trial environment with test problems (2026-11-27):
+
+| What | Measured |
+| --- | --- |
+| The trigger fires after the problem event | 1–4 s for a close or a first-seen update, 11–12 s for a new problem |
+| The problem record can be queried in Grail | About 30–40 s after its timestamp. Runs 24 s and 29 s after it did not find the record yet. |
+| Incident created by the problem-triggered run | 34 s, 40 s and 34 s after the problem's timestamp, in three tests. The scheduled run (1-minute interval) would have created them 50 s, 34 s and 45 s later. |
+| Incident resolved after the problem closed | Within 30 s of the close event (three closes) |
+| Routing | The incident got its service's team from `cc.service`: the problem's Davis event was readable by then |
+| Billing | One `ACTION` invocation per firing (runs of 23–30 s). The trigger fired once when the problem opened and once when it closed, not on the update in between. |
+
+Because the trigger fires before the record can be queried, the run **waits**. Every 5 seconds it checks the incident
+in App State and one small query (the problem's newest status), for up to 40 seconds. As soon as the problem can be
+read it runs a normal cycle, and at most one more if the incident is still not there. If another run was faster, it
+ends without a cycle. If the problem is not readable in time, it ends too, and the scheduled run picks the problem up
+as before. The wait is inside the same invocation, and
+a function call of up to 60 seconds is one billed invocation.
+
+What it gives you: the incident no longer waits for the next scheduled run. It is created about half a minute after
+the problem opens, whatever the interval, and its first notifications are planned and sent in that same cycle. That
+makes a 5-minute interval practical: about 8,640 scheduled runs a month instead of 43,200, plus about two runs per
+problem. It does not replace the engine workflow. Escalation steps, snooze ends, retries and the other sources
+(Davis events, generic events) are handled on the interval.
+
+Limits:
+
+- Dynatrace limits each workflow to 1,000 event-triggered executions per hour and throttles beyond that; the
+  scheduled run then covers the gap.
+- A new trigger needs time to become active. On the trial environment a problem created 52 seconds after the
+  workflow did not start it; events from two and a half minutes on did.
+- After installation the trigger also fires once for every problem that is already open, on its next update. Those
+  runs end at once, because the incident exists.
+- Only the API creation of this workflow was exercised. **Install in Workflows** and the upload of its JSON were
+  not clicked through.
 
 ## Cost and consumption
 
@@ -109,7 +158,8 @@ sent in time waits for a later run).
 | Engine runs = function invocations (`ACTION`) | ≈ 43,200 | ≈ 21,600 | ≈ 8,640 |
 | Workflow hours | 0 | 0 | 0 |
 | Grail queries | 1–8 per run (below) | same | same |
-| Integration workflow runs = function invocations (`ACTION`) | one per notification of an integration that has its own workflow, failed sends and retries included | same | same |
+| *Engine on problem* runs (optional) = function invocations (`ACTION`) | about 2 per problem: it opens, it closes | same | same |
+| Integration workflow runs (optional) = function invocations (`ACTION`) | one per notification of an integration that has its own workflow, failed sends and retries included; none by default | same | same |
 
 One invocation is a function call of up to 60 seconds; a call that runs for 61 to 120 seconds counts as two (Dynatrace
 licensing documentation). The engine runs measured on the trial environment took 3 to 10 seconds.
@@ -134,10 +184,9 @@ How to measure in your environment:
   billable capabilities: here the function invocations and the Grail queries.
 
 How to reduce cost: keep Q2 and Q3 off unless you send events that don't open problems; lower the look-back; choose
-a 2- or 5-minute interval if your escalation delays are long. An integration costs no extra invocation while it has
-no workflow of its own: don't create that workflow (close the Workflows app when it opens), or delete it there and
-select *Unlink* in the integration's configuration. While a workflow named *Command Center · <integration>* exists,
-the Outbound tab links it again.
+a 2- or 5-minute interval if your escalation delays are long, and install *Engine on problem* so that the first page
+does not wait for it. Leave integrations on **By the engine** (the default): a workflow of its own costs one
+invocation per notification.
 
 **The queries** (`ui/app/data/dql.ts`, all executed on the trial environment):
 
@@ -183,6 +232,14 @@ fetch dt.davis.events, from: now() - 72h
 | dedup event.id, sort: { timestamp desc }
 | fieldsKeep event.id, event.type, event.provider, "cc.*"
 | limit 1000
+
+// Q5 — one problem's newest status (only the run started by the Problem trigger: one per 5-second check)
+fetch dt.davis.problems, from: now() - 2h
+| filter event.id == "<problem id>"
+| filter not(dt.davis.is_duplicate)
+| sort timestamp desc
+| limit 1
+| fields event.id, event.status, dt.davis.event_ids
 ```
 
 ## Health and monitoring
@@ -202,6 +259,11 @@ fetch dt.davis.events, from: now() - 72h
 - **At-least-once paging.** The ledger prevents duplicates in normal operation. In rare races (a run that overlaps a
   slow previous run, a result that arrives after the timeout) a person can be notified twice.
 - **Timing precision = interval.** A step fires on the first run after it is due. The same applies to snooze ends.
+- **A new problem waits for its events.** A problem record can become queryable before the Davis events it links to.
+  Routing happens once, when the incident is created, and the `cc.*` properties are on those events. So a problem
+  none of whose events can be read yet is held back for up to 90 seconds, then goes through as it is.
+- **A page is never faster than Grail.** On the trial environment a problem could be queried about 30–40 seconds
+  after it opened. No trigger or interval pages before that.
 - **Configuration is last-write-wins.** Two people saving the same team at the same moment: the later save wins.
 - **Roles are guidance.** Any user of the app can change configuration. IAM decides who can open the app.
 - **Demo mode is per browser** and never mixes sample data with real data (see [configuration](configuration.md#general)).
@@ -230,6 +292,7 @@ fetch dt.davis.events, from: now() - 72h
 | Workflows tab: *Update available* | The app was upgraded. Reinstall, then delete the old workflow. |
 | No incidents appear | Settings → Event sources; check that the event reached Grail (`fetch dt.davis.events` in a Notebook) and that its type opens a problem. Otherwise turn on the Davis events source. |
 | An incident has no team and nobody was paged | No routing rule matched and there is no default team. Problems that Davis detects on its own carry no team (only events you post can name a service in `cc.service`). Open the team and select *Receive all unrouted alerts* in its **Ready to page?** checklist (or set Settings → Routing defaults), or add a routing rule. The checklist also shows what else the team is missing. |
+| *Engine on problem* is installed but does not seem to run | Simple workflows show no execution list: check **Integrations → Workflows → Last engine run** right after a problem opens. A new trigger needs a few minutes before it fires. Its actor needs the same permissions as the engine's, and the trigger must be switched on. |
 | Routing ignores `cc.service` | The name or ID doesn't match a service, or an earlier rule set another service. Use Services → Test a rule. |
 | A notification **failed** | Incident → Notifications shows the provider error. Usual causes: host missing in External requests, a vault entry the actor can't read, wrong credential type, phone not in E.164, Twilio API key without *Account SID*. |
 | A notification shows **No result** | The run ended before the call returned. It is retried up to *Delivery attempts*. |
@@ -252,13 +315,22 @@ Verified on a trial environment (latest Dynatrace):
   task, and the expression `{{ execution().params | to_json }}` delivered the full notification JSON.
 - App functions `engine-run`, `config` (export, import, dry run), `status` and `incidents`. War room notebooks created
   through the Document API.
+- **Engine on problem**: a simple workflow with a Problem trigger and the engine action, created through the
+  Automation API. It fired when test problems opened and closed, the run waited until the problem was readable,
+  created the incident with the right team and resolved it on close, one billed invocation per firing. The numbers
+  are in [Running on problems](#running-on-problems).
 
 Not verified, or only partly:
 
 - **Twilio, IFTTT, Slack, Microsoft Teams and Telegram** senders: implemented from vendor documentation, not exercised
   live. Unit tests cover the Twilio SMS and voice, Slack and Telegram requests.
-- **Install in Workflows** (intent) and the **Upload** of the JSON in the Workflows app: not clicked through by us.
-  The API install of the same definition is verified.
+- **Install in Workflows** (intent) and the **Upload** of the JSON in the Workflows app: not clicked through by us,
+  for the engine, for *Engine on problem* and for an integration's own workflow. The API install of the same
+  definitions is verified.
+- **Configure → Delivery** (the choice between the engine and an integration's own workflow) was exercised in the
+  offline preview only.
+- **A notification sent by a problem-triggered run**: no provider was switched on during those tests. The runs
+  created and resolved incidents; nothing was sent. Sending uses the same cycle code as the scheduled run.
 - **Minimal permissions** of the workflow actor: all permissions were enabled on the trial environment.
 - **User search** returned nobody for users who had just been invited. A search for active users in a signed-in
   session was not confirmed on the trial environment. With a platform token, IAM answered *User not authorized*.

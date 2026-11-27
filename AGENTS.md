@@ -30,7 +30,7 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 ## Project specifics
 
 - **App id:** `my.command.center` (keep the `my.` prefix — unsigned app). **Name:** `Command Center`.
-- **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.2.0); every release is
+- **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.3.0); every release is
   recorded in `CHANGELOG.md`. Versions must increase monotonically per environment or `dt-app deploy` is rejected.
 - **Scopes (11):** `storage:buckets:read`, `storage:events:read`, `state:app-states:read|write|delete`,
   `iam:users:read`, `automation:workflows:read`, `automation:workflows:run` (custom workflow provider),
@@ -48,6 +48,10 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
   `run-engine` (`actions/run-engine.action.ts`), every 1, 2 or 5 minutes: one function invocation and 1–8 Grail queries
   per run. Measured on a trial tenant: one `ACTION` billing event per run. The UI runs no DQL; it polls App State
   (default every 30 s). Never reintroduce a standard workflow or Run JavaScript tasks for the engine.
+- **Every workflow task execution is one billed function call, whatever the trigger** (Dynatrace licensing docs;
+  measured for this app's actions and for Dynatrace's own HTTP request action). So the engine sends notifications
+  itself; an integration's own workflow is opt-in (one more call per notification). Do not add workflows "for
+  elegance": count the invocations first.
 
 ## Architecture and layer boundaries
 
@@ -58,11 +62,14 @@ ui/app/domain/        pure TypeScript core — routing, schedules, escalation, a
                       a schemaVersion bump and a migration.
 ui/app/data/          platform adapters behind the Repository port: App State adapter, in-memory adapter (demo/tests),
                       DQL builders, Grail runner, IAM directory, notebooks, workflow definition + installer status.
-actions/              the custom workflow action run-engine (one full cycle via api/lib/cycle.ts).
+actions/              the custom workflow actions: run-engine (one full cycle via api/lib/cycle.ts; with a problem
+                      id as input, the problem-triggered run in api/lib/problemTrigger.ts) and send-notification.
 api/                  app functions engine-run, config, status, incidents, directory; api/lib/ holds the engine cycle,
-                      sources, lease, senders. They import the domain and data layers from ui/app (shared code).
+                      the problem-triggered run, sources, lease, senders. They import the domain and data layers from
+                      ui/app (shared code).
 ui/app/pages|components|hooks/   Strato UI. Consumes contracts.ts, the Repository/store and pure domain functions.
-workflow-templates/   GENERATED engine workflow JSON (node scripts/gen-workflow-templates.mjs) + trial-only simulator.
+workflow-templates/   GENERATED engine workflow JSON files: interval and on-problem (node scripts/gen-workflow-templates.mjs)
+                      + trial-only simulator.
 scripts/              install-workflow, gen-workflow-templates, preview-server, screenshot.
 docs/                 project page (index.html, icon.svg, screenshots/) and guides/{en,pt-BR,es}/ — English is the
                       source; update the three languages together, and never document anything not verified.
@@ -75,10 +82,16 @@ Rules that keep the layers honest:
 - The engine workflow definition is `ui/app/data/workflows/definition.ts` (SIMPLE, one task, no input). After
   changing it, run `node scripts/gen-workflow-templates.mjs` and bump `ENGINE_DEFINITION_VERSION` so installed
   workflows show "Update available". A unit test fails if the checked-in template drifts.
+- The optional "Engine on problem" workflow (`buildOnProblemWorkflow`, own marker and version
+  `ON_PROBLEM_DEFINITION_VERSION`, own template file and drift test) has a Problem trigger and the same action with
+  `problemId` / `problemStatus` as input. Its run waits until the problem is readable and its incident is in the
+  expected state (`api/lib/problemTrigger.ts`); it never replaces the interval workflow.
 - Senders (`api/lib/senders.ts`) never retry inside a run — the ledger retries with a new attempt number.
-- Integration workflows: a built-in provider with `params.workflowId` is sent by its own simple workflow whose task is
-  the app action `send-notification` (`actions/send-notification.action.ts`); the engine runs it per notification
-  (hand-off, no result) and falls back to a direct send if the run is refused. The action writes the ledger result.
+- Delivery: the engine sends built-in providers directly (default). Only a provider with `params.workflowId` is sent
+  by its own simple workflow whose task is the app action `send-notification`
+  (`actions/send-notification.action.ts`); the engine runs it per notification (hand-off, no result) and falls back
+  to a direct send if the run is refused. The UI links a workflow only where the person chose it
+  (`params.delivery === "workflow"`); never bring back automatic linking for every enabled provider.
 - Provider kind `workflow` ("Custom workflow") runs a customer-owned workflow with the notification as run params;
   it needs no vault entry. One enabled provider per channel (validated). New default providers are appended to
   stored settings by `mergeSettings`.
@@ -124,7 +137,8 @@ claude mcp add dt-app-mcp -- npx -y dt-app-mcp
 ```
 
 **Knowledge is not execution.** A query written with help from `get_dql_knowledgebase` has still never run.
-Current status: Q1–Q4 executed on a trial tenant, Q3 with data (generic events trigger and resolve).
+Current status: Q1–Q5 executed on a trial tenant, Q3 with data (generic events trigger and resolve); Q5 (one
+problem's newest status) returned ACTIVE, CLOSED and no record for an unknown ID.
 
 ## Dynatrace knowledge: reference, never vendor
 
@@ -141,7 +155,7 @@ npm run lint             # ESLint incl. security, no-unsanitized and no-secrets 
 npm run build            # dt-app build (offline)
 npm run check            # all of the above
 
-node scripts/gen-workflow-templates.mjs [--check]      # regenerate / verify the engine workflow template
+node scripts/gen-workflow-templates.mjs [--check]      # regenerate / verify the two engine workflow templates
 npx dt-app build && node scripts/preview-server.mjs    # offline preview at http://127.0.0.1:4173/ui/ (demo mode)
 node scripts/screenshot.mjs ./screenshots-out          # one PNG per route; needs playwright + a Chrome binary
 
@@ -165,6 +179,13 @@ Before every commit: `bash <skill>/assets/scripts/scan-secrets.sh` on the workin
 - App State reads can be stale for a few seconds: the engine lease compares `acquiredAt` instead of trusting one read
   (`api/lib/lease.ts`). Never "simplify" it back to read-after-write.
 - Simple workflows keep only execution metadata: diagnostics live in the heartbeat (`hb.engine`), not in task results.
+  `lastExecution` of a simple workflow is null and its executions are not listed by the Automation API: read
+  `dt.system.events` (`event.kind == "WORKFLOW_EVENT"`) to see them.
+- Grail is not instant: a problem record became queryable 30–40 s after its timestamp on a trial tenant, and a
+  Problem trigger fires before that (1–12 s after the event). A run started by the trigger must wait for the record;
+  never create an incident from the trigger payload alone (routing needs the `cc.*` properties of the Davis events,
+  and routing happens only once). The sources layer also holds a young problem whose events are not readable yet.
+- A new event trigger needs a few minutes to become active (a problem created 52 s after the workflow did not fire it).
 - IAM user search returns only **active** users; with a platform token it answers "User not authorized".
 - Problem records do **not** carry the Events API `properties`; they are on the linked `dt.davis.events` records
   (`dt.davis.event_ids`). The engine copies `cc.*` from the events onto the problem (Q4 + `api/lib/sources.ts`).

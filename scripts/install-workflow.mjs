@@ -6,6 +6,10 @@
  *   DT_ENVIRONMENT=https://YOUR-ENVIRONMENT.apps.dynatrace.com \
  *   DT_PLATFORM_TOKEN=<platform token with automation:workflows:read + automation:workflows:write> \
  *   node scripts/install-workflow.mjs [--app-id my.command.center] [--workflow-id <uuid>] [--actor <service-user-uid>] [--interval 1|2|5] [--dry-run]
+ *   node scripts/install-workflow.mjs --on-problem [--app-id …] [--actor …] [--dry-run]
+ *
+ * --on-problem creates or updates the optional "Command Center · Engine on problem" workflow (Problem trigger)
+ * instead of the engine workflow. It has no fixed id: it is looked up by its title.
  *
  * Endpoints (same as @dynatrace-sdk/client-automation 8.10 esm/index.js):
  *   GET  /platform/automation/v1/workflows/{id}            → 200 exists / 404
@@ -49,7 +53,7 @@ try {
   await build({
     stdin: {
       contents: [
-        'export { buildEngineWorkflowCreate, buildEngineWorkflowUpdate } from "./ui/app/data/workflows/definition";',
+        'export { buildEngineWorkflowCreate, buildEngineWorkflowUpdate, buildOnProblemWorkflowCreate, ON_PROBLEM_WORKFLOW_TITLE } from "./ui/app/data/workflows/definition";',
         'export { defaultSettings } from "./ui/app/data/domainPort";',
       ].join("\n"),
       resolveDir: root,
@@ -72,9 +76,11 @@ const id = settings.engine.workflowId;
 const def = { appId, settings, intervalMinutes, ...(actor ? { actor } : {}) };
 const createBody = mod.buildEngineWorkflowCreate(def);
 const updateBody = mod.buildEngineWorkflowUpdate(def);
+const onProblem = has("on-problem");
+const onProblemBody = mod.buildOnProblemWorkflowCreate({ appId, settings, ...(actor ? { actor } : {}) });
 
 if (dryRun) {
-  console.log(JSON.stringify(createBody, null, 2));
+  console.log(JSON.stringify(onProblem ? onProblemBody : createBody, null, 2));
   process.exit(0);
 }
 
@@ -101,6 +107,18 @@ async function call(method, path, body) {
 function fail(what, r) {
   console.error(`${what} failed: HTTP ${r.status} ${r.json?.error?.message ?? r.text}`);
   process.exit(1);
+}
+
+if (onProblem) {
+  const title = mod.ON_PROBLEM_WORKFLOW_TITLE;
+  const list = await call("GET", `/workflows?search=${encodeURIComponent(title)}&limit=20`);
+  if (list.status !== 200) fail("lookup", list);
+  const hit = (list.json?.results ?? []).find((w) => w.title === title);
+  const r = hit ? await call("PUT", `/workflows/${hit.id}`, onProblemBody) : await call("POST", "/workflows", onProblemBody);
+  if (r.status >= 300) fail(hit ? "update" : "create", r);
+  console.log(`${title} ${hit ? "updated" : "created"} (workflow id ${hit?.id ?? r.json?.id}, app ${appId}).`);
+  console.log("Keep the engine workflow installed too: escalation steps, snooze ends and retries need its interval.");
+  process.exit(0);
 }
 
 const existing = await call("GET", `/workflows/${id}`);

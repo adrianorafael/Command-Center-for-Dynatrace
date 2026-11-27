@@ -15,7 +15,7 @@ import { DEFAULT_LOCK_TTL_SEC, MIN_LOCK_TTL_SEC, defaultSettings } from "../../u
 import type { QueryRunner } from "../../ui/app/data/grail";
 import { runEngineTick, type EngineHeartbeatWithStorage } from "../lib/engine";
 import { runDeliveryReport } from "../lib/delivery";
-import { fetchSources, HOLD_INCOMPLETE_MS } from "../lib/sources";
+import { fetchSources, HOLD_INCOMPLETE_MS, HOLD_UNREADABLE_MS } from "../lib/sources";
 import { shedArchives, slimRecord } from "../lib/storage";
 
 const NOW = Date.parse("2026-11-26T12:00:00Z");
@@ -251,6 +251,30 @@ describe("#15/#21 source health", () => {
     expect(young.status["davis-problem"]).toBe("truncated");
     const old = await fetchSources(s, q(new Date(NOW - HOLD_INCOMPLETE_MS - 1).toISOString()), 1000, NOW);
     expect(old.problems).toHaveLength(1);
+  });
+
+  it("a young problem whose events are not readable yet waits for them (routing happens only once)", async () => {
+    const EVENT = "0000000000000000001_0000000000001";
+    const q = (start: string, events: Record<string, unknown>[]) =>
+      vi.fn((query: string) =>
+        Promise.resolve(query.startsWith("fetch dt.davis.problems") ? [problem(start, [EVENT])] : query.includes("in(event.id") ? events : []),
+      ) as unknown as QueryRunner;
+    const young = new Date(NOW - 20_000).toISOString();
+    // Q4 answered without the event: the problem record became queryable before its event.
+    const held = await fetchSources(s, q(young, []), 1000, NOW);
+    expect(held.problems).toHaveLength(0);
+    expect(held.heldProblems).toBe(1);
+    expect(held.status["davis-problem"]).toBe("ok");
+    // Once the event is readable the problem goes through, with its routing properties.
+    const ready = await fetchSources(s, q(young, [{ "event.id": EVENT, "cc.service": "checkout" }]), 1000, NOW);
+    expect(ready.problems).toHaveLength(1);
+    expect(ready.problems[0]).toMatchObject({ "cc.service": "checkout" });
+    // An event that never shows up does not block paging for long.
+    const old = await fetchSources(s, q(new Date(NOW - HOLD_UNREADABLE_MS - 1).toISOString(), []), 1000, NOW);
+    expect(old.problems).toHaveLength(1);
+    // A problem without linked events is never held.
+    const none = vi.fn((query: string) => Promise.resolve(query.startsWith("fetch dt.davis.problems") ? [problem(young, [])] : [])) as unknown as QueryRunner;
+    expect((await fetchSources(s, none, 1000, NOW)).problems).toHaveLength(1);
   });
 });
 

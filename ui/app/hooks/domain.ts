@@ -1,3 +1,4 @@
+import { exportOnProblemDefinition, getOnProblemStatus, openOnProblemIntent, type OnProblemWorkflowStatus } from "../data/workflows/installer";
 import { exportCustomWorkflow, exportProviderWorkflow, findCustomWorkflows, findProviderWorkflows, openCustomWorkflowIntent, openProviderWorkflowIntent, type CustomWorkflowInfo } from "../data/workflows/installer";
 /**
  * The one seam between the UI and agents A (pure domain) and B (data/platform).
@@ -124,6 +125,21 @@ export function exportCustomWorkflowDefinition(): { fileName: string; json: stri
 }
 export function findCustomWorkflowIds(): Promise<CustomWorkflowInfo[]> {
   return isDemo() ? Promise.resolve([]) : findCustomWorkflows();
+}
+
+/** "Engine on problem": the optional workflow that runs the engine when Davis opens or closes a problem. */
+export type { OnProblemWorkflowStatus };
+export function openOnProblemInstall(settings: Settings): void {
+  openOnProblemIntent(currentAppId(), settings);
+}
+export function exportOnProblemWorkflowDefinition(settings: Settings): { fileName: string; json: string } {
+  return exportOnProblemDefinition(currentAppId(), settings);
+}
+export function getOnProblemWorkflowStatus(): Promise<OnProblemWorkflowStatus> {
+  // Demo mode shows a complete setup and never calls the platform.
+  return isDemo()
+    ? Promise.resolve({ installed: true, type: "SIMPLE", isDeployed: true, usesAction: true, triggerActive: true, outdated: false, demo: true })
+    : getOnProblemStatus(currentAppId());
 }
 
 /** Per-integration workflow of a built-in provider. */

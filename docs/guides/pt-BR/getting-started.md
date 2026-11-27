@@ -117,10 +117,11 @@ Depois:
    serviço. A ação do motor lê o Grail, o App State e o Credential Vault com as permissões do ator.
 2. **Authorization settings.** No app Workflows → **Settings → Authorization settings**, habilite para o ator as
    permissões que o motor usa: `storage:buckets:read`, `storage:events:read`, `state:app-states:read`,
-   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` e, para os workflows de integração
-   e a integração Custom workflow, `automation:workflows:run`. O ator de cada workflow de integração precisa de
-   `state:app-states:read`, `state:app-states:write` e `credential-vault:entries:read`: a ação dele lê as
-   configurações do provedor, lê o segredo e registra o resultado. No ambiente trial, todas as permissões foram habilitadas para o ator, então o conjunto mínimo não foi isolado.
+   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` e, para uma integração que
+   tem workflow próprio e para a integração Custom workflow, `automation:workflows:run`. O ator do workflow próprio de
+   uma integração precisa de `state:app-states:read`, `state:app-states:write` e `credential-vault:entries:read`: a
+   ação dele lê as configurações do provedor, lê o segredo e registra o resultado. No ambiente trial, todas as
+   permissões foram habilitadas para o ator, então o conjunto mínimo não foi isolado.
 3. De volta ao Command Center, selecione **Refresh**. Se o workflow foi encontrado pelo título, selecione **Save this
    ID**. O status fica verde (**Installed · simple workflow**) e **Last engine run** é atualizado dentro de um
    intervalo.
@@ -128,17 +129,31 @@ Depois:
 **Run engine now** executa um ciclo completo imediatamente pela função do app `engine-run`, com as suas próprias
 permissões. Use-o para testar sem esperar o agendamento.
 
+### Opcional: rodar a cada problema
+
+O card **Command Center · Engine on problem**, na mesma aba, instala um segundo simple workflow. Ele tem um **Problem
+trigger** (gatilho de problema) e a mesma ação, de modo que o motor também roda assim que o Davis abre ou fecha um
+problema e o primeiro acionamento não espera a próxima execução agendada. Instale-o como o motor: **Install in
+Workflows**, **Download JSON** e upload, ou `node scripts/install-workflow.mjs --on-problem`. O ator dele precisa das
+mesmas permissões do ator do motor.
+
+Mantenha o **Command Center · Engine** instalado: passos de escalonamento, fim de snooze e novas tentativas dependem
+do intervalo dele. Com os dois workflows, um intervalo de 5 minutos basta para a maioria das equipes, o que significa
+menos execuções. O que ele faz, o que medimos e os limites: [operações](operations.md#rodando-a-cada-problema).
+
 ## Passo 6 — Configure os provedores
 
 **Integrations → Outbound**: cada card de provedor tem uma chave **On/Off**, e somente os provedores ativados são
 usados. Ativar um provedor pela primeira vez abre **Configure**: cole o ID da entrada do vault, preencha os parâmetros
 não secretos e salve. Só pode haver um provedor ativado por canal.
 
-Quando um provedor integrado é ativado (**on**), o app Workflows abre com **o seu próprio workflow** já preenchido
-(*Command Center · <provider>*, um simple workflow cuja tarefa é a ação do app *Send Command Center notification*).
-Salve-o lá. De volta a Integrations → Outbound, o Command Center o encontra pelo título e o vincula; o card passa a
-mostrar *Sent by its workflow*. Até que ele seja vinculado, o próprio motor envia as notificações desse provedor, então
-nada se perde. Depois use **Send test** com um endereço. Detalhes: [integrações](integrations.md#integration-workflows).
+O próprio motor envia as notificações de um provedor ativado, dentro da execução que ele já está fazendo. Não há
+nada para criar no app Workflows e nenhuma chamada de função extra. Use **Send test** com um endereço.
+
+Opcional: **Configure → Delivery → Through its own workflow** envia as notificações de um provedor por um simple
+workflow próprio (*Command Center · <provider>*). Cada entrega passa a ser uma execução de workflow que você vê no
+app Workflows, ao custo de uma chamada de função a mais por notificação. Detalhes:
+[integrações](integrations.md#integration-workflows).
 
 | Provedor | Parâmetros |
 | --- | --- |

@@ -118,6 +118,69 @@ describe("checked-in workflow template", () => {
   });
 });
 
+describe("engine on problem (optional workflow with a Problem trigger)", () => {
+  it("is a SIMPLE workflow: Problem trigger on open and close, one task, the engine action with the problem as input", async () => {
+    const { buildOnProblemWorkflow, buildOnProblemWorkflowCreate, ON_PROBLEM_WORKFLOW_TITLE, ON_PROBLEM_MARKER } = await import("../workflows/definition");
+    const wf = buildOnProblemWorkflow({ appId: "my.command.center", settings });
+    expect(wf.title).toBe(ON_PROBLEM_WORKFLOW_TITLE);
+    expect(wf.type).toBe("SIMPLE");
+    expect(wf.description).toContain(ON_PROBLEM_MARKER);
+    expect(wf.trigger).toMatchObject({
+      eventTrigger: { isActive: true, triggerConfiguration: { type: "davis-problem", value: { triggerOn: "open-and-close", analysisReady: false } } },
+    });
+    // Every problem category: the app's routing decides what pages, not the trigger.
+    const value = (wf.trigger as unknown as { eventTrigger: { triggerConfiguration: { value: { categories: Record<string, boolean> } } } }).eventTrigger.triggerConfiguration.value;
+    expect(Object.values(value.categories).every(Boolean)).toBe(true);
+    expect(Object.keys(value.categories)).toHaveLength(7);
+    const tasks = Object.values(wf.tasks ?? {});
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]).toMatchObject({
+      action: actionId("my.command.center"),
+      input: { problemId: '{{ event()["event.id"] }}', problemStatus: '{{ event()["event.status"] }}' },
+    });
+    // It has no fixed id (found by title) and follows the engine switch.
+    expect(buildOnProblemWorkflowCreate({ appId: "my.command.center", settings })).not.toHaveProperty("id");
+    const off = buildOnProblemWorkflow({ appId: "my.command.center", settings: { ...settings, engine: { ...settings.engine, enabled: false } } });
+    expect(off.trigger).toMatchObject({ eventTrigger: { isActive: false } });
+    expect(JSON.stringify(wf)).not.toMatch(/dt0[cs]\d{2}\.|CREDENTIAL|\.apps\.dynatrace\.com/);
+  });
+
+  it("its status is found by title: not installed, healthy, standard, trigger off, outdated", async () => {
+    const { getOnProblemStatus, parseOnProblemVersion } = await import("../workflows/installer");
+    const { buildOnProblemWorkflow, ON_PROBLEM_WORKFLOW_TITLE, ON_PROBLEM_DEFINITION_VERSION } = await import("../workflows/definition");
+    const def = buildOnProblemWorkflow({ appId: "my.command.center", settings });
+    expect(parseOnProblemVersion(def.description)).toBe(ON_PROBLEM_DEFINITION_VERSION);
+    // The engine workflow's own marker is not mistaken for this one.
+    expect(parseOnProblemVersion("[command-center-engine v3]")).toBeUndefined();
+    const client = (wf?: Record<string, unknown>): AutomationClientLike => ({
+      getWorkflows: () => Promise.resolve({ results: wf ? [{ id: "wf-1", title: ON_PROBLEM_WORKFLOW_TITLE }, { id: "wf-0", title: `${ON_PROBLEM_WORKFLOW_TITLE} (copy)` }] : [] }),
+      getWorkflow: () => (wf ? Promise.resolve({ id: "wf-1", title: ON_PROBLEM_WORKFLOW_TITLE, ...wf }) : Promise.reject(new Error("not found"))),
+    });
+    const installed = { description: def.description, type: "SIMPLE", isDeployed: true, tasks: def.tasks, trigger: { eventTrigger: { isActive: true } } };
+    expect(await getOnProblemStatus("my.command.center", client())).toEqual({ installed: false });
+    expect(await getOnProblemStatus("my.command.center", client(installed))).toMatchObject({
+      installed: true,
+      workflowId: "wf-1",
+      type: "SIMPLE",
+      usesAction: true,
+      triggerActive: true,
+      outdated: false,
+    });
+    expect(await getOnProblemStatus("my.command.center", client({ ...installed, type: "STANDARD" }))).toMatchObject({ type: "STANDARD" });
+    expect(await getOnProblemStatus("my.command.center", client({ ...installed, trigger: { eventTrigger: { isActive: false } } }))).toMatchObject({ triggerActive: false });
+    expect(await getOnProblemStatus("my.command.center", client({ ...installed, description: "edited by hand" }))).toMatchObject({ outdated: true });
+    expect(await getOnProblemStatus("my.command.center", client({ ...installed, tasks: { x: { action: "dynatrace.automations:run-javascript" } } }))).toMatchObject({ usesAction: false, outdated: true });
+  });
+
+  it("the checked-in template matches the generated definition (run scripts/gen-workflow-templates.mjs)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { onProblemTemplateJson } = await import("../workflows/template");
+    const file = readFileSync(new URL("../../../../workflow-templates/command-center-engine-on-problem.workflow.json", import.meta.url), "utf8");
+    expect(file).toBe(onProblemTemplateJson());
+    expect(file).not.toMatch(/\.apps\.dynatrace\.com|\.live\.dynatrace\.com/);
+  });
+});
+
 describe("custom integration workflow", () => {
   it("is a SIMPLE on-demand workflow with one HTTP request task forwarding the run params as JSON", async () => {
     const { buildCustomWorkflow, CUSTOM_WORKFLOW_TASK } = await import("../workflows/definition");

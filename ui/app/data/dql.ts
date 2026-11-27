@@ -129,6 +129,28 @@ export function buildProblemEventPropsQuery(eventIds: readonly string[], lookbac
   ].join("\n");
 }
 
+const PROBLEM_ID_RE = /^[A-Za-z0-9_-]{1,80}$/;
+
+/**
+ * Q5 — the newest record of ONE problem: its status and the Davis events it links to. Used by the engine run
+ * that the Problem trigger starts, to wait until the problem can be read (the trigger fires before the record
+ * is queryable). Returns undefined for anything that is not a plain problem id.
+ * ✅ executed on a trial tenant (2026-11-27): an active problem → ACTIVE, a closed one → CLOSED, an unknown id → no record.
+ * Duplicates are left out, as in Q1: a duplicate never becomes an incident, so the run must not wait for one.
+ */
+export function buildProblemStatusQuery(problemId: string): string | undefined {
+  const id = problemId.trim();
+  if (!PROBLEM_ID_RE.test(id)) return undefined;
+  return [
+    `fetch dt.davis.problems, from: now() - 2h`,
+    `| filter event.id == ${dqlString(id)}`,
+    `| filter not(dt.davis.is_duplicate)`,
+    `| sort timestamp desc`,
+    `| limit 1`,
+    `| fields event.id, event.status, dt.davis.event_ids`,
+  ].join("\n");
+}
+
 export function chunk<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
