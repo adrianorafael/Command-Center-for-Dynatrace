@@ -11,6 +11,11 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-27
+
+### Fixed
+- Settings → About shows the installed app version instead of a fixed number.
+
 ## [2.1.0] - 2026-11-27
 
 ### Added

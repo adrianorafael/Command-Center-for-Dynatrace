@@ -53,9 +53,9 @@ Each built-in integration can have **its own workflow**, created when you switch
 | Back in Command Center | Integrations → Outbound finds the workflow by its title and links it (its ID is stored in the provider). **Configure → Integration workflow** also offers *Create its workflow*, *Download JSON*, *Find its workflow* and *Unlink*. |
 | A notification is due | The engine runs that workflow with the notification as run params. The action reads the provider settings from Command Center and the secret from the Credential Vault, sends, and writes *Sent* or *Failed* into the notification ledger. A failed send fails the workflow execution, so it shows in the Workflows app. |
 | The workflow can't be run | Deleted, or no permission: the engine sends that notification directly, so nobody misses a page. Until a workflow is linked, the engine also sends directly. |
-| Switch **off** | The provider and its workflow are no longer used. The app cannot pause or delete workflows: delete it in the Workflows app if you don't need it. |
+| Switch **off** | The provider and its workflow are no longer used; the link is kept for when you switch it on again. The app cannot pause or delete workflows: delete it in the Workflows app if you don't need it. |
 
-Each notification of a linked integration is one workflow run, with one action invocation. As simple workflows they
+Each notification of a linked integration is one workflow run with one action invocation, in addition to the engine run that planned it. As simple workflows they
 consume no workflow hours. If a workflow was created as a *standard* workflow (the create-workflow intent has no type
 field), *Find its workflow* says so and the automatic link skips it; upload the downloaded JSON instead.
 

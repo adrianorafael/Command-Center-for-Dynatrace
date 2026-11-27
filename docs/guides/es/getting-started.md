@@ -118,8 +118,10 @@ Luego:
    usuario de servicio. La acción del motor lee Grail, App State y el Credential Vault con los permisos del actor.
 2. **Authorization settings.** En la app Workflows → **Settings → Authorization settings**, habilita para el actor los
    permisos que usa el motor: `storage:buckets:read`, `storage:events:read`, `state:app-states:read`,
-   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` y, si usas la integración
-   Custom workflow, `automation:workflows:run`. En el entorno trial se habilitaron todos los permisos para el actor, así que el conjunto mínimo no se aisló.
+   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` y, para los workflows de
+   integración y la integración Custom workflow, `automation:workflows:run`. El actor de cada workflow de integración
+   necesita `state:app-states:read`, `state:app-states:write` y `credential-vault:entries:read`: su acción lee los
+   ajustes del proveedor, lee el secreto y registra el resultado. En el entorno trial se habilitaron todos los permisos para el actor, así que el conjunto mínimo no se aisló.
 3. De vuelta en Command Center selecciona **Refresh**. Si el workflow se encontró por su título, selecciona **Save this
    ID**. El estado se pone en verde (**Installed · simple workflow**) y **Last engine run** se actualiza dentro de un
    intervalo.
@@ -131,8 +133,14 @@ propios permisos. Úsalo para probar sin esperar a la programación.
 
 **Integrations → Outbound**: cada tarjeta de proveedor tiene un interruptor **On/Off**, y solo se usan los proveedores
 que están activados. Al activar uno por primera vez se abre **Configure**: pega el ID de la entrada del vault, completa
-los parámetros no secretos y guarda. Luego usa **Send test** con una dirección. Puede haber un solo proveedor activado
-por canal.
+los parámetros no secretos y guarda. Puede haber un solo proveedor activado por canal.
+
+Cuando se **activa** un proveedor integrado, la app Workflows se abre con **su propio workflow** ya completado
+(*Command Center · <provider>*, un simple workflow cuya tarea es la acción de la app *Send Command Center notification*).
+Guárdalo ahí. De vuelta en Integrations → Outbound, Command Center lo encuentra por su título y lo vincula; la tarjeta
+entonces dice *Sent by its workflow*. Hasta que esté vinculado, el motor envía por sí mismo las notificaciones de ese
+proveedor, así que no se pierde nada. Luego usa **Send test** con una dirección. Detalles:
+[integraciones](integrations.md#integration-workflows).
 
 | Proveedor | Parámetros |
 | --- | --- |

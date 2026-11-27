@@ -58,7 +58,7 @@ motor.
 | Diseño | Horas de workflow | Invocaciones de función | Veredicto |
 | --- | --- | --- | --- |
 | Versión 2 antes de este cambio: un **standard** workflow `tick` → 8 emisores → `report` | 1 por hora de vida del workflow, haga algo o no | Medido: cerca de 690 por hora (≈ 11.5 por minuto) | Reemplazado |
-| Un **simple** workflow por integración integrada, disparado por eventos | ninguna | Una invocación por notificación, más una ingesta de evento por notificación para dispararlo | No se usa para los proveedores integrados: no necesitan ningún workflow, y una integración desactivada no tiene nada que instalar. Se ofrece como la integración opcional **Custom workflow**, ejecutada directamente por el motor (sin ingesta de eventos). |
+| Un **simple** workflow por integración, ejecutado por el motor por cada notificación (actual, adicional) | ninguna | Una ejecución de workflow adicional por cada notificación de esa integración | ✅ Cada integración activada obtiene su propio workflow (una confirmación). El motor sigue leyendo las alertas y escalando; entrega cada notificación al workflow de la integración y recurre a un envío directo cuando ese workflow no se puede ejecutar. |
 | **Un simple workflow, una acción, trigger de intervalo** (actual) | **ninguna** | Medido: **1 por ejecución** (60 por hora con 1 minuto) | ✅ |
 
 Fuentes: *Create a simple workflow* ("without consuming workflow hours") y *Workflows concepts* (los simple workflows
@@ -90,6 +90,7 @@ en esa hora, no generó ningún evento de facturación de workflow.
 | Ejecuciones del motor = invocaciones de función (`ACTION`) | ≈ 43,200 | ≈ 21,600 | ≈ 8,640 |
 | Horas de workflow | 0 | 0 | 0 |
 | Consultas a Grail | 1–8 por ejecución (más abajo) | igual | igual |
+| Ejecuciones de workflows de integración | una por notificación de una integración vinculada | igual | igual |
 
 **Consultas a Grail por ejecución**: Q1 problemas (cuando la fuente Davis problems está activada, el valor
 predeterminado), Q4 propiedades de eventos de los problemas que devolvió Q1 (una

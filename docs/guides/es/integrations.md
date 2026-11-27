@@ -12,7 +12,8 @@ salida: los ocho canales, qué recibe cada proveedor, la integración custom wor
 1. El motor se ejecuta según su programación (simple workflow, una acción). Decide a quién se debe notificar ahora: el
    paso de escalamiento que vence, las personas de guardia de sus destinos y las reglas de notificación de cada persona.
 2. Escribe una **entrada del registro de notificaciones** (ledger) (`planned`) por persona, paso, canal e intento.
-3. Justo después de planificar, la misma ejecución lee el secreto del proveedor desde el Credential Vault y llama al
+3. Justo después de planificar, la misma ejecución envía: a través del workflow propio de la integración cuando hay uno
+   vinculado (más abajo), o si no, directamente — lee el secreto del proveedor desde el Credential Vault y llama al
    proveedor por HTTPS (o ejecuta tu custom workflow).
 4. El resultado se escribe de vuelta: `sent` (con la referencia del proveedor cuando se devuelve una) o `failed` (con
    el error del proveedor; los secretos y las URLs se enmascaran como `***` y `<url>`).
@@ -41,8 +42,24 @@ veces.
 Todos los proveedores comienzan **desactivados** y tienen un interruptor **On/Off** en su tarjeta. Un proveedor se usa
 solo mientras está activado y configurado (un ID de entrada del vault; para el custom workflow, un workflow ID). Puede
 haber un solo proveedor activado por canal: el webhook genérico y el custom workflow comparten el canal *webhook*. Los
-proveedores desactivados no cuestan nada y no necesitan ningún workflow: todos los proveedores integrados se envían
-desde el único workflow del motor.
+proveedores desactivados no cuestan nada y no se ejecuta nada de ellos.
+
+## Integration workflows
+
+Cada integración integrada puede tener **su propio workflow**, que se crea cuando la activas:
+
+| Paso | Qué ocurre |
+| --- | --- |
+| Activar (**on**) | Command Center guarda el proveedor y abre la app Workflows con *Command Center · <provider>* ya completado: un simple workflow, sin trigger (bajo demanda), una tarea — la acción de la app **Send Command Center notification** con las entradas `providerId` y `notification` = `{{ execution().params.notification }}`. Tú lo guardas (una confirmación: la app no puede crear workflows por sí misma). |
+| De vuelta en Command Center | Integrations → Outbound encuentra el workflow por su título y lo vincula (su ID se guarda en el proveedor). **Configure → Integration workflow** también ofrece *Create its workflow*, *Download JSON*, *Find its workflow* y *Unlink*. |
+| Vence una notificación | El motor ejecuta ese workflow con la notificación como parámetros de ejecución. La acción lee los ajustes del proveedor desde Command Center y el secreto desde el Credential Vault, envía, y escribe *Sent* o *Failed* en el registro de notificaciones. Un envío fallido hace fallar la ejecución del workflow, así que se ve en la app Workflows. |
+| El workflow no se puede ejecutar | Eliminado, o sin permiso: el motor envía esa notificación directamente, para que nadie se pierda un aviso. Hasta que haya un workflow vinculado, el motor también envía directamente. |
+| Desactivar (**off**) | El proveedor y su workflow dejan de usarse; el vínculo se conserva para cuando lo vuelvas a activar. La app no puede pausar ni eliminar workflows: elimínalo en la app Workflows si no lo necesitas. |
+
+Cada notificación de una integración vinculada es una ejecución de workflow con una invocación de acción, además de la ejecución del motor que la planificó. Como simple
+workflows, no consumen horas de workflow. Si un workflow se creó como *standard* workflow (el intent create-workflow no
+tiene campo de tipo), *Find its workflow* lo indica y la vinculación automática lo omite; en ese caso sube el JSON
+descargado.
 
 ## Qué recibe cada proveedor
 
@@ -158,6 +175,7 @@ el error del proveedor) se muestra de inmediato. Prueba de punta a punta cada ca
 | --- | --- |
 | Webhook genérico | ✅ Verificado en vivo en un entorno trial: escalamientos y pruebas entregados, resultados escritos en el registro de notificaciones |
 | Custom workflow | ✅ Verificado en vivo en un entorno trial: una prueba y un escalamiento programado ejecutaron el workflow, que entregó el JSON completo de la notificación al receptor |
+| Integration workflows | ✅ Verificado en vivo en un entorno trial con el webhook genérico: el motor ejecutó *Command Center · Generic webhook*, su acción leyó el proveedor y el secreto del vault y entregó; un error del proveedor (HTTP 429) hizo fallar la ejecución del workflow con el mensaje del proveedor |
 | Twilio SMS, voz, WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implementados a partir de la documentación de la API de cada proveedor, **no ejercitados en vivo** (no hay cuentas en el entorno de pruebas). Las pruebas unitarias cubren las solicitudes de Twilio SMS y voz, Slack y Telegram. Prueba cada proveedor con *Send test*. |
 
 Las respuestas bidireccionales (reconocer respondiendo un SMS o un mensaje de chat) no están implementadas. Reconoce en
