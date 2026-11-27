@@ -7,6 +7,8 @@
 export interface WarRoomLink {
   title: string;
   url: string;
+  /** Dynatrace document id when the link is a Notebook created or picked in the app. */
+  documentId?: string;
 }
 
 export interface WarRoom {
@@ -56,7 +58,8 @@ export function validateWarRoom(w: WarRoom): WarRoomError[] {
   if (w.incidentIds.length === 0) e.push({ path: "incidentIds", message: "Link at least one incident" });
   w.notebooks.forEach((n, i) => {
     if (!n.title.trim()) e.push({ path: `notebooks[${i}].title`, message: "Give the notebook a name" });
-    if (!isSafeHttpsUrl(n.url)) e.push({ path: `notebooks[${i}].url`, message: "Use an https link" });
+    // Notebooks picked or created in the app carry a document id and a platform link (may be relative).
+    if (!n.documentId && !isSafeHttpsUrl(n.url)) e.push({ path: `notebooks[${i}].url`, message: "Use an https link" });
   });
   if (w.status === "closed" && (w.closedAt === undefined || w.closedAt < w.openedAt))
     e.push({ path: "closedAt", message: "A closed room needs an end time after its start" });
@@ -93,4 +96,58 @@ export function reopenWarRoom(w: WarRoom): WarRoom {
   void _a;
   void _b;
   return { ...rest, status: "open", rev: w.rev + 1 };
+}
+
+/** DQL string literal: escape backslashes and double quotes. */
+function dqlString(v: string): string {
+  return `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/**
+ * Content of a Dynatrace Notebook (document type "notebook", content version "7", the format the Notebooks
+ * app writes) with a post-mortem template and a DQL section listing the war room's problems.
+ * `uuid` is injected so the builder stays pure and testable.
+ */
+export function buildPostmortemNotebook(
+  title: string,
+  displayIds: readonly string[],
+  uuid: () => string,
+): Record<string, unknown> {
+  const md = (markdown: string) => ({ id: uuid(), type: "markdown", markdown });
+  const ids = displayIds.filter((d) => /^[A-Za-z0-9._-]{1,64}$/.test(d));
+  const sections: Record<string, unknown>[] = [
+    md(`# Post-mortem: ${title.replace(/[\r\n]+/g, " ")}\n\nWar room opened from Command Center${ids.length ? ` for ${ids.join(", ")}` : ""}.`),
+    md("## Summary\n\n_What happened, in two or three sentences._"),
+  ];
+  if (ids.length > 0) {
+    sections.push({
+      id: uuid(),
+      type: "dql",
+      title: "Problems handled in this war room",
+      showTitle: true,
+      filterSegments: [],
+      drilldownPath: [],
+      showInput: true,
+      height: 300,
+      previousFilterSegments: [],
+      state: {
+        input: {
+          timeframe: { from: "now()-7d", to: "now()" },
+          value: [
+            "fetch dt.davis.problems, from: now()-7d",
+            `| filter in(display_id, array(${ids.map(dqlString).join(", ")}))`,
+            "| dedup event.id, sort: {timestamp desc}",
+            "| fields display_id, event.name, event.status, event.start, event.end",
+          ].join("\n"),
+        },
+      },
+    });
+  }
+  sections.push(
+    md("## Timeline\n\n| Time | Event |\n| --- | --- |\n|  |  |"),
+    md("## Root cause\n\n"),
+    md("## Impact\n\n"),
+    md("## Action items\n\n- [ ] "),
+  );
+  return { version: "7", defaultTimeframe: { from: "now()-24h", to: "now()" }, defaultSegments: [], sections };
 }

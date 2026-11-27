@@ -39,6 +39,14 @@
       {
         "name": "automation:workflows:run",
         "comment": "Escalate now and send test notifications through the workflow"
+      },
+      {
+        "name": "document:documents:read",
+        "comment": "List notebooks to attach to war rooms"
+      },
+      {
+        "name": "document:documents:write",
+        "comment": "Create post-mortem notebooks from war rooms"
       }
     ]
   }

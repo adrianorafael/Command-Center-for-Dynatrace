@@ -61,3 +61,26 @@ describe("war rooms", () => {
     expect(isTodaysRoom(room({ openedAt: T0 - 3 * 86_400_000 }), T0)).toBe(true); // still open
   });
 });
+
+describe("post-mortem notebook", () => {
+  it("builds notebook v7 content with a DQL section for the war room's problems", async () => {
+    const { buildPostmortemNotebook } = await import("../warrooms");
+    let n = 0;
+    const nb = buildPostmortemNotebook("Checkout outage", ["P-1", "P-2", 'bad"id'], () => `id-${++n}`) as {
+      version: string;
+      sections: { type: string; markdown?: string; state?: { input: { value: string } } }[];
+    };
+    expect(nb.version).toBe("7");
+    expect(nb.sections[0].markdown).toContain("# Post-mortem: Checkout outage");
+    const dql = nb.sections.find((s) => s.type === "dql");
+    expect(dql?.state?.input.value).toContain('in(display_id, array("P-1", "P-2"))');
+    expect(dql?.state?.input.value).not.toContain("bad");
+    expect(nb.sections.map((s) => s.type)).toEqual(["markdown", "markdown", "dql", "markdown", "markdown", "markdown", "markdown"]);
+  });
+
+  it("omits the DQL section when no incident has a display id", async () => {
+    const { buildPostmortemNotebook } = await import("../warrooms");
+    const nb = buildPostmortemNotebook("x", [], () => "u") as { sections: { type: string }[] };
+    expect(nb.sections.some((s) => s.type === "dql")).toBe(false);
+  });
+});

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex, Grid } from "@dynatrace/strato-components/layouts";
@@ -19,11 +19,14 @@ import {
   EventIcon,
   PauseIcon,
   SuccessIcon,
+  GroupIcon,
 } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { EscalationPolicy, Incident, NotificationRecord } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { Cell } from "../../components/tableKit";
+import { WarRoomModal } from "../warrooms/WarRoomModal";
+import { isSafeHttpsUrl, openRoomsForIncident } from "../../domain/warrooms";
 import { PriorityChip } from "../../components/PriorityChip";
 import { StatusIndicator } from "../../components/StatusIndicator";
 import { AgeText } from "../../components/AgeText";
@@ -58,7 +61,11 @@ const MoreActions = ({
   const cmd = useIncidentCommands();
   const ids = [incident.id];
   const davis = problemUrl(incident);
+  const { data } = useAppData();
+  const [warRoom, setWarRoom] = useState(false);
+  const room = openRoomsForIncident(data?.warRooms ?? [], incident.id).find((r) => isSafeHttpsUrl(r.url));
   return (
+    <>
     <Menu>
       <Menu.Trigger>
         <Button aria-label="More actions" size={size}>
@@ -108,6 +115,21 @@ const MoreActions = ({
           </Menu.Prefix>
           Add note
         </Menu.Item>
+        {room ? (
+          <Menu.Item onSelect={() => window.open(room.url, "_blank", "noopener,noreferrer")}>
+            <Menu.Prefix>
+              <GroupIcon />
+            </Menu.Prefix>
+            Join war room
+          </Menu.Item>
+        ) : (
+          <Menu.Item onSelect={() => setWarRoom(true)}>
+            <Menu.Prefix>
+              <GroupIcon />
+            </Menu.Prefix>
+            Open war room…
+          </Menu.Item>
+        )}
         {davis && (
           <Menu.Item onSelect={() => window.open(davis, "_blank", "noopener,noreferrer")}>
             <Menu.Prefix>
@@ -124,6 +146,8 @@ const MoreActions = ({
         </Menu.Item>
       </Menu.Content>
     </Menu>
+    {warRoom && <WarRoomModal request={{ mode: "create", incidentId: incident.id }} onClose={() => setWarRoom(false)} />}
+    </>
   );
 };
 
