@@ -147,6 +147,11 @@ describe("help language", () => {
 describe("guide icons", () => {
   const files = LANGUAGES.flatMap((lang) => GUIDE_IDS.map((id) => ({ path: `${SOURCE_DIRS[lang]}/${id}.md`, text: read(`${SOURCE_DIRS[lang]}/${id}.md`) })));
 
+  it("the pictograph check catches the stand-ins that were used, and lets text symbols through", () => {
+    for (const c of ["⚙️", "🔔", "📞", "🔴", "🟠", "⚪", "🟢", "✅", "✔", "✖", "⋮", "⋯", "○", "▶", "⏸", "⬆", "✎", "\u{FE0F}"]) expect(PICTOGRAPH.test(c), c).toBe(true);
+    for (const c of ["→", "…", "–", "—", "≈", "·", "×", "é", "ç", "ñ", "“", "”"]) expect(PICTOGRAPH.test(c), c).toBe(false);
+  });
+
   it("no guide source uses emoji or pictographs in place of the app's icons", () => {
     for (const { path, text } of files) {
       text.split("\n").forEach((line, i) => expect(PICTOGRAPH.exec(line)?.[0], `${path}:${i + 1}: ${line.trim().slice(0, 80)}`).toBeUndefined());
