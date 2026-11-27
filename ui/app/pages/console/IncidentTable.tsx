@@ -295,6 +295,30 @@ const IncidentPreview = ({
   );
 };
 
+const VISIBILITY_KEY = "command-center.console-columns.v1";
+const DEFAULT_VISIBILITY: Record<string, boolean> = { createdAt: false, source: false };
+
+/** Column visibility chosen in the table's column settings, kept per browser (survives refresh and reloads). */
+function useColumnVisibility(): [Record<string, boolean>, (v: Record<string, boolean>) => void] {
+  const [v, setV] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = window.localStorage.getItem(VISIBILITY_KEY);
+      return raw ? { ...DEFAULT_VISIBILITY, ...(JSON.parse(raw) as Record<string, boolean>) } : DEFAULT_VISIBILITY;
+    } catch {
+      return DEFAULT_VISIBILITY;
+    }
+  });
+  const update = (next: Record<string, boolean>) => {
+    setV(next);
+    try {
+      window.localStorage.setItem(VISIBILITY_KEY, JSON.stringify(next));
+    } catch {
+      // storage unavailable: the choice lasts for this session only
+    }
+  };
+  return [v, update];
+}
+
 /**
  * Custom cells don't get the default cell inset; DataTable.DefaultCell restores it so every column keeps
  * the same distance from its dividers as plain text cells (measured: content x == header text x).
@@ -331,6 +355,7 @@ export const IncidentTable = ({
   density: "default" | "condensed";
   ackTargetMs: number;
 }) => {
+  const [columnVisibility, setColumnVisibility] = useColumnVisibility();
   const { data, now, userName } = useAppData();
   const tz = data?.settings.ui.timeZone;
 
@@ -495,7 +520,8 @@ export const IncidentTable = ({
         onActivate(id);
       }}
       loading={loading}
-      columnVisibility={{ createdAt: false, source: false }}
+      columnVisibility={columnVisibility}
+      onColumnVisibilityChange={setColumnVisibility}
     >
       <DataTable.Toolbar>
         <DataTable.LineWrap />
