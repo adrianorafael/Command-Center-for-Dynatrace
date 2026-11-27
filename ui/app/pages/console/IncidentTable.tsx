@@ -28,7 +28,7 @@ import { Cell } from "../../components/tableKit";
 import { WarRoomModal } from "../warrooms/WarRoomModal";
 import { isSafeHttpsUrl, openRoomsForIncident } from "../../domain/warrooms";
 import { PriorityChip } from "../../components/PriorityChip";
-import { StatusIndicator } from "../../components/StatusIndicator";
+import { DELIVERY, StatusIndicator } from "../../components/StatusIndicator";
 import { AgeText } from "../../components/AgeText";
 import { AssigneeView } from "../../components/UserAvatar";
 import { EscalationCell, EscalationSteps } from "../../components/EscalationProgress";
@@ -479,7 +479,7 @@ export const IncidentTable = ({
           if (!n) return <Text style={{ color: Colors.Text.Neutral.Subdued }}>–</Text>;
           const failed = n.status === "failed" || n.status === "timeout";
           return (
-            <Tooltip text={`${CHANNEL_LABEL[n.channel]} to ${n.to.name ?? userName(n.to.uid)} · ${failed ? "failed" : n.status}`}>
+            <Tooltip text={`${CHANNEL_LABEL[n.channel]} to ${n.to.name ?? userName(n.to.uid)} · ${DELIVERY[n.status].label}`}>
               <Flex alignItems="center" gap={4} style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
                 {failed ? <CriticalFailedIcon style={{ color: Colors.Icon.Critical.Default, flexShrink: 0 }} /> : <ChannelIcon channel={n.channel} />}
                 <Text style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: "1 1 auto" }}>{formatRelative(n.reportedAt ?? n.plannedAt, now)}</Text>

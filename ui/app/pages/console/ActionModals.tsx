@@ -203,7 +203,7 @@ export const ActionModals = ({ request, onClose }: { request?: ModalRequest; onC
           <Footer label="Resolve" busy={busy} onCancel={onClose} onSubmit={() => run(() => act(request.ids, { type: "resolve" }))} />
         }
       >
-        <Paragraph>Escalations stop and responders are notified that the incidents are resolved.</Paragraph>
+        <Paragraph>Escalations stop. Nobody is notified about the resolution.</Paragraph>
       </Modal>
     );
   }

@@ -24,15 +24,15 @@ const TOC = [
 
 const CONCEPTS = `
 - **Incident**: one alert from Davis or the Events API after deduplication. It moves from *Triggered* to *Acknowledged* to *Resolved*; *Snoozed* hides it until a time, then it triggers again.
-- **Priority**: P1 (critical, page now) to P5 (informational, no page). Set by a routing rule, the event's \`cc.priority\`, the service default, or the priority mapping.
-- **Team**: Dynatrace users with a role. *Team admins* edit the team, *Responders* get paged, *Observers* only watch.
+- **Priority**: P1 (critical) to P5 (informational). Set by a routing rule, the event's \`cc.priority\`, the service default, or the priority mapping. Priority doesn't decide *whether* someone is paged (the escalation policy does, and a routing rule can suppress); it selects people's notification rules and quiet-hours behaviour.
+- **Team**: Dynatrace users with a role. *Team admins* edit the team and get paged, *Responders* get paged, *Observers* only watch and are never paged.
 - **Schedule**: who is on call, built from **layers**. Each layer rotates its members daily, weekly or every N hours, optionally only in certain hours. Later layers win; **overrides** win over everything.
 - **Escalation policy**: ordered steps. Each step waits a number of minutes, then notifies an on-call schedule, a whole team, or a person. It can repeat; it stops as soon as someone acknowledges.
 - **Service and routing rule**: rules are checked top to bottom and the first match decides service, team, policy and priority, or suppresses the alert.
 `;
 
 const CONSOLE = `
-1. **Acknowledge** to stop escalation and tell your team you're on it. Undo is available for 10 seconds.
+1. **Acknowledge** to stop escalation and tell your team you're on it. The confirmation pop-up offers Undo for 10 seconds (also after Resolve), unless you silenced pop-ups.
 2. **Reassign** to a team or a person, optionally with a note.
 3. **Snooze** for 15 minutes to 4 hours, or until a custom time. Escalation resumes afterwards.
 4. **Escalate now** jumps to the next step immediately.
@@ -43,27 +43,27 @@ Select several rows to act on them together. Filters are part of the URL, so you
 `;
 
 const OUTBOUND = `
-Notifications leave Dynatrace only through the **Command Center · Engine** workflow, which runs every minute:
+Notifications leave Dynatrace only through the **Command Center · Engine** workflow, a simple workflow that runs this app's engine action every 1, 2 or 5 minutes:
 
-1. In **Integrations → Workflows**, download the workflow JSON and upload it in the Workflows app. Set a **service user** as actor.
-2. In the Workflows app's authorization settings, grant the actor the permissions the workflow needs.
-3. Create one **Credential Vault** entry per provider (Twilio, IFTTT, Slack, Microsoft Teams, Telegram, or your webhook) with scope **AppEngine**, owned by the workflow actor, with **Owner access only** and **Allow access without app context** both on. Its ID looks like \`CREDENTIAL_VAULT_ENTRY-…\`.
+1. In **Integrations → Workflows**, choose the interval and select **Install in Workflows**, then deploy the workflow. If it shows up as a standard workflow, upload the downloaded JSON instead (or ask an admin to run \`scripts/install-workflow.mjs\`).
+2. In the Workflows app's **Authorization settings**, grant the workflow actor (the person who deploys it, or a service user) the permissions the engine uses: Grail read, app state and credential vault read.
+3. Create one **Credential Vault** entry per provider (Twilio, IFTTT, Slack, Microsoft Teams, Telegram, or your webhook) with scope **AppEngine**, owned by the workflow actor. Its ID looks like \`CREDENTIAL_VAULT_ENTRY-…\`.
 4. In **Integrations → Outbound**, paste the credential vault ID, set the sender, enable the provider, and send a test.
-5. Add the provider hosts to **Settings → External requests**.
+5. Add the provider hosts to **Settings → General → Environment management → External requests**.
 
 The app never sees secrets: it only stores vault IDs. Delivery results come back to the incident timeline and the notification ledger.
 `;
 
 const TROUBLE = `
-- **No incidents appear**: check that a source is on in Settings and that events arrive (Integrations → Inbound). The engine workflow must be running: a banner on the Console tells you when its heartbeat is older than 3 minutes.
-- **A notification failed**: open the incident's Notifications tab for the provider error. Common causes are a missing host in External requests, a vault entry that isn't owned by the workflow actor or lacks "Owner access only" plus "Allow access without app context", or an invalid phone number (use E.164).
-- **The workflow isn't installed or is outdated**: download the JSON again in Integrations → Workflows and upload it over the existing workflow.
+- **No incidents appear**: check that a source is on in Settings and that events arrive (Integrations → Inbound). The engine workflow must be running: a banner on the Console tells you when its heartbeat is late (older than two intervals plus one minute).
+- **A notification failed**: open the incident's Notifications tab for the provider error. Common causes are a missing host in External requests, a vault entry the workflow actor can't read (make the actor its owner), the wrong credential type, or an invalid phone number (use E.164).
+- **The workflow isn't installed or is outdated**: in Integrations → Workflows select **Reinstall in Workflows** (or upload the downloaded JSON), then delete the old workflow.
 - **Permission errors**: the app needs the scopes listed in Settings → Permissions, and your user needs IAM access to the app.
-- **People can't be found in the user picker**: type at least 3 characters of the email or the first name. Only users of this environment are listed. If the picker says user search is unavailable, IAM returned 403: check that your user belongs to the Dynatrace account that owns this environment and may view users; ask your account admin.
+- **People can't be found in the user picker**: type at least 3 characters of the email or the first name. Only active users of the account that owns this environment are listed: people who were invited but never signed in are not found yet. If the picker says user search is unavailable, IAM returned 403: check that your user belongs to the Dynatrace account that owns this environment and may view users; ask your account admin.
 `;
 
 const PRIVACY = `
-The app stores IAM user IDs and display names, phone numbers and chat IDs that people enter as contact methods, and the audit trail of actions. All of it lives in this app's app state in your environment and is readable by every user of the app. Emails are read live from IAM and shown only in the user picker and team member list. Message texts and phone numbers appear in workflow execution results, so keep the workflow private.
+The app stores IAM user IDs and display names, phone numbers and chat IDs that people enter as contact methods, and the audit trail of actions. All of it lives in this app's app state in your environment and is readable by every user of the app. Emails are read live from IAM and shown only in the user picker and team member list. The engine workflow's execution results contain only counts, never message texts or phone numbers.
 `;
 
 const SHORTCUTS = [

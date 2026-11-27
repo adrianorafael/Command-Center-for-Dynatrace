@@ -96,7 +96,7 @@ const LedgerTable = ({ records, steps }: { records: NotificationRecord[]; steps?
       <SimpleEmpty
         size="small"
         title="No notifications yet"
-        details="Notifications appear here once the escalation policy pages someone through the notification workflow."
+        details="Notifications appear here once the escalation policy pages someone through the engine workflow."
       />
     );
   return (

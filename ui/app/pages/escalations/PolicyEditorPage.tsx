@@ -359,7 +359,7 @@ export const PolicyEditorPage = () => {
                   <FormField>
                     <Label>Times</Label>
                     <NumberInput value={draft.repeat} min={1} max={5} onChange={(v) => update({ ...draft, repeat: Math.max(1, Math.min(5, v ?? 1)) })} />
-                    <FieldHint>Each repeat starts after the last step's delay. When all repeats are done the policy is exhausted and the incident stays triggered.</FieldHint>
+                    <FieldHint>Each repeat starts after the last step's delay (5 minutes if that delay is 0). When all repeats are done the policy is exhausted and the incident stays triggered.</FieldHint>
                   </FormField>
                 )}
               </Flex>

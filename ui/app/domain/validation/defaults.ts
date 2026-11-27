@@ -54,7 +54,7 @@ export function defaultSettings(): Settings {
       maxNotificationsPerTick: 100,
       reportTimeoutSec: 180,
       maxAttempts: 3,
-      lockTtlSec: 90,
+      lockTtlSec: 130,
     },
     retention: { resolvedVisibleHours: 24, archiveDays: 30 },
     ui: { autoRefreshSec: 30 },

@@ -22,7 +22,7 @@ import type {
   Team,
   UserContact,
 } from "../domain/contracts";
-import { SCHEMA_VERSION } from "../domain/contracts";
+import { SCHEMA_VERSION, engineStaleAfterMs } from "../domain/contracts";
 import type { Store, Stored } from "../data/repository";
 import { createAppStore, effectiveIncident, getCurrentUser, isDemoActive, loadDirectoryUsers } from "./domain";
 import { errorMessage } from "../components/format";
@@ -172,13 +172,14 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
           if (fresh.length > 3) notify({ category: "incident", type: "warning", title: `${fresh.length - 3} more new P1/P2 incidents`, link: "/" });
         }
         seenIncidents.current = ids;
-        const stale = !!heartbeat && Date.now() - heartbeat.lastTickAt > 3 * 60_000;
+        const staleMs = engineStaleAfterMs(settings);
+        const stale = !!heartbeat && Date.now() - heartbeat.lastTickAt > staleMs;
         if (stale && !engineStaleNotified.current) {
           notify({
             category: "engine",
             type: "warning",
             title: "Paging engine is not running",
-            message: "No engine run in the last 3 minutes: escalations and notifications are paused.",
+            message: `No engine run in the last ${Math.round(staleMs / 60_000)} minutes: escalations and notifications are delayed until it runs again.`,
             link: "/integrations",
             lifespan: 10_000,
           });

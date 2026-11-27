@@ -4,11 +4,11 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Priority } from "../domain/contracts";
 
 export const PRIORITY_MEANING: Record<Priority, string> = {
-  P1: "Critical: page now, all channels",
-  P2: "High: page on-call",
-  P3: "Moderate: notify, escalate in business hours",
-  P4: "Low: notify only",
-  P5: "Informational: no notification",
+  P1: "Critical: major outage or customer impact",
+  P2: "High: a service is degraded",
+  P3: "Moderate: needs attention soon",
+  P4: "Low: can wait for business hours",
+  P5: "Informational: for awareness",
 };
 
 /** Chart token per priority (SecurityRiskLevel family, DESIGN §1.2). */

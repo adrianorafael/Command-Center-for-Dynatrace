@@ -453,6 +453,8 @@ export interface Settings {
     reportTimeoutSec: number;
     maxAttempts: number;
     lockTtlSec: number;
+    /** Run interval of the installed engine workflow in minutes (1, 2 or 5); recorded at install. */
+    intervalMinutes?: number;
   };
   retention: { resolvedVisibleHours: number; archiveDays: number };
   ui: { autoRefreshSec: number; timeZone?: string };
@@ -480,4 +482,11 @@ export interface DailyRollup {
   notificationsSent: number;
   notificationsFailed: number;
   pagesByUser: Record<string, number>;
+}
+
+/** The engine counts as late after two intervals plus one minute (3 min at the default 1-minute interval). */
+export function engineStaleAfterMs(settings: Pick<Settings, "engine"> | undefined): number {
+  const i = settings?.engine.intervalMinutes;
+  const minutes = i === 2 || i === 5 ? i : 1;
+  return (minutes * 2 + 1) * 60_000;
 }

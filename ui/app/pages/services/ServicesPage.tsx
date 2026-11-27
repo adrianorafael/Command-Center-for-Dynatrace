@@ -460,7 +460,7 @@ const MappingTab = () => {
     <Flex flexDirection="column" gap={16} style={{ maxWidth: 720 }}>
       <Paragraph>
         When no rule sets a priority and the event doesn't carry cc.priority, the service default applies, then the event severity, then its category.
-        Category names follow the Davis event categories (UNVERIFIED against a tenant).
+        Category names follow the Davis event categories.
       </Paragraph>
       <Grid gridTemplateColumns="repeat(auto-fit, minmax(320px, 1fr))" gap={24}>
         <Flex flexDirection="column" gap={8}>

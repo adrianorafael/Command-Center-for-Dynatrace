@@ -1,3 +1,4 @@
+import { engineStaleAfterMs } from "../domain/contracts";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -25,24 +26,22 @@ export const DemoModeBanner = () => {
   );
 };
 
-const STALE_MS = 3 * 60_000;
-
-/** Spec §8: warn when the paging engine heartbeat is older than 3 minutes. */
+/** Spec §8: warn when the paging engine heartbeat is late (two intervals plus one minute; 3 min at 1-minute runs). */
 export const EngineHealthBanner = () => {
   const { data, demo, now } = useAppData();
   const navigate = useNavigate();
   if (!data || demo || !data.settings.engine.enabled) return null;
   const hb = data.heartbeat;
-  if (hb && now - hb.lastTickAt < STALE_MS && !hb.lastError) return null;
+  if (hb && now - hb.lastTickAt < engineStaleAfterMs(data.settings) && !hb.lastError) return null;
   return (
     <MessageContainer variant={hb?.lastError ? "critical" : "warning"}>
       <MessageContainer.Title>
-        {hb ? (hb.lastError ? "The paging engine reported an error" : "The paging engine is stale") : "The paging engine hasn't run yet"}
+        {hb ? (hb.lastError ? "The paging engine reported an error" : "The paging engine is late") : "The paging engine hasn't run yet"}
       </MessageContainer.Title>
       <MessageContainer.Description>
         {hb
           ? `Last run ${formatRelative(hb.lastTickAt, now)}.${hb.lastError ? ` ${hb.lastError}` : ""} Escalations and notifications may be delayed. Check the engine workflow.`
-          : "No heartbeat was found. Install the notification workflow so that escalations are sent."}
+          : "No heartbeat was found. Install the engine workflow so that escalations are sent."}
       </MessageContainer.Description>
       <MessageContainer.Actions>
         <Button onClick={() => navigate("/integrations?tab=workflows")}>Open workflows</Button>

@@ -235,7 +235,7 @@ export const SettingsPage = () => {
             <FormField>
               <Label>Acknowledge target (minutes)</Label>
               <NumberInput value={prefs.ackTargetMin} min={1} max={240} onChange={(v) => setPrefs({ ...prefs, ackTargetMin: Math.max(1, v ?? 5) })} />
-              <FieldHint>Incidents older than this turn red in the Console; drives the MTTA meter</FieldHint>
+              <FieldHint>Triggered incidents older than this turn red in the Console; drives the MTTA meter</FieldHint>
             </FormField>
             <Heading level={4}>Demo mode</Heading>
             <Switch
@@ -382,7 +382,7 @@ export const SettingsPage = () => {
             </FormField>
             <FormField>
               <Label>Engine lock lease (seconds)</Label>
-              <NumberInput value={draft.engine.lockTtlSec} min={30} max={180} onChange={(v) => set({ engine: { ...draft.engine, lockTtlSec: v ?? 90 } })} />
+              <NumberInput value={draft.engine.lockTtlSec} min={30} max={180} onChange={(v) => set({ engine: { ...draft.engine, lockTtlSec: v ?? 130 } })} />
               <FieldHint>Prevents two runs from paging twice. The engine uses a value between 130 and 180 seconds.</FieldHint>
             </FormField>
             {saveRow}

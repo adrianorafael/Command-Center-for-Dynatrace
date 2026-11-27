@@ -289,10 +289,10 @@ export const ReportsPage = () => {
             ) : (
               <Flex flexDirection="column" gap={8} alignItems="center">
                 <GaugeChart value={(m?.s.deliverySuccessRate ?? 0) * 100} min={0} max={100} unit="percent" loading={loading} height={200}>
-                  <GaugeChart.Label>Delivered</GaugeChart.Label>
+                  <GaugeChart.Label>Sent</GaugeChart.Label>
                 </GaugeChart>
                 <Text textStyle="small">
-                  {m?.s.notificationsSent ?? 0} delivered · {m?.s.notificationsFailed ?? 0} failed
+                  {m?.s.notificationsSent ?? 0} sent · {m?.s.notificationsFailed ?? 0} failed
                 </Text>
               </Flex>
             )}

@@ -40,11 +40,12 @@ export const StatusIndicator = ({
   </HealthIndicator>
 );
 
-const DELIVERY: Record<NotificationStatus, { health: Health; label: string }> = {
-  planned: { health: "good", label: "Sent (pending)" },
-  sent: { health: "ideal", label: "Delivered" },
+/** "Sent" means the provider accepted the message (HTTP 2xx); delivery to the handset is not tracked. */
+export const DELIVERY: Record<NotificationStatus, { health: Health; label: string }> = {
+  planned: { health: "good", label: "Sending" },
+  sent: { health: "ideal", label: "Sent" },
   failed: { health: "critical", label: "Failed" },
-  timeout: { health: "warning", label: "No report" },
+  timeout: { health: "warning", label: "No result" },
 };
 
 export const DeliveryStatus = ({ status }: { status: NotificationStatus }) => (

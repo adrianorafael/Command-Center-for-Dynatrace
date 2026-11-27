@@ -12,7 +12,7 @@ import { Modal, Sheet, Tooltip } from "@dynatrace/strato-components/overlays";
 import { notify } from "../../hooks/notifications";
 import { DownloadIcon, KeyIcon, PlayIcon, RefreshIcon, FlowIcon } from "@dynatrace/strato-icons";
 import type { Timeseries } from "@dynatrace/strato-components/charts";
-import type { ProviderConfig, Settings } from "../../domain/contracts";
+import { engineStaleAfterMs, type ProviderConfig, type Settings } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { exportWorkflowDefinition, getEngineStatus, openEngineInstallIntent, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
 import { Cell, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
@@ -345,7 +345,7 @@ const OutboundTab = () => {
                 )}
                 <Text textStyle="small">
                   {last
-                    ? `${mine.filter((n) => n.status === "sent").length} delivered, ${mine.filter((n) => n.status === "failed").length} failed · last ${formatRelative(last.reportedAt ?? last.plannedAt, Date.now())}`
+                    ? `${mine.filter((n) => n.status === "sent").length} sent, ${mine.filter((n) => n.status === "failed").length} failed · last ${formatRelative(last.reportedAt ?? last.plannedAt, Date.now())}`
                     : "No notifications sent yet"}
                 </Text>
                 {failed && last?.error && <Text textStyle="small">{last.error}</Text>}
@@ -389,7 +389,7 @@ const WorkflowsTab = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>();
   const [running, setRunning] = useState(false);
-  const [interval, setIntervalMin] = useState<string>("1");
+  const [interval, setIntervalMin] = useState<string>(String(data?.settings.engine.intervalMinutes ?? 1));
   const settings = data?.settings;
 
   const load = useCallback(() => {
@@ -407,7 +407,11 @@ const WorkflowsTab = () => {
 
   const install = () => {
     if (!settings) return;
-    openEngineInstallIntent(settings, Number(interval));
+    const minutes = Number(interval);
+    openEngineInstallIntent(settings, minutes);
+    // Remember the interval so the "engine is late" warnings use the right threshold.
+    if (settings.engine.intervalMinutes !== minutes)
+      void mutate((st) => st.saveSettings(nextRev({ ...settings, engine: { ...settings.engine, intervalMinutes: minutes } })), "Engine interval saved").catch(() => undefined);
   };
 
   const download = () => {
@@ -454,7 +458,7 @@ const WorkflowsTab = () => {
       .then(load)
       .catch(() => undefined);
   };
-  const stale = !hb || now - hb.lastTickAt > 3 * 60_000;
+  const stale = !hb || now - hb.lastTickAt > engineStaleAfterMs(settings);
 
   return (
     <Flex flexDirection="column" gap={16}>

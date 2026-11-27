@@ -199,7 +199,7 @@ export const ConsolePage = () => {
             <SearchInput
               value={filters.q}
               onChange={(v) => setFilters({ q: v })}
-              placeholder="Search title, ID, entity"
+              placeholder="Search title, ID, entity, tag"
               aria-label="Search incidents"
             />
             <Flex flexGrow={1} style={{ minWidth: 320 }}>
