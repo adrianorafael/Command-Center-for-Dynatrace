@@ -48,7 +48,7 @@ Notifications leave Dynatrace only through the **Command Center · Engine** work
 1. In **Integrations → Workflows**, choose the interval and select **Install in Workflows**, then deploy the workflow. If it shows up as a standard workflow, upload the downloaded JSON instead (or ask an admin to run \`scripts/install-workflow.mjs\`).
 2. In the Workflows app's **Authorization settings**, grant the workflow actor (the person who deploys it, or a service user) the permissions the engine uses: Grail read, app state and credential vault read.
 3. Create one **Credential Vault** entry per provider (Twilio, IFTTT, Slack, Microsoft Teams, Telegram, or your webhook) with scope **AppEngine**, owned by the workflow actor. Its ID looks like \`CREDENTIAL_VAULT_ENTRY-…\`.
-4. In **Integrations → Outbound**, paste the credential vault ID, set the sender, enable the provider, and send a test.
+4. In **Integrations → Outbound**, switch on only the providers you use: paste the credential vault ID, set the sender, and send a test. For any other tool, **Custom workflow → Create example workflow** prefills a workflow you own; Command Center runs it once per notification.
 5. Add the provider hosts to **Settings → General → Environment management → External requests**.
 
 The app never sees secrets: it only stores vault IDs. Delivery results come back to the incident timeline and the notification ledger.

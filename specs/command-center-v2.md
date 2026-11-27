@@ -20,11 +20,12 @@ This amendment supersedes every part of this spec that describes the engine as a
 - **Senders** moved from workflow task scripts to `api/lib/senders.ts`; secrets are read with
   `credential-vault:entries:read` from the action.
 - **On-demand runs** (Run engine now, test notifications, Escalate now) call the app function `engine-run` with the
-  caller's permissions. `automation:workflows:run` is no longer requested.
+  caller's permissions.
 - **Install:** the Workflows create-workflow intent (one confirmation), the JSON upload, or
   `scripts/install-workflow.mjs`. The intent payload has no type property, so the Workflows tab flags a standard result.
-- **Scopes:** add `document:documents:read|write` (war rooms) and `credential-vault:entries:read`; remove
-  `automation:workflows:run`.
+- **Scopes:** add `document:documents:read|write` (war rooms) and `credential-vault:entries:read`.
+  `automation:workflows:run` stays, now only for the custom workflow provider (kind `workflow`), which runs a
+  customer-owned workflow with the notification as params.
 - **Workflow visibility:** not private; simple workflows keep execution metadata only and the action returns counts.
 - **Measured** (trial tenant billing events): ≈ 690 function invocations per hour plus one workflow hour per hour for
   the standard design; one `ACTION` invocation per run for this design.

@@ -38,6 +38,9 @@ console.
 - **Integrations** page: inbound snippets, provider configuration with test notifications, engine install through the
   Workflows create-workflow intent (with a warning when the result is a standard workflow), JSON download, *Run engine
   now*, heartbeat, External requests checklist.
+- **Custom workflow integration**: hands each notification to a customer-owned simple workflow (run with the
+  notification as params, scope `automation:workflows:run`); the app prefills an example workflow with one HTTP
+  request task. Every provider card has an On/Off switch; one provider per channel can be on.
 - **War rooms**: meeting link, related incidents (same root cause, or same service within 30 minutes), notebooks
   (generated post-mortem notebook named after the first incident, existing notebooks, links), open/close by people,
   count in the navigation.
@@ -60,8 +63,8 @@ console.
 ### Changed
 - **Scopes changed — every user must re-consent on first load.** Now requested: `storage:buckets:read`,
   `storage:events:read`, `state:app-states:read`, `state:app-states:write`, `state:app-states:delete`,
-  `iam:users:read`, `automation:workflows:read`, `document:documents:read`, `document:documents:write`,
-  `credential-vault:entries:read`.
+  `iam:users:read`, `automation:workflows:read`, `automation:workflows:run`, `document:documents:read`,
+  `document:documents:write`, `credential-vault:entries:read`.
 - **Cost profile changed.** The UI no longer runs DQL. The engine runs around the clock, independent of how many
   people have the app open: one function invocation and 1–8 Grail queries per run (≈ 43,200 runs a month at the
   1-minute interval), and no workflow hours. Measured on a trial tenant against an earlier standard-workflow design:

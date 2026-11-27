@@ -32,8 +32,9 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 - **App id:** `my.command.center` (keep the `my.` prefix — unsigned app). **Name:** `Command Center`.
 - **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.0.0); every release is
   recorded in `CHANGELOG.md`. Versions must increase monotonically per environment or `dt-app deploy` is rejected.
-- **Scopes (10):** `storage:buckets:read`, `storage:events:read`, `state:app-states:read|write|delete`,
-  `iam:users:read`, `automation:workflows:read`, `document:documents:read|write`, `credential-vault:entries:read`.
+- **Scopes (11):** `storage:buckets:read`, `storage:events:read`, `state:app-states:read|write|delete`,
+  `iam:users:read`, `automation:workflows:read`, `automation:workflows:run` (custom workflow provider),
+  `document:documents:read|write`, `credential-vault:entries:read`.
   Each carries a comment in `app.config.json`, and the documentation source of each is in
   `docs/guides/en/getting-started.md`. Adding one forces every user to re-consent (MAJOR).
 - **Cannot be requested:** `automation:workflows:write` (rejected at deploy: only Dynatrace-provided apps may hold it).
@@ -75,6 +76,9 @@ Rules that keep the layers honest:
   changing it, run `node scripts/gen-workflow-templates.mjs` and bump `ENGINE_DEFINITION_VERSION` so installed
   workflows show "Update available". A unit test fails if the checked-in template drifts.
 - Senders (`api/lib/senders.ts`) never retry inside a run — the ledger retries with a new attempt number.
+- Provider kind `workflow` ("Custom workflow") runs a customer-owned workflow with the notification as run params;
+  it needs no vault entry. One enabled provider per channel (validated). New default providers are appended to
+  stored settings by `mergeSettings`.
 - Secrets never enter App State, the bundle, task results or logs: only Credential Vault entry IDs.
 - Any value interpolated into DQL is allow-listed or clamped in `dql.ts`.
 

@@ -248,7 +248,7 @@
         <p>Ordered routing rules (first match wins) on title, category, severity, entity, tags or any field; set service, team, policy, priority or suppress. Rule tester.</p>
         <div class="meta">Events route with <code>cc.service</code>, <code>cc.priority</code>, <code>cc.tags</code></div></div>
       <div class="card"><span class="ico">📣</span><h3>Outbound via one simple workflow</h3>
-        <p>Twilio SMS, voice and WhatsApp and IFTTT by default; Slack, Microsoft Teams, Telegram and a generic JSON webhook for any other tool. War rooms with meeting links and post-mortem notebooks.</p>
+        <p>Twilio SMS, voice and WhatsApp and IFTTT by default; Slack, Microsoft Teams, Telegram, a generic JSON webhook, and a prefilled <b>custom workflow</b> you own for anything else. Every integration has an On/Off switch. War rooms with meeting links and post-mortem notebooks.</p>
         <div class="meta">Secrets stay in the Credential Vault; the app stores entry IDs only</div></div>
       <div class="card"><span class="ico">📊</span><h3>Reports</h3>
         <p>MTTA and MTTR, incidents per day, load by priority and team, noisiest services, time-to-acknowledge distribution, delivery success, on-call load.</p>
@@ -446,7 +446,8 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
           <tr><td><code>storage:events:read</code></td><td>Read <code>dt.davis.problems</code>, <code>dt.davis.events</code> and <code>events</code></td></tr>
           <tr><td><code>state:app-states:read</code> / <code>:write</code> / <code>:delete</code></td><td>Configuration, incidents, operator actions, notification ledger</td></tr>
           <tr><td><code>iam:users:read</code></td><td>Team member search and names</td></tr>
-          <tr><td><code>automation:workflows:read</code></td><td>Engine workflow install status</td></tr>
+          <tr><td><code>automation:workflows:read</code></td><td>Engine workflow install status; finding your custom workflow</td></tr>
+          <tr><td><code>automation:workflows:run</code></td><td>Custom workflow integration: run your workflow once per notification</td></tr>
           <tr><td><code>document:documents:read</code> / <code>:write</code></td><td>War rooms: attach notebooks, create the post-mortem notebook</td></tr>
           <tr><td><code>credential-vault:entries:read</code></td><td>The engine reads provider secrets when it sends</td></tr>
         </tbody>
@@ -468,8 +469,8 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
       <li><b>Install the engine.</b> Integrations → Workflows → choose the interval → <b>Install in Workflows</b> and deploy it.
         If it comes out as a standard workflow, upload the downloaded JSON instead, or run <code>node scripts/install-workflow.mjs</code>.</li>
       <li><b>Authorization settings.</b> Workflows app → Settings → Authorization settings: enable Grail read, App State and Credential Vault read for the workflow actor.</li>
-      <li><b>Providers.</b> Integrations → Outbound: paste the vault entry IDs, sender numbers or IFTTT event name, enable,
-        <b>Send test notification</b>.</li>
+      <li><b>Providers.</b> Integrations → Outbound: switch on only the providers you use, paste their vault entry IDs, sender numbers or IFTTT event name,
+        then <b>Send test</b>. For any other tool, <b>Custom workflow → Create example workflow</b> prefills a workflow you edit in the Workflows app.</li>
       <li><b>Teams, schedules, policies, routing.</b> Add members from IAM with contact methods and rules; build schedules;
         create escalation policies; add services and routing rules; set routing defaults.</li>
       <li><b>Send an event.</b> A platform token with <code>openpipeline:events.davis:ingest</code>, and
@@ -516,6 +517,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
       <li>✅ End to end on a trial environment: Davis event ingest → Davis problem → engine → routing by <code>cc.service</code> → schedule → escalation steps → <b>generic webhook</b> delivered → ledger updated. A four-step policy fired every step within one minute of being due.</li>
       <li>✅ Generic events (<code>/platform/ingest/v1/events</code>) trigger and resolve by <code>cc.dedup_key</code>; all four queries executed.</li>
       <li>✅ The engine as a simple workflow with the app's own action: every run successful; one function invocation per run.</li>
+      <li>✅ The custom workflow integration: a test and a scheduled escalation ran the customer's workflow, which delivered the full notification JSON.</li>
       <li>⚠️ Twilio (SMS, voice, WhatsApp), IFTTT, Slack, Teams and Telegram senders: implemented from vendor documentation, <b>not exercised live</b> — test every channel you enable.</li>
       <li>⚠️ The Install in Workflows intent and the JSON upload were not clicked through; the API install of the same definition is verified. The minimal actor permission set was not isolated.</li>
       <li>⚠️ User search returned nobody for just-invited users; IAM lists only active users.</li>
