@@ -7,14 +7,14 @@ import { Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { Heading, Paragraph, Text, ExternalLink, Code, List, Strong } from "@dynatrace/strato-components/typography";
 import { MessageContainer, ProgressCircle } from "@dynatrace/strato-components/content";
 import { DataTable, SimpleTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
-import { FormField, Label, Select, Switch, TextInput } from "@dynatrace/strato-components/forms";
+import { FormField, Label, Radio, RadioGroup, Select, Switch, TextInput } from "@dynatrace/strato-components/forms";
 import { Modal, Sheet, Tooltip } from "@dynatrace/strato-components/overlays";
 import { notify } from "../../hooks/notifications";
 import { DownloadIcon, KeyIcon, PlayIcon, RefreshIcon, FlowIcon } from "@dynatrace/strato-icons";
 import type { Timeseries } from "@dynatrace/strato-components/charts";
 import { engineStaleAfterMs, type ProviderConfig, type Settings } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
-import { exportCustomWorkflowDefinition, exportProviderWorkflowDefinition, findCustomWorkflowIds, findProviderWorkflowIds, openCustomWorkflowInstall, openProviderWorkflowInstall, exportWorkflowDefinition, getEngineStatus, openEngineInstallIntent, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
+import { exportCustomWorkflowDefinition, exportProviderWorkflowDefinition, findCustomWorkflowIds, findProviderWorkflowIds, openCustomWorkflowInstall, openProviderWorkflowInstall, exportWorkflowDefinition, getEngineStatus, openEngineInstallIntent, runEngineNow, validateProvider, workflowsAppUrl, exportOnProblemWorkflowDefinition, getOnProblemWorkflowStatus, openOnProblemInstall, type EngineWorkflowStatus, type OnProblemWorkflowStatus } from "../../hooks/domain";
 import { Cell, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { Health } from "../../components/StatusIndicator";
@@ -207,12 +207,28 @@ const download = (fileName: string, json: string) => {
   URL.revokeObjectURL(url);
 };
 
-/** Built-in provider: its own workflow ("Command Center · <name>"), created when the integration is switched on. */
-const OwnWorkflowFields = ({ draft, setDraft, error }: { draft: ProviderConfig; setDraft: (p: ProviderConfig) => void; error?: string }) => {
+/** Param that records the choice "send through its own workflow"; absent means the engine sends directly. */
+const DELIVERY_PARAM = "delivery";
+/** A built-in integration uses its own workflow only when the person chose that, or one is already linked. */
+function wantsOwnWorkflow(p: ProviderConfig): boolean {
+  return p.kind !== "workflow" && (p.params[DELIVERY_PARAM] === "workflow" || !!p.params["workflowId"]?.trim());
+}
+
+/**
+ * Built-in provider: who sends its notifications. Default: the engine, in the run it is already doing (no extra
+ * function call). Optional: a workflow of its own ("Command Center · <name>"), one more function call per notification.
+ */
+const DeliveryFields = ({ draft, setDraft, error }: { draft: ProviderConfig; setDraft: (p: ProviderConfig) => void; error?: string }) => {
   const { demo } = useAppData();
   const [found, setFound] = useState<{ id: string; type?: string }[]>();
   const [searching, setSearching] = useState(false);
   const wfId = draft.params["workflowId"] ?? "";
+  const own = wantsOwnWorkflow(draft);
+  const setMode = (mode: string) => {
+    if (mode === "workflow") return setDraft({ ...draft, params: { ...draft.params, [DELIVERY_PARAM]: "workflow" } });
+    // Back to the engine: forget the choice and the link (the workflow itself stays in the Workflows app).
+    setDraft({ ...draft, params: Object.fromEntries(Object.entries(draft.params).filter(([k]) => k !== "workflowId" && k !== DELIVERY_PARAM)) });
+  };
   const search = () => {
     setSearching(true);
     findProviderWorkflowIds(draft.name)
@@ -223,11 +239,18 @@ const OwnWorkflowFields = ({ draft, setDraft, error }: { draft: ProviderConfig; 
   const chosen = found?.find((f) => f.id === wfId.trim());
   return (
     <Flex flexDirection="column" gap={12}>
-      <Heading level={4}>Integration workflow</Heading>
+      <Heading level={4}>Delivery</Heading>
+      <RadioGroup value={own ? "workflow" : "engine"} onChange={setMode}>
+        <Radio value="engine">By the engine (default): no extra cost</Radio>
+        <Radio value="workflow">Through its own workflow: one more function call per notification</Radio>
+      </RadioGroup>
+      {!own && <Text textStyle="small">The engine sends {draft.name} notifications in the run it is already doing. Nothing to create in the Workflows app.</Text>}
+      {own && (
+      <>
       <Paragraph>
         {wfId.trim()
-          ? `Notifications of ${draft.name} are sent by the workflow “Command Center · ${draft.name}”. If it can't be run, the engine sends them directly.`
-          : `Not linked yet: the engine sends ${draft.name} notifications directly. Create the integration's workflow to see and run it in the Workflows app.`}
+          ? `Each ${draft.name} notification is one run of the workflow “Command Center · ${draft.name}”, visible in the Workflows app. If it can't be run, the engine sends directly.`
+          : `Create the workflow “Command Center · ${draft.name}” and save this integration: Command Center links the workflow when it finds it. Until then the engine sends directly.`}
       </Paragraph>
       <Flex gap={8} flexWrap="wrap">
         <Tooltip text={demo ? "Not available in demo mode" : "Opens the Workflows app with this integration's workflow filled in"}>
@@ -255,7 +278,6 @@ const OwnWorkflowFields = ({ draft, setDraft, error }: { draft: ProviderConfig; 
           </Button.Prefix>
           Find its workflow
         </Button>
-        {wfId.trim() && <Button onClick={() => setDraft({ ...draft, params: { ...draft.params, workflowId: "" } })}>Unlink</Button>}
       </Flex>
       {found && found.length === 0 && <Text textStyle="small">No workflow named “Command Center · {draft.name}” was found. Create it first.</Text>}
       {found?.map((f) => (
@@ -278,9 +300,11 @@ const OwnWorkflowFields = ({ draft, setDraft, error }: { draft: ProviderConfig; 
       <FormField>
         <Label>Workflow ID</Label>
         <TextInput value={wfId} onChange={(v) => setDraft({ ...draft, params: { ...draft.params, workflowId: v.trim() } })} placeholder="Linked automatically when found" />
-        <FieldHint>Turning the integration off stops using its workflow; delete the workflow in the Workflows app if you no longer need it.</FieldHint>
+        <FieldHint>To stop using the workflow, choose “By the engine” above; delete the workflow in the Workflows app if you no longer need it.</FieldHint>
         {error && <Text>{error}</Text>}
       </FormField>
+      </>
+      )}
     </Flex>
   );
 };
@@ -430,7 +454,7 @@ const ProviderSheet = ({ provider, onClose }: { provider?: ProviderConfig; onClo
             {err(`params.${p.key}`) && <Text>{err(`params.${p.key}`)}</Text>}
           </FormField>
         ))}
-        {draft.kind !== "workflow" && <OwnWorkflowFields draft={draft} setDraft={setDraft} error={err("params.workflowId")} />}
+        {draft.kind !== "workflow" && <DeliveryFields draft={draft} setDraft={setDraft} error={err("params.workflowId")} />}
         {draft.kind !== "workflow" && (
           <Flex alignItems="center" gap={4}>
             <KeyIcon />
@@ -505,7 +529,7 @@ const TestModal = ({ provider, onClose }: { provider?: ProviderConfig; onClose: 
 
 /** On/off switch on each provider card; opens the setup sheet when the provider can't be turned on yet. */
 const ProviderSwitch = ({ provider, onNeedsSetup }: { provider: ProviderConfig; onNeedsSetup: () => void }) => {
-  const { data, mutate, demo } = useAppData();
+  const { data, mutate } = useAppData();
   const [busy, setBusy] = useState(false);
   if (!data) return null;
   const toggle = (on: boolean) => {
@@ -519,16 +543,7 @@ const ProviderSwitch = ({ provider, onNeedsSetup }: { provider: ProviderConfig; 
     const settings = nextRev({ ...data.settings, providers: data.settings.providers.map((p) => (p.id === provider.id ? { ...p, enabled: on } : p)) });
     mutate((s) => s.saveSettings(settings), `${provider.name} turned ${on ? "on" : "off"}`)
       .then(() => {
-        if (on && !demo && provider.kind !== "workflow" && !provider.params["workflowId"]?.trim()) {
-          notify({
-            category: "action",
-            type: "info",
-            title: `Confirm the ${provider.name} workflow`,
-            message: "The Workflows app opens with this integration's workflow filled in. Save it; Command Center links it when you come back.",
-            lifespan: 10_000,
-          });
-          openProviderWorkflowInstall(provider);
-        }
+        // Switching on is enough: the engine sends. A workflow of its own is an explicit choice in Configure.
         if (!on && provider.kind !== "workflow" && provider.params["workflowId"]?.trim()) {
           notify({ category: "action", type: "info", title: `${provider.name} is off`, message: "Its workflow is no longer run. Delete it in the Workflows app if you don't need it.", lifespan: 8000 });
         }
@@ -545,8 +560,11 @@ const ProviderSwitch = ({ provider, onNeedsSetup }: { provider: ProviderConfig; 
 
 const OutboundTab = () => {
   const { data, demo, mutate } = useAppData();
-  // Link each switched-on integration to its workflow as soon as one with its title exists (single simple match).
-  const unlinked = (data?.settings.providers ?? []).filter((p) => p.enabled && p.kind !== "workflow" && !p.params["workflowId"]?.trim()).map((p) => p.id).join(",");
+  // Where the person chose "its own workflow": link it as soon as one with its title exists (single simple match).
+  const unlinked = (data?.settings.providers ?? [])
+    .filter((p) => p.enabled && p.kind !== "workflow" && p.params[DELIVERY_PARAM] === "workflow" && !p.params["workflowId"]?.trim())
+    .map((p) => p.id)
+    .join(",");
   useEffect(() => {
     if (demo || !data || !unlinked) return;
     let cancelled = false;
@@ -577,9 +595,10 @@ const OutboundTab = () => {
   return (
     <Flex flexDirection="column" gap={16}>
       <Paragraph>
-        Each integration is used only while it is switched on. Built-in providers are sent by the engine workflow and reference a Credential Vault
-        entry: Twilio (SMS, voice, WhatsApp) and IFTTT are the defaults, and the generic webhook covers any other tool. The custom workflow hands each
-        notification to a workflow you own and edit. One provider per channel can be on.
+        Each integration is used only while it is switched on. The engine sends the built-in providers itself, at no extra cost, with a secret from a
+        Credential Vault entry: Twilio (SMS, voice, WhatsApp) and IFTTT are the defaults, and the generic webhook covers any other tool. In an
+        integration's configuration you can give it a workflow of its own instead. The custom workflow hands each notification to a workflow you own
+        and edit. One provider per channel can be on.
       </Paragraph>
       <Grid gridTemplateColumns="repeat(auto-fill, minmax(320px, 1fr))" gap={12}>
         {(data?.settings.providers ?? []).map((p) => {
@@ -613,7 +632,11 @@ const OutboundTab = () => {
                 {failed && last?.error && <Text textStyle="small">{last.error}</Text>}
                 {p.kind !== "workflow" && p.enabled && (
                   <Text textStyle="small">
-                    {p.params["workflowId"]?.trim() ? `Sent by its workflow “Command Center · ${p.name}”` : "Sent by the engine until its workflow is linked"}
+                    {p.params["workflowId"]?.trim()
+                      ? `Sent by its workflow “Command Center · ${p.name}”`
+                      : wantsOwnWorkflow(p)
+                        ? "Sent by the engine until its workflow is linked"
+                        : "Sent by the engine"}
                   </Text>
                 )}
                 <Flex gap={8}>
@@ -649,6 +672,93 @@ const HOSTS = [
   { host: "Your webhook host", use: "Generic webhook" },
 ];
 
+
+/**
+ * Optional second engine workflow: started by the Problem trigger, so the first page does not wait for the interval.
+ * It never replaces the interval workflow (escalation steps, snooze ends and retries need a clock).
+ */
+const OnProblemCard = () => {
+  const { data, demo } = useAppData();
+  const settings = data?.settings;
+  const [status, setStatus] = useState<OnProblemWorkflowStatus>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>();
+  const load = useCallback(() => {
+    setLoading(true);
+    getOnProblemWorkflowStatus()
+      .then((s) => {
+        setStatus(s);
+        setError(undefined);
+      })
+      .catch((e) => setError(e))
+      .finally(() => setLoading(false));
+  }, []);
+  useEffect(() => load(), [load]);
+  if (!settings) return null;
+  const link = status?.workflowId ? workflowUrl(status.workflowId) : undefined;
+  return (
+    <Surface padding={16}>
+      <Flex flexDirection="column" gap={12}>
+        <Flex alignItems="center" gap={8} justifyContent="space-between">
+          <Flex alignItems="center" gap={8}>
+            <FlowIcon />
+            <Heading level={3}>Command Center · Engine on problem</Heading>
+          </Flex>
+          {loading && <ProgressCircle size="small" aria-label="Loading status" />}
+        </Flex>
+        {error ? (
+          <Health status="neutral">Couldn't read its status: {errorMessage(error)}</Health>
+        ) : !status ? null : !status.installed ? (
+          <Health status="neutral">Optional · not installed</Health>
+        ) : status.outdated ? (
+          <Health status="warning">{status.usesAction ? "Update available: reinstall it" : "Its task is not this app's engine action: reinstall it"}</Health>
+        ) : status.type && status.type !== "SIMPLE" ? (
+          <Health status="warning">Installed as a standard workflow: it consumes workflow hours. Delete it and upload the downloaded JSON instead</Health>
+        ) : status.triggerActive === false ? (
+          <Health status="warning">Installed, but its trigger is switched off</Health>
+        ) : (
+          <Health status="ideal">Installed · simple workflow (no workflow hours)</Health>
+        )}
+        <Paragraph>
+          Runs the engine as soon as Davis opens or closes a problem, so the first page doesn't wait for the next scheduled run. With it, a 5-minute
+          interval is enough for most teams: about 8,640 scheduled runs a month instead of 43,200, plus about two runs per problem.
+        </Paragraph>
+        <Flex gap={8} flexWrap="wrap">
+          <Tooltip text={demo ? "Not available in demo mode" : "Opens the Workflows app with this workflow filled in"}>
+            <Button disabled={demo} onClick={() => openOnProblemInstall(settings)}>
+              <Button.Prefix>
+                <FlowIcon />
+              </Button.Prefix>
+              {status?.installed ? "Reinstall in Workflows" : "Install in Workflows"}
+            </Button>
+          </Tooltip>
+          <Button
+            onClick={() => {
+              const { fileName, json } = exportOnProblemWorkflowDefinition(settings);
+              download(fileName, json);
+            }}
+          >
+            <Button.Prefix>
+              <DownloadIcon />
+            </Button.Prefix>
+            Download JSON
+          </Button>
+          <Button onClick={load}>
+            <Button.Prefix>
+              <RefreshIcon />
+            </Button.Prefix>
+            Refresh
+          </Button>
+        </Flex>
+        <Text textStyle="small">
+          Keep “Command Center · Engine” installed: escalation steps, snooze ends and retries need its clock. The trigger covers Davis problems; other
+          sources are read on the interval. Each run waits until the problem can be read (about half a minute), then pages.
+        </Text>
+        {link && <ExternalLink href={link}>Open in Workflows</ExternalLink>}
+      </Flex>
+    </Surface>
+  );
+};
 
 const WorkflowsTab = () => {
   const { data, mutate, demo, now } = useAppData();
@@ -740,7 +850,8 @@ const WorkflowsTab = () => {
   return (
     <Flex flexDirection="column" gap={16}>
       {error ? <ErrorMessage title="Couldn't read the workflow status" error={error} onRetry={load} /> : null}
-      <Grid gridTemplateColumns="repeat(auto-fit, minmax(320px, 1fr))" gap={12}>
+      {/* 460 px keeps both workflow titles on one line, so the cards stay aligned */}
+      <Grid gridTemplateColumns="repeat(auto-fit, minmax(460px, 1fr))" gap={12}>
         <Surface padding={16}>
           <Flex flexDirection="column" gap={12}>
             <Flex alignItems="center" gap={8} justifyContent="space-between">
@@ -822,6 +933,7 @@ const WorkflowsTab = () => {
             {link && <ExternalLink href={link}>Open in Workflows</ExternalLink>}
           </Flex>
         </Surface>
+        <OnProblemCard />
         <Surface padding={16}>
           <Flex flexDirection="column" gap={8}>
             <Heading level={3}>Set up the engine</Heading>

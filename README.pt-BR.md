@@ -35,11 +35,11 @@ e usando o **Strato**, o design system da Dynatrace.
 | **Console** | Tabela de incidentes ao vivo com tiles de KPI, filtros, ações em massa e atalhos de teclado; detalhes do incidente com linha do tempo, progresso do escalonamento, registro de notificações, entidades e notas. |
 | **Plantão** | Equipes de **usuários do Dynatrace** (escolhidos no IAM), escalas em camadas com rodízio e substituições (overrides), políticas de escalonamento com passos e repetições, métodos de contato pessoais, regras de notificação e quiet hours (horário de silêncio) por equipe. |
 | **War rooms** | Um link de reunião mais os incidentes que ela trata e os seus Dynatrace Notebooks, incluindo um notebook de post-mortem gerado. |
-| **Saída** | Um único **simple workflow** (*Command Center · Engine*) executa a ação do próprio app a cada 1, 2 ou 5 minutos e não consome workflow hours. Cada integração tem uma chave On/Off; ativar uma delas cria **o seu próprio workflow** (*Command Center · Slack*, …) com uma confirmação no app Workflows, e esse workflow envia as notificações dela. Uma integração **Custom workflow** entrega as notificações a um workflow pré-preenchido que é seu e que você edita. |
+| **Saída** | Um **simple workflow** (*Command Center · Engine*) executa a ação do próprio app a cada 1, 2 ou 5 minutos, não consome workflow hours e envia ele mesmo as notificações. Um segundo simple workflow, opcional, com **Problem trigger**, roda a mesma ação assim que o Davis abre ou fecha um problema. Cada integração tem uma chave On/Off; opcionalmente ela ganha um workflow próprio (*Command Center · Slack*, …). Uma integração **Custom workflow** entrega as notificações a um workflow pré-preenchido que é seu e que você edita. |
 | **Armazenamento** | Dynatrace App State. Nenhum banco de dados externo. Os segredos dos provedores ficam no Credential Vault. |
 | **Modo demo** | Por navegador: dados de exemplo em todo lugar, nada é lido nem escrito, nada é enviado. Desativado: somente dados reais. |
 
-Versão atual: **2.2.0** — veja o [CHANGELOG.md](CHANGELOG.md).
+Versão atual: **2.3.0** — veja o [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentação
 
@@ -84,11 +84,11 @@ npx dt-app deploy
 Depois, no app:
 
 1. **Integrations → Workflows** → escolha o intervalo → **Install in Workflows** (ou **Download JSON** e faça o upload
-   do arquivo). Habilite as **Authorization settings** do Workflows para o ator.
+   do arquivo). Habilite as **Authorization settings** do Workflows para o ator. Opcional: instale o **Engine on
+   problem** na mesma aba, para que o primeiro acionamento não espere o intervalo.
 2. Entradas do **Credential Vault** para os seus provedores. Adicione os hosts deles em **External requests**.
 3. **Integrations → Outbound** → ative os provedores que você usa (Twilio, IFTTT, Slack, Teams, Telegram, webhook ou
-   o seu próprio custom workflow). Cada um abre o app Workflows com o seu próprio workflow já preenchido: salve-o, volte,
-   e o Command Center o vincula. Depois use **Send test**.
+   o seu próprio custom workflow). O próprio motor envia: não há mais nada para criar. Depois use **Send test**.
 4. **Teams**, **On-call**, **Escalations**, **Services** → pessoas, escalas, uma política, roteamento.
 5. Envie um evento (o token precisa de `openpipeline:events.davis:ingest`):
 
@@ -127,15 +127,17 @@ Workflows. O link da documentação de cada escopo está em
 | Item | Intervalo de 1 minuto | 2 minutos | 5 minutos |
 | --- | --- | --- | --- |
 | Execuções do motor (uma invocação de função cada) por mês | ≈ 43.200 | ≈ 21.600 | ≈ 8.640 |
-| Execuções de workflows de integração (uma invocação de função cada) | uma por notificação de uma integração que tem workflow próprio | igual | igual |
+| Execuções do *Engine on problem* (opcional, uma invocação de função cada) | cerca de 2 por problema | igual | igual |
+| Execuções de workflows de integração (opcional, uma invocação de função cada) | uma por notificação de uma integração que tem workflow próprio; nenhuma por padrão | igual | igual |
 | Workflow hours | 0 | 0 | 0 |
 | Consultas ao Grail por execução | 1–8 | 1–8 | 1–8 |
 
 Medido em um ambiente trial: o motor anterior, baseado em workflow standard, usava cerca de **690 invocações de função
 por hora mais uma workflow hour por hora**. O motor baseado em simple workflow usa **1 invocação por execução** (60 por
-hora em um intervalo de 1 minuto) e nenhuma workflow hour. Uma integração com workflow próprio acrescenta uma invocação
-por notificação, seja qual for o gatilho desse workflow; sem ele, o motor envia diretamente, sem invocação extra. A UI
-não executa DQL. As consultas, os fatores de custo e
+hora em um intervalo de 1 minuto) e nenhuma workflow hour. O próprio motor envia as notificações, sem invocação
+extra; uma integração à qual você dá um workflow próprio acrescenta uma invocação por notificação, seja qual for o
+gatilho desse workflow. Com o workflow opcional *Engine on problem*, o primeiro acionamento não espera o intervalo,
+então 5 minutos bastam para a maioria das equipes. A UI não executa DQL. As consultas, os fatores de custo e
 como medi-los no seu próprio ambiente estão no [guia de operações](docs/guides/pt-BR/operations.md#custo-e-consumo).
 
 ## Desenvolvimento
@@ -154,8 +156,8 @@ Prévia offline em modo demo (acrescente `?demo=empty` para começar sem dados e
 
 | Script | Descrição |
 | --- | --- |
-| `node scripts/install-workflow.mjs [--interval 1\|2\|5] [--actor <uid>] [--dry-run]` | Instalação ou atualização, por um administrador, do workflow do motor pela Automation API (platform token com `automation:workflows:read` e `:write`) |
-| `node scripts/gen-workflow-templates.mjs [--check]` | Regenerar ou verificar `workflow-templates/command-center-engine.workflow.json` |
+| `node scripts/install-workflow.mjs [--interval 1\|2\|5] [--actor <uid>] [--dry-run]` | Instalação ou atualização, por um administrador, do workflow do motor pela Automation API (platform token com `automation:workflows:read` e `:write`). Com `--on-problem`, instala o workflow opcional *Engine on problem* no lugar. |
+| `node scripts/gen-workflow-templates.mjs [--check]` | Regenerar ou verificar os dois arquivos de workflow do motor em `workflow-templates/` |
 | `node scripts/preview-server.mjs` | Servir a UI compilada offline em modo demo |
 | `node scripts/screenshot.mjs` | Capturar a tela de cada rota da prévia offline |
 
@@ -167,13 +169,13 @@ instalação do motor, as entradas do vault e a lista de permissões de hosts. O
 
 ```
 app.config.json                  app id, version, scopes, the run-engine action
-actions/run-engine.action.ts     the workflow action: one engine cycle
+actions/run-engine.action.ts     the workflow action: one engine cycle (interval, or started by a problem)
 api/                             app functions engine-run, config, status, incidents, directory
-api/lib/                         engine cycle, sources (Q1–Q4), lease, senders, config as code
+api/lib/                         engine cycle, problem-triggered run, sources (Q1–Q5), lease, senders, config as code
 ui/app/domain/                   pure TypeScript core: routing, schedules, escalation, planning, reports
 ui/app/data/                     App State, DQL builders, IAM directory, notebooks, workflow definition
 ui/app/pages/                    console, war rooms, on-call, teams, escalations, services, integrations, reports, settings, help
-workflow-templates/              generated engine workflow + trial-only alert simulator
+workflow-templates/              generated engine workflows (interval, on problem) + trial-only alert simulator
 docs/                            project page, guides in three languages, screenshots
 specs/, design/                  specification and screen design
 ```

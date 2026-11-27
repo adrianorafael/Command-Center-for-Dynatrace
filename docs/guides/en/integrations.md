@@ -12,9 +12,9 @@ eight channels, what each provider receives, the custom workflow integration, an
 1. The engine runs on its schedule (simple workflow, one action). It decides who must be notified now: the escalation
    step that is due, the people on call for its targets, and each person's notification rules.
 2. It writes one **ledger entry** (`planned`) per person, step, channel and attempt.
-3. Right after planning, the same run sends: through the integration's own workflow when one is linked (below),
-   otherwise directly — it reads the provider's secret from the Credential Vault and calls the provider over HTTPS
-   (or runs your custom workflow).
+3. Right after planning, the same run sends: it reads the provider's secret from the Credential Vault and calls the
+   provider over HTTPS (or runs your custom workflow). An integration that has a workflow of its own (below) is
+   handed to that workflow instead.
 4. The result is written back: `sent` (with the provider's reference when one is returned) or `failed` (with the
    provider's error; secrets and URLs are masked as `***` and `<url>`).
 5. A notification that failed, or got no result within *Delivery report timeout* (`timeout`), is retried with a new
@@ -45,17 +45,20 @@ of theirs runs.
 
 ## Integration workflows
 
-Each built-in integration can have **its own workflow**, created when you switch it on:
+By default the engine sends every built-in integration itself, at no extra cost. An integration **can** have a
+workflow of its own instead; you choose that per integration:
 
 | Step | What happens |
 | --- | --- |
-| Switch **on** | Command Center saves the provider and opens the Workflows app with *Command Center · <provider>* filled in: a simple workflow, no trigger (on demand), one task — the app action **Send Command Center notification** with the inputs `providerId` and `notification` = `{{ execution().params.notification }}`. You save it (one confirmation: the app cannot create workflows itself). |
-| Back in Command Center | Integrations → Outbound finds the workflow by its title and links it (its ID is stored in the provider). **Configure → Integration workflow** also offers *Create its workflow*, *Download JSON*, *Find its workflow* and *Unlink*. |
+| Choose it | **Configure → Delivery → Through its own workflow**, then **Create its workflow**. The Workflows app opens with *Command Center · <provider>* filled in: a simple workflow, no trigger (on demand), one task — the app action **Send Command Center notification** with the inputs `providerId` and `notification` = `{{ execution().params.notification }}`. You save it there (the app cannot create workflows itself). **Download JSON** gives the same definition for upload. Then save the integration. |
+| Back in Command Center | Integrations → Outbound finds the workflow by its title and links it (its ID is stored in the provider); **Find its workflow** does the same by hand. The card then says *Sent by its workflow*. |
 | A notification is due | The engine runs that workflow with the notification as run params. The action reads the provider settings from Command Center and the secret from the Credential Vault, sends, and writes *Sent* or *Failed* into the notification ledger. A failed send fails the workflow execution, so it shows in the Workflows app. |
 | The workflow can't be run | Deleted, or no permission: the engine sends that notification directly, so nobody misses a page. Until a workflow is linked, the engine also sends directly. |
-| Switch **off** | The provider and its workflow are no longer used; the link is kept for when you switch it on again. The app cannot pause or delete workflows: delete it in the Workflows app if you don't need it. |
+| Back to the engine | **Configure → Delivery → By the engine** removes the choice and the link. The workflow itself stays in the Workflows app: delete it there if you don't need it. |
+| Switch **off** | The provider and its workflow are no longer used; the link is kept for when you switch it on again. The app cannot pause or delete workflows. |
 
-Each notification of a linked integration is one workflow run with one action invocation, in addition to the engine run that planned it. As simple workflows they
+Each notification of an integration with its own workflow is one workflow run with one action invocation, in addition
+to the engine run that planned it; sent by the engine it costs no extra invocation. As simple workflows they
 consume no workflow hours. If a workflow was created as a *standard* workflow (the create-workflow intent has no type
 field), *Find its workflow* says so and the automatic link skips it; upload the downloaded JSON instead.
 

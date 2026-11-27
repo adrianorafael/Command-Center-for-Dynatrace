@@ -18,7 +18,21 @@ import { workflowsClient } from "@dynatrace-sdk/client-automation";
 import { functions } from "@dynatrace-sdk/app-utils";
 import { sendIntent } from "@dynatrace-sdk/navigation";
 import type { EngineTickRequest, Settings } from "../../domain/contracts";
-import { buildProviderWorkflow, providerWorkflowTitle, CUSTOM_WORKFLOW_TITLE, ENGINE_DEFINITION_VERSION, ENGINE_WORKFLOW_TITLE, actionId, buildCustomWorkflow, buildEngineWorkflow, buildEngineWorkflowCreate } from "./definition";
+import {
+  buildProviderWorkflow,
+  providerWorkflowTitle,
+  CUSTOM_WORKFLOW_TITLE,
+  ENGINE_DEFINITION_VERSION,
+  ENGINE_WORKFLOW_TITLE,
+  ON_PROBLEM_DEFINITION_VERSION,
+  ON_PROBLEM_WORKFLOW_TITLE,
+  actionId,
+  buildCustomWorkflow,
+  buildEngineWorkflow,
+  buildEngineWorkflowCreate,
+  buildOnProblemWorkflow,
+  buildOnProblemWorkflowCreate,
+} from "./definition";
 
 export interface ExecutionSummary {
   id: string;
@@ -116,7 +130,7 @@ interface WorkflowLike {
   actor?: string | null;
   type?: string;
   tasks?: Record<string, { action?: string }>;
-  trigger?: { schedule?: { trigger?: { intervalMinutes?: number } | null } | null } | null;
+  trigger?: { schedule?: { trigger?: { intervalMinutes?: number } | null } | null; eventTrigger?: { isActive?: boolean } | null } | null;
   lastExecution?: ExecutionLike | null;
 }
 
@@ -174,6 +188,64 @@ export function exportEngineDefinition(appId: string, settings: Settings, interv
   return {
     fileName: "command-center-engine.workflow.json",
     json: `${JSON.stringify(buildEngineWorkflowCreate({ appId, settings, intervalMinutes }), null, 2)}\n`,
+  };
+}
+
+// ─── "Engine on problem": the optional second engine workflow (Problem trigger) ───
+
+export interface OnProblemWorkflowStatus {
+  installed: boolean;
+  workflowId?: string;
+  /** "SIMPLE" (no workflow hours) or "STANDARD". */
+  type?: string;
+  isDeployed?: boolean;
+  /** True when its task is this app's run-engine action. */
+  usesAction?: boolean;
+  /** False when the workflow exists but its trigger is switched off. */
+  triggerActive?: boolean;
+  /** True when the installed definition is older than this build's. */
+  outdated?: boolean;
+  demo?: boolean;
+}
+
+export function parseOnProblemVersion(description: string | undefined): number | undefined {
+  const m = /\[command-center-engine-on-problem v(\d+)\]/.exec(description ?? "");
+  return m ? Number(m[1]) : undefined;
+}
+
+export function exportOnProblemDefinition(appId: string, settings: Settings): WorkflowExport {
+  return {
+    fileName: "command-center-engine-on-problem.workflow.json",
+    json: `${JSON.stringify(buildOnProblemWorkflowCreate({ appId, settings }), null, 2)}\n`,
+  };
+}
+
+/** Opens the Workflows app with the "Engine on problem" workflow prefilled (create workflow intent). */
+export function openOnProblemIntent(appId: string, settings: Settings): void {
+  sendIntent(buildOnProblemWorkflow({ appId, settings }));
+}
+
+/** Looks the workflow up by title (it has no fixed id: the person creates it in the Workflows app). */
+export async function getOnProblemStatus(appId: string, client: AutomationClientLike = defaultClient): Promise<OnProblemWorkflowStatus> {
+  const list = await client.getWorkflows({ search: ON_PROBLEM_WORKFLOW_TITLE, limit: 20 });
+  const hit = list.results.find((w) => w.title === ON_PROBLEM_WORKFLOW_TITLE);
+  if (!hit) return { installed: false };
+  let wf = hit;
+  try {
+    wf = await client.getWorkflow({ id: hit.id });
+  } catch {
+    // the list entry is enough for a status
+  }
+  const usesAction = Object.values(wf.tasks ?? {}).some((t) => t.action === actionId(appId));
+  const version = parseOnProblemVersion(wf.description);
+  return {
+    installed: true,
+    workflowId: wf.id,
+    ...(wf.type ? { type: wf.type } : {}),
+    ...(wf.isDeployed !== undefined ? { isDeployed: wf.isDeployed } : {}),
+    usesAction,
+    ...(wf.trigger?.eventTrigger?.isActive !== undefined ? { triggerActive: wf.trigger.eventTrigger.isActive } : {}),
+    outdated: version === undefined || version < ON_PROBLEM_DEFINITION_VERSION || !usesAction,
   };
 }
 

@@ -16,6 +16,7 @@ flowchart LR
     subgraph WF["Simple workflow · Command Center · Engine<br/>every 1, 2 or 5 min"]
       A["Action: Run Command Center engine"]
     end
+    OP["Optional simple workflow<br/>Engine on problem<br/>(Problem trigger)"]
     subgraph APP["Command Center app"]
       UI["UI (React + Strato)"]
       F["App functions<br/>engine-run · config · status<br/>incidents · directory"]
@@ -27,6 +28,8 @@ flowchart LR
 
   T -->|POST event| API --> G
   DAVIS -->|opens problems| G
+  DAVIS -.problem opens or closes.-> OP
+  OP -.same action.-> A
   A -->|DQL| G
   A <--> S
   A -->|reads secret| CV
@@ -41,7 +44,8 @@ flowchart LR
 1. Tomar el lease del motor (`lock.engine`) para que dos ejecuciones nunca avisen dos veces. Si otra ejecución lo
    tiene, esta ejecución se omite (se cuenta como `skippedLocked` en el heartbeat).
 2. Ejecutar las consultas DQL de las fuentes habilitadas (Q1–Q4), normalizar los registros en alertas, deduplicarlas y
-   enrutarlas.
+   enrutarlas. Un problema nuevo cuyos eventos de Davis todavía no se pueden leer se retiene hasta 90 segundos (ver
+   [Comportamiento que debes conocer](#comportamiento-que-debes-conocer)).
 3. Crear o actualizar incidentes, aplicar en orden las acciones de los operadores, terminar las posposiciones que
    vencen, evaluar las políticas de escalamiento contra los calendarios, planificar las notificaciones y los reintentos
    (fallidas o sin resultado) en el registro de notificaciones (ledger), archivar los incidentes resueltos antiguos y
@@ -58,8 +62,9 @@ motor.
 | Diseño | Horas de workflow | Invocaciones de función | Veredicto |
 | --- | --- | --- | --- |
 | Versión 2 antes de este cambio: un **standard** workflow `tick` → 8 emisores → `report` | 1 por hora de vida del workflow, haga algo o no | Medido: cerca de 690 por hora (≈ 11.5 por minuto) | Reemplazado |
-| Un **simple** workflow por integración, ejecutado por el motor por cada notificación (actual, adicional) | ninguna | Medido: **1 por notificación** de esa integración (la tarea del workflow), incluidos los envíos que fallan | ✅ Cada integración activada obtiene su propio workflow (una confirmación). El motor sigue leyendo las alertas y escalando; entrega cada notificación al workflow de la integración y recurre a un envío directo cuando ese workflow no se puede ejecutar. |
-| **Un simple workflow, una acción, trigger de intervalo** (actual) | **ninguna** | Medido: **1 por ejecución** (60 por hora con 1 minuto) | ✅ |
+| **Un simple workflow, una acción, trigger de intervalo** (actual) | **ninguna** | Medido: **1 por ejecución** (60 por hora con 1 minuto) | ✅ El motor también envía, así que una notificación no agrega ninguna invocación. |
+| Un segundo simple workflow con **Problem trigger** y la misma acción (opcional) | ninguna | Medido: **1 por disparo**, cerca de 2 por problema (se abre, se cierra) | ✅ Opcional. El primer aviso no espera al intervalo, así que un intervalo más largo se vuelve práctico. Ver [Ejecución en cada problema](#ejecución-en-cada-problema). |
+| Un **simple** workflow por integración, ejecutado por el motor por cada notificación (opcional, por integración) | ninguna | Medido: **1 por notificación** de esa integración (la tarea del workflow), incluidos los envíos que fallan | Opcional desde la 2.3.0 (era lo predeterminado en la 2.1 y la 2.2). Cada entrega es una ejecución de workflow que puedes ver. El motor recurre a un envío directo cuando ese workflow no se puede ejecutar. |
 
 Fuentes: *Create a simple workflow* ("without consuming workflow hours") y *Workflows concepts* (los simple workflows
 "do not generate any consumption of workflow hours") en la documentación de Dynatrace. Los simple workflows permiten
@@ -99,10 +104,52 @@ acción *Send Command Center notification* de la app y la acción *HTTP request*
 custom workflow) se facturaron con una invocación por ejecución cada una, incluidos los envíos que fallaron. La
 llamada de API que inicia una ejecución no generó un evento de facturación propio.
 
-Una integración sin workflow propio la envía directamente el motor, dentro de la ejecución que ya está haciendo, sin
-invocación adicional. El workflow propio agrega una invocación por notificación. A cambio, cada entrega es una
-ejecución que puedes ver en la app Workflows, y los envíos no comparten el límite de tiempo de la ejecución del motor
-(100 segundos; lo que no se envía a tiempo espera a una ejecución posterior).
+Por eso el motor envía una integración directamente, a menos que le des un workflow propio (**Configure →
+Delivery**): el envío ocurre dentro de la ejecución que el motor ya está haciendo, sin invocación adicional. El
+workflow propio agrega una invocación por notificación. A cambio, cada entrega es una ejecución que puedes ver en la
+app Workflows, y los envíos no comparten el límite de tiempo de la ejecución del motor (100 segundos; lo que no se
+envía a tiempo espera a una ejecución posterior).
+
+### Ejecución en cada problema
+
+El workflow opcional **Command Center · Engine on problem** es donde sí encaja un disparador de evento: un problema
+de Davis que se abre o se cierra es un evento que Dynatrace produce por sí misma. Es un simple workflow con un
+**Problem trigger** (el problema se abre o se cierra; todas las categorías) y una tarea, la misma acción del motor.
+El disparador le pasa a la acción el ID y el estado del problema.
+
+Medido en el entorno trial con problemas de prueba (2026-11-27):
+
+| Qué | Medido |
+| --- | --- |
+| El disparador se activa después del evento del problema | 1–4 s para un cierre o una actualización vista por primera vez, 11–12 s para un problema nuevo |
+| El registro del problema se puede consultar en Grail | Unos 30–40 s después de su timestamp. Ejecuciones 24 s y 29 s después todavía no encontraron el registro. |
+| Incidente creado por la ejecución iniciada por el problema | 34 s después del timestamp del problema. La ejecución programada (intervalo de 1 minuto) lo habría creado 50 s más tarde. |
+| Incidente resuelto después de que el problema se cerró | Dentro de los 30 s del evento de cierre |
+| Enrutamiento | El incidente recibió el equipo de su servicio a partir de `cc.service`: el evento de Davis del problema ya se podía leer |
+| Facturación | Una invocación `ACTION` por disparo (ejecuciones de 24–30 s). El disparador se activó una vez cuando el problema se abrió y una vez cuando se cerró, y no en la actualización intermedia. |
+
+Como el disparador se activa antes de que el registro se pueda consultar, la ejecución **espera**. Cada 5 segundos
+revisa el incidente en App State y una consulta pequeña (el estado más reciente del problema), durante un máximo de
+45 segundos. En cuanto el problema se puede leer, ejecuta un ciclo normal. Si otra ejecución fue más rápida, termina
+sin ciclo. Si el problema no se puede leer a tiempo, también termina, y la ejecución programada toma el problema como
+antes. La espera queda dentro de la misma invocación, y una llamada de función de hasta 60 segundos es una invocación
+facturada.
+
+Qué te da: el primer aviso sale cerca de medio minuto después de que el problema se abre, sea cual sea el intervalo.
+Eso vuelve práctico un intervalo de 5 minutos: unas 8,640 ejecuciones programadas al mes en lugar de 43,200, más
+unas dos ejecuciones por problema. No reemplaza al workflow del motor. Los pasos de escalamiento, el fin de las
+posposiciones, los reintentos y las otras fuentes (eventos de Davis, eventos genéricos) se atienden en el intervalo.
+
+Límites:
+
+- Dynatrace limita cada workflow a 1,000 ejecuciones iniciadas por evento por hora y aplica throttling más allá de
+  eso; la ejecución programada cubre la diferencia.
+- Un disparador nuevo necesita tiempo para quedar activo. En el entorno trial, un problema creado 52 segundos después
+  del workflow no lo inició; los eventos a partir de dos minutos y medio, sí.
+- Después de la instalación, el disparador también se activa una vez por cada problema que ya está abierto, en su
+  siguiente actualización. Esas ejecuciones terminan de inmediato, porque el incidente ya existe.
+- Solo se ejercitó la creación de este workflow por API. **Install in Workflows** y la carga de su JSON no se
+  recorrieron haciendo clic.
 
 ## Costo y consumo
 
@@ -114,7 +161,8 @@ ejecución que puedes ver en la app Workflows, y los envíos no comparten el lí
 | Ejecuciones del motor = invocaciones de función (`ACTION`) | ≈ 43,200 | ≈ 21,600 | ≈ 8,640 |
 | Horas de workflow | 0 | 0 | 0 |
 | Consultas a Grail | 1–8 por ejecución (más abajo) | igual | igual |
-| Ejecuciones de workflows de integración = invocaciones de función (`ACTION`) | una por notificación de una integración que tiene workflow propio, incluidos los envíos que fallan y los reintentos | igual | igual |
+| Ejecuciones de *Engine on problem* (opcional) = invocaciones de función (`ACTION`) | cerca de 2 por problema: se abre, se cierra | igual | igual |
+| Ejecuciones de workflows de integración (opcional) = invocaciones de función (`ACTION`) | una por notificación de una integración que tiene workflow propio, incluidos los envíos que fallan y los reintentos; ninguna de forma predeterminada | igual | igual |
 
 Una invocación es una llamada de función de hasta 60 segundos; una llamada que dura de 61 a 120 segundos cuenta como
 dos (documentación de licenciamiento de Dynatrace). Las ejecuciones del motor medidas en el entorno trial duraron de
@@ -143,10 +191,9 @@ Cómo medir en tu entorno:
   disparar otras capacidades facturables: aquí, las invocaciones de función y las consultas a Grail.
 
 Cómo reducir el costo: mantén Q2 y Q3 desactivadas a menos que envíes eventos que no abren problemas; reduce el
-look-back; elige un intervalo de 2 o 5 minutos si las demoras de tus escalamientos son largas. Una integración no cuesta
-invocación adicional mientras no tiene workflow propio: no crees ese workflow (cierra la app Workflows cuando se
-abra), o elimínalo ahí y selecciona *Unlink* en la configuración de la integración. Mientras exista un workflow
-llamado *Command Center · <integración>*, la pestaña Outbound lo vuelve a vincular.
+look-back; elige un intervalo de 2 o 5 minutos si las demoras de tus escalamientos son largas, e instala *Engine on problem*
+para que el primer aviso no lo espere. Deja las integraciones en **By the engine** (lo predeterminado): un workflow
+propio cuesta una invocación por notificación.
 
 **Las consultas** (`ui/app/data/dql.ts`, todas ejecutadas en el entorno trial):
 
@@ -192,6 +239,13 @@ fetch dt.davis.events, from: now() - 72h
 | dedup event.id, sort: { timestamp desc }
 | fieldsKeep event.id, event.type, event.provider, "cc.*"
 | limit 1000
+
+// Q5 — one problem's newest status (only the run started by the Problem trigger: one per 5-second check)
+fetch dt.davis.problems, from: now() - 2h
+| filter event.id == "<problem id>"
+| sort timestamp desc
+| limit 1
+| fields event.id, event.status, dt.davis.event_ids
 ```
 
 ## Salud y monitoreo
@@ -214,6 +268,12 @@ fetch dt.davis.events, from: now() - 72h
   timeout) una persona puede ser notificada dos veces.
 - **Precisión de tiempo = intervalo.** Un paso se dispara en la primera ejecución después de su vencimiento. Lo mismo
   aplica al fin de las posposiciones.
+- **Un problema nuevo espera a sus eventos.** El registro de un problema puede volverse consultable antes que los
+  eventos de Davis a los que se vincula. El enrutamiento ocurre una sola vez, cuando se crea el incidente, y las
+  propiedades `cc.*` están en esos eventos. Por eso un problema cuyos eventos todavía no se pueden leer se retiene
+  hasta 90 segundos, y luego sigue tal como está.
+- **Un aviso nunca es más rápido que Grail.** En el entorno trial, un problema se podía consultar unos 30–40 segundos
+  después de abrirse. Ningún disparador o intervalo avisa antes de eso.
 - **La configuración es de tipo última-escritura-gana.** Dos personas que guardan el mismo equipo en el mismo momento:
   gana el guardado posterior.
 - **Los roles son orientativos.** Cualquier usuario de la app puede cambiar la configuración. IAM decide quién puede
@@ -248,6 +308,7 @@ fetch dt.davis.events, from: now() - 72h
 | Pestaña Workflows: *Update available* | La app se actualizó. Reinstala y luego elimina el workflow anterior. |
 | No aparecen incidentes | Settings → Event sources; verifica que el evento llegó a Grail (`fetch dt.davis.events` en un Notebook) y que su tipo abre un problema. Si no, activa la fuente de eventos de Davis. |
 | Un incidente queda sin equipo y no se avisa a nadie | Ninguna regla de enrutamiento coincidió y no hay equipo predeterminado. Los problemas que Davis detecta por sí solo no traen equipo (solo los eventos que tú envías pueden nombrar un servicio en `cc.service`). Abre el equipo y selecciona *Receive all unrouted alerts* en su lista de verificación **Ready to page?** (o defínelo en Settings → Routing defaults), o agrega una regla de enrutamiento. La lista también muestra qué más le falta al equipo. |
+| *Engine on problem* está instalado pero parece no ejecutarse | Los simple workflows no muestran lista de ejecuciones: revisa **Integrations → Workflows → Last engine run** justo después de que se abra un problema. Un disparador nuevo necesita unos minutos antes de activarse. Su actor necesita los mismos permisos que el del motor, y el disparador tiene que estar encendido. |
 | El enrutamiento ignora `cc.service` | El nombre o el ID no coincide con un servicio, o una regla anterior definió otro servicio. Usa Services → Test a rule. |
 | Una notificación **falló** | Incidente → Notifications muestra el error del proveedor. Causas habituales: falta el host en External requests, una entrada del vault que el actor no puede leer, tipo de credencial incorrecto, teléfono que no está en E.164, API key de Twilio sin *Account SID*. |
 | Una notificación muestra **No result** | La ejecución terminó antes de que la llamada respondiera. Se reintenta hasta *Delivery attempts*. |
@@ -270,6 +331,10 @@ Verificado en un entorno trial (latest Dynatrace):
   tarea HTTP request, y la expresión `{{ execution().params | to_json }}` entregó el JSON completo de la notificación.
 - Funciones de la app `engine-run`, `config` (export, import, dry run), `status` e `incidents`. Notebooks de war rooms
   creados a través de la Document API.
+- **Engine on problem**: un simple workflow con Problem trigger y la acción del motor, creado por la Automation API.
+  Se activó cuando problemas de prueba se abrieron y se cerraron; la ejecución esperó hasta que el problema se pudo
+  leer, creó el incidente con el equipo correcto y lo resolvió al cierre, con una invocación facturada por disparo.
+  Los números están en [Ejecución en cada problema](#ejecución-en-cada-problema).
 
 No verificado, o solo en parte:
 
@@ -277,7 +342,10 @@ No verificado, o solo en parte:
   proveedores, no ejercitados en vivo. Las pruebas unitarias cubren las solicitudes de Twilio SMS y voz, Slack y
   Telegram.
 - **Install in Workflows** (intent) y el **Upload** del JSON en la app Workflows: no los recorrimos haciendo clic
-  nosotros. La instalación por API de la misma definición está verificada.
+  nosotros, ni para el motor, ni para *Engine on problem*, ni para el workflow propio de una integración. La
+  instalación por API de las mismas definiciones está verificada.
+- **Configure → Delivery** (la elección entre el motor y el workflow propio de una integración) se ejercitó solo en la
+  vista previa sin conexión.
 - **Permisos mínimos** del actor del workflow: en el entorno trial se habilitaron todos los permisos.
 - La **búsqueda de usuarios** no devolvió a nadie para usuarios que acababan de ser invitados. Una búsqueda de usuarios
   activos en una sesión iniciada no se confirmó en el entorno trial. Con un platform token, IAM respondió *User not

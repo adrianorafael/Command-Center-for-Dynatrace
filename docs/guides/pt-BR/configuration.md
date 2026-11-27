@@ -55,7 +55,7 @@ O mapeamento de prioridade por severidade e categoria é editado em **Services �
 | Configuração | Padrão | Faixa | Efeito |
 | --- | --- | --- | --- |
 | Engine enabled | On | | Off pausa **todos** os acionamentos. O motor continua rodando no agendamento, mas não faz nada. |
-| Engine workflow ID | Preenchido por Integrations → Workflows | UUID | Permite que a aba Workflows encontre e vincule o workflow. O intervalo (1, 2 ou 5 minutos) é escolhido na instalação; o app o lê de volta a partir do workflow instalado. |
+| Engine workflow ID | Preenchido por Integrations → Workflows | UUID | Permite que a aba Workflows encontre e vincule o workflow. O intervalo (1, 2 ou 5 minutos) é escolhido na instalação; o app o lê de volta a partir do workflow instalado. Com o workflow opcional *Engine on problem* instalado, 5 minutos bastam para a maioria das equipes. |
 | Max notifications per run | 100 | 1–500 | Notificações além disso são planejadas novamente na execução seguinte |
 | Delivery report timeout (seconds) | 180 | 30–3600 | Uma notificação sem resultado de entrega após esse tempo é marcada como *timeout* e tentada novamente |
 | Delivery attempts | 3 | 1–10 | Tentativas por notificação antes de ela ser marcada como falha |

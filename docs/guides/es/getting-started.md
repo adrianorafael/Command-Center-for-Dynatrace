@@ -118,10 +118,11 @@ Luego:
    usuario de servicio. La acción del motor lee Grail, App State y el Credential Vault con los permisos del actor.
 2. **Authorization settings.** En la app Workflows → **Settings → Authorization settings**, habilita para el actor los
    permisos que usa el motor: `storage:buckets:read`, `storage:events:read`, `state:app-states:read`,
-   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` y, para los workflows de
-   integración y la integración Custom workflow, `automation:workflows:run`. El actor de cada workflow de integración
-   necesita `state:app-states:read`, `state:app-states:write` y `credential-vault:entries:read`: su acción lee los
-   ajustes del proveedor, lee el secreto y registra el resultado. En el entorno trial se habilitaron todos los permisos para el actor, así que el conjunto mínimo no se aisló.
+   `state:app-states:write`, `state:app-states:delete`, `credential-vault:entries:read` y, para una integración que
+   tiene workflow propio y para la integración Custom workflow, `automation:workflows:run`. El actor del workflow
+   propio de una integración necesita `state:app-states:read`, `state:app-states:write` y
+   `credential-vault:entries:read`: su acción lee los ajustes del proveedor, lee el secreto y registra el resultado.
+   En el entorno trial se habilitaron todos los permisos para el actor, así que el conjunto mínimo no se aisló.
 3. De vuelta en Command Center selecciona **Refresh**. Si el workflow se encontró por su título, selecciona **Save this
    ID**. El estado se pone en verde (**Installed · simple workflow**) y **Last engine run** se actualiza dentro de un
    intervalo.
@@ -129,17 +130,31 @@ Luego:
 **Run engine now** ejecuta de inmediato un ciclo completo a través de la función de la app `engine-run`, con tus
 propios permisos. Úsalo para probar sin esperar a la programación.
 
+### Opcional: ejecutar en cada problema
+
+La tarjeta **Command Center · Engine on problem**, en la misma pestaña, instala un segundo simple workflow. Tiene un
+**Problem trigger** (disparador de problema) y la misma acción, de modo que el motor también se ejecuta en cuanto
+Davis abre o cierra un problema y el primer aviso no espera a la siguiente ejecución programada. Instálalo como el
+motor: **Install in Workflows**, **Download JSON** y carga, o `node scripts/install-workflow.mjs --on-problem`. Su
+actor necesita los mismos permisos que el del motor.
+
+Mantén **Command Center · Engine** instalado: los pasos de escalamiento, el fin de las posposiciones y los reintentos
+dependen de su intervalo. Con los dos workflows, un intervalo de 5 minutos basta para la mayoría de los equipos, lo
+que significa menos ejecuciones. Qué hace, qué medimos y sus límites:
+[operaciones](operations.md#ejecución-en-cada-problema).
+
 ## Paso 6 — Configurar los proveedores
 
 **Integrations → Outbound**: cada tarjeta de proveedor tiene un interruptor **On/Off**, y solo se usan los proveedores
 que están activados. Al activar uno por primera vez se abre **Configure**: pega el ID de la entrada del vault, completa
 los parámetros no secretos y guarda. Puede haber un solo proveedor activado por canal.
 
-Cuando se **activa** un proveedor integrado, la app Workflows se abre con **su propio workflow** ya completado
-(*Command Center · <provider>*, un simple workflow cuya tarea es la acción de la app *Send Command Center notification*).
-Guárdalo ahí. De vuelta en Integrations → Outbound, Command Center lo encuentra por su título y lo vincula; la tarjeta
-entonces dice *Sent by its workflow*. Hasta que esté vinculado, el motor envía por sí mismo las notificaciones de ese
-proveedor, así que no se pierde nada. Luego usa **Send test** con una dirección. Detalles:
+El propio motor envía las notificaciones de un proveedor activado, dentro de la ejecución que ya está haciendo. No
+hay nada que crear en la app Workflows ni ninguna llamada de función adicional. Usa **Send test** con una dirección.
+
+Opcional: **Configure → Delivery → Through its own workflow** envía las notificaciones de un proveedor por un simple
+workflow propio (*Command Center · <provider>*). Cada entrega pasa a ser una ejecución de workflow que puedes ver en
+la app Workflows, al costo de una llamada de función más por notificación. Detalles:
 [integraciones](integrations.md#integration-workflows).
 
 | Proveedor | Parámetros |

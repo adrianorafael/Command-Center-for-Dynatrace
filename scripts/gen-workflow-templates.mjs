@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Regenerates workflow-templates/command-center-engine.workflow.json from
- * ui/app/data/workflows/template.ts (bundled on the fly with the installed esbuild).
+ * Regenerates the importable workflow templates from ui/app/data/workflows/template.ts
+ * (bundled on the fly with the installed esbuild):
+ *   workflow-templates/command-center-engine.workflow.json             the engine (interval trigger)
+ *   workflow-templates/command-center-engine-on-problem.workflow.json  optional: the engine on a Problem trigger
  * Usage: node scripts/gen-workflow-templates.mjs [--check]
  */
 import { build } from "esbuild";
@@ -11,7 +13,6 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const root = resolve(import.meta.dirname, "..");
-const out = join(root, "workflow-templates", "command-center-engine.workflow.json");
 const dir = mkdtempSync(join(tmpdir(), "cc-wf-"));
 try {
   const bundle = join(dir, "template.mjs");
@@ -23,18 +24,33 @@ try {
     outfile: bundle,
     logLevel: "error",
   });
-  const { engineTemplateJson } = await import(pathToFileURL(bundle).href);
-  const json = engineTemplateJson();
-  if (process.argv.includes("--check")) {
-    const current = readFileSync(out, "utf8");
-    if (current !== json) {
-      console.error(`${out} is out of date — run: node scripts/gen-workflow-templates.mjs`);
-      process.exit(1);
+  const { engineTemplateJson, onProblemTemplateJson } = await import(pathToFileURL(bundle).href);
+  const files = [
+    ["command-center-engine.workflow.json", engineTemplateJson()],
+    ["command-center-engine-on-problem.workflow.json", onProblemTemplateJson()],
+  ];
+  let stale = false;
+  for (const [name, json] of files) {
+    const out = join(root, "workflow-templates", name);
+    if (process.argv.includes("--check")) {
+      let current = "";
+      try {
+        current = readFileSync(out, "utf8");
+      } catch {
+        // missing file: reported as out of date below
+      }
+      if (current !== json) {
+        console.error(`${out} is out of date — run: node scripts/gen-workflow-templates.mjs`);
+        stale = true;
+      }
+    } else {
+      writeFileSync(out, json);
+      console.log(`wrote ${out}`);
     }
-    console.log("workflow template is up to date");
-  } else {
-    writeFileSync(out, json);
-    console.log(`wrote ${out}`);
+  }
+  if (process.argv.includes("--check")) {
+    if (stale) process.exit(1);
+    console.log("workflow templates are up to date");
   }
 } finally {
   rmSync(dir, { recursive: true, force: true });

@@ -26,7 +26,7 @@ export interface SourceRecords {
   genericEvents: GrailRecord[];
   /** Per source: failed query, truncated result (limits/sampling/incomplete Q4) or ok (also when disabled). */
   status: Record<AlertSource, SourceHealth>;
-  /** Problems held back this tick because their routing properties could not be fetched. */
+  /** Problems held back this tick because their routing properties could not be fetched or are not readable yet. */
   heldProblems: number;
   errors: string[];
 }
@@ -35,6 +35,13 @@ export interface SourceRecords {
 export const Q4_MAX_IDS = 5 * Q4_CHUNK;
 /** A problem whose routing properties are incomplete is held back while younger than this. */
 export const HOLD_INCOMPLETE_MS = 3 * 60_000;
+/**
+ * A problem none of whose Davis events can be read yet is held back while younger than this. Records become
+ * queryable some time after they are written (measured on a trial tenant, 2026-11-27: a problem 30–40 s after its
+ * timestamp), and the problem can show up before its events. Routing happens once, when the incident is created,
+ * so creating it without the events' cc.* properties would route it wrongly for good.
+ */
+export const HOLD_UNREADABLE_MS = 90_000;
 
 const EVENT_IDS = "dt.davis.event_ids";
 /** Event properties that must not change a problem's identity or status. */
@@ -144,14 +151,22 @@ export async function fetchSources(
     if (allIds.length > Q4_MAX_IDS) out.errors.push(`Q4 event properties: ${allIds.length - Q4_MAX_IDS} event id(s) over the ${Q4_MAX_IDS} cap`);
   }
   const props = results.flatMap((r) => r ?? []);
+  const readable = new Set(props.map((e) => e["event.id"]).filter((id): id is string => typeof id === "string"));
 
   // Problems whose routing properties are incomplete are held back for a few minutes (the next
   // tick usually completes them); older ones go through so a persistent failure never blocks paging.
   const kept: GrailRecord[] = [];
   for (const p of problems ?? []) {
-    const missing = stringArray(p[EVENT_IDS]).some((id) => incomplete.has(id));
+    const eventIds = stringArray(p[EVENT_IDS]);
+    const missing = eventIds.some((id) => incomplete.has(id));
     const start = startedAt(p);
     if (missing && start !== undefined && now - start < HOLD_INCOMPLETE_MS) {
+      out.heldProblems++;
+      continue;
+    }
+    // Q4 answered, but none of this young problem's events is queryable yet: wait for them (see HOLD_UNREADABLE_MS).
+    const unreadable = !missing && eventIds.length > 0 && !eventIds.some((id) => readable.has(id));
+    if (unreadable && start !== undefined && now - start < HOLD_UNREADABLE_MS) {
       out.heldProblems++;
       continue;
     }

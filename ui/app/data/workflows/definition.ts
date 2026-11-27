@@ -87,6 +87,67 @@ export function buildEngineWorkflowUpdate(opts: DefinitionOptions): WorkflowUpda
   return { ...buildEngineWorkflow(opts), ...(opts.actor ? { actor: opts.actor } : {}) };
 }
 
+// ─── Engine on problem (optional second engine workflow, Problem trigger) ──────
+
+export const ON_PROBLEM_WORKFLOW_TITLE = "Command Center · Engine on problem";
+/** Bumped whenever this definition changes. */
+export const ON_PROBLEM_DEFINITION_VERSION = 1;
+export const ON_PROBLEM_MARKER = `[command-center-engine-on-problem v${ON_PROBLEM_DEFINITION_VERSION}]`;
+
+/**
+ * Optional second engine workflow: SIMPLE, **Problem trigger** (a Davis problem opens or closes), one task — the
+ * same run-engine action, with the problem's id and status as input. With it the first page no longer waits for
+ * the interval of the engine workflow, so a longer interval (fewer runs) becomes acceptable. The interval workflow
+ * stays: escalation steps, snooze ends and retries need a clock.
+ *
+ * Verified on a trial tenant (2026-11-27): the platform accepted this body as a simple workflow; the trigger fired
+ * 1–11 s after the problem event, once when the problem opened and once when it closed, and every execution was
+ * one billed invocation of the action. Trigger shape: DavisProblemTriggerConfig in
+ * node_modules/@dynatrace-sdk/client-automation/types/index.d.ts (triggerOn, categories, analysisReady).
+ */
+export function buildOnProblemWorkflow(opts: Pick<DefinitionOptions, "appId" | "settings" | "actor">): Pick<WorkflowCreate, "title" | "description" | "type" | "isPrivate" | "trigger" | "tasks"> {
+  return {
+    title: ON_PROBLEM_WORKFLOW_TITLE,
+    description:
+      `Runs the paging engine of the Command Center app (${opts.appId}) as soon as Davis opens or closes a problem, so the ` +
+      `first page does not wait for the interval of "${ENGINE_WORKFLOW_TITLE}". Simple workflow: one task, no workflow hours. ` +
+      `Keep "${ENGINE_WORKFLOW_TITLE}" installed: escalations need its clock. ${ON_PROBLEM_MARKER}`,
+    type: "SIMPLE",
+    isPrivate: false,
+    trigger: {
+      eventTrigger: {
+        isActive: opts.settings.engine.enabled,
+        triggerConfiguration: {
+          type: "davis-problem",
+          value: {
+            // Every category: the app's own routing rules decide what pages, not the trigger.
+            categories: { monitoringUnavailable: true, availability: true, error: true, slowdown: true, resource: true, custom: true, info: true },
+            entityTags: {},
+            entityTagsMatch: null,
+            triggerOn: "open-and-close",
+            customFilter: "",
+            analysisReady: false,
+          },
+        },
+      },
+    },
+    tasks: {
+      [ENGINE_TASK]: {
+        name: ENGINE_TASK,
+        action: actionId(opts.appId),
+        description: "One Command Center cycle for the problem that started this run",
+        input: { problemId: '{{ event()["event.id"] }}', problemStatus: '{{ event()["event.status"] }}' },
+        position: { x: 0, y: 1 },
+        predecessors: [],
+      },
+    },
+  };
+}
+
+export function buildOnProblemWorkflowCreate(opts: Pick<DefinitionOptions, "appId" | "settings" | "actor">): WorkflowCreate {
+  return { ...buildOnProblemWorkflow(opts), ...(opts.actor ? { actor: opts.actor } : {}) };
+}
+
 // ─── Custom integration workflow (provider kind "workflow") ───────────────────
 
 export const CUSTOM_WORKFLOW_TITLE = "Command Center · Custom integration";

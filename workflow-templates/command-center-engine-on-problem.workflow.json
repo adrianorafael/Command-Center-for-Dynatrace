@@ -1,0 +1,46 @@
+{
+  "title": "Command Center · Engine on problem",
+  "description": "Runs the paging engine of the Command Center app (my.command.center) as soon as Davis opens or closes a problem, so the first page does not wait for the interval of \"Command Center · Engine\". Simple workflow: one task, no workflow hours. Keep \"Command Center · Engine\" installed: escalations need its clock. [command-center-engine-on-problem v1]",
+  "type": "SIMPLE",
+  "isPrivate": false,
+  "trigger": {
+    "eventTrigger": {
+      "isActive": true,
+      "triggerConfiguration": {
+        "type": "davis-problem",
+        "value": {
+          "categories": {
+            "monitoringUnavailable": true,
+            "availability": true,
+            "error": true,
+            "slowdown": true,
+            "resource": true,
+            "custom": true,
+            "info": true
+          },
+          "entityTags": {},
+          "entityTagsMatch": null,
+          "triggerOn": "open-and-close",
+          "customFilter": "",
+          "analysisReady": false
+        }
+      }
+    }
+  },
+  "tasks": {
+    "run_engine": {
+      "name": "run_engine",
+      "action": "my.command.center:run-engine",
+      "description": "One Command Center cycle for the problem that started this run",
+      "input": {
+        "problemId": "{{ event()[\"event.id\"] }}",
+        "problemStatus": "{{ event()[\"event.status\"] }}"
+      },
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "predecessors": []
+    }
+  }
+}

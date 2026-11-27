@@ -55,7 +55,7 @@ El mapeo de prioridad por severidad y categoría se edita en **Services → Prio
 | Ajuste | Predeterminado | Rango | Efecto |
 | --- | --- | --- | --- |
 | Engine enabled | On | | Off pausa **todos** los avisos. El motor sigue ejecutándose según la programación pero no hace nada. |
-| Engine workflow ID | Lo completa Integrations → Workflows | UUID | Permite que la pestaña Workflows encuentre y vincule el workflow. El intervalo (1, 2 o 5 minutos) se elige al instalar; la app lo vuelve a leer del workflow instalado. |
+| Engine workflow ID | Lo completa Integrations → Workflows | UUID | Permite que la pestaña Workflows encuentre y vincule el workflow. El intervalo (1, 2 o 5 minutos) se elige al instalar; la app lo vuelve a leer del workflow instalado. Con el workflow opcional *Engine on problem* instalado, 5 minutos bastan para la mayoría de los equipos. |
 | Max notifications per run | 100 | 1–500 | Las notificaciones que superan este valor se vuelven a planificar en la siguiente ejecución |
 | Delivery report timeout (seconds) | 180 | 30–3600 | Una notificación sin resultado de entrega después de este tiempo se marca como *timeout* y se reintenta |
 | Delivery attempts | 3 | 1–10 | Intentos por notificación antes de que se marque como fallida |

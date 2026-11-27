@@ -11,13 +11,41 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-11-27
+
+Lower running cost. Every workflow task execution is one billed function call, whatever starts the workflow, so this
+release removes the call per notification by default and adds a way to run the engine less often without paging
+later.
+
+### Added
+- **Command Center · Engine on problem** (optional): a second simple workflow with a **Problem trigger** that runs
+  the engine action when Davis opens or closes a problem. The run waits until the problem can be read in Grail and
+  then pages, so the first page no longer depends on the interval and a 5-minute interval becomes practical (about
+  8,640 scheduled runs a month instead of 43,200, plus about two runs per problem). Install it from **Integrations →
+  Workflows**, with the downloaded JSON, or with `node scripts/install-workflow.mjs --on-problem`. Measured on a trial
+  tenant: the trigger fired 1–12 s after the problem event; the incident was created 34 s after the problem's
+  timestamp (the 1-minute scheduled run would have created it 50 s later) and resolved within 30 s of the close; one
+  billed invocation per firing. The engine workflow stays installed: escalation steps, snooze ends and retries need
+  its clock.
+- **Configure → Delivery** for each built-in integration: *By the engine* (default) or *Through its own workflow*.
+
+### Changed
+- **The engine sends built-in integrations itself by default.** Switching an integration on no longer opens the
+  Workflows app, and a workflow is linked only where you chose *Through its own workflow*. An integration that is
+  already linked keeps its workflow until you choose *By the engine*. Sent by the engine, a notification costs no
+  extra function call; through its own workflow it costs one (measured, failed sends included).
+- **A new problem waits for its events.** A problem none of whose Davis events can be read yet is held back for up to
+  90 seconds, because routing happens once and the `cc.*` properties are on those events. Before, such a problem
+  could become an incident without its routing properties.
+- The sends of a run that waited first (the problem-triggered run) are bound to the start of the invocation, so they
+  never outlive the platform's time limit.
+
 ### Documentation
 - Operations guide (three languages): why the integration workflows start on demand and not on an event trigger, and
   that a workflow's task is billed as one function call whatever started the workflow. Measured on a trial tenant:
   the app's notification action and Dynatrace's own *HTTP request* action, one invocation per run each, failed sends
-  included. How to keep an integration on direct sending.
-- README and project page: the cost table lists the invocation per notification of an integration that has its own
-  workflow.
+  included. New section *Running on problems* with the measurements and the limits.
+- README and project page: the cost tables list the optional invocations (per problem, per notification).
 
 ## [2.2.0] - 2026-11-27
 
