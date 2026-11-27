@@ -247,13 +247,14 @@ motivo. Una frase de vista previa dice exactamente qué va a ocurrir.
 Los roles son orientativos: App State no tiene permisos por clave, así que técnicamente cualquier usuario de la app
 puede cambiar la configuración.
 
-- **Contact methods** (persona → *Add* o *Edit*): el panel se abre con una fila lista para completar: canal, la
-  dirección y una etiqueta opcional, más **Send test**. El campo de la dirección lleva el nombre del canal: *Phone
-  number* en E.164 con el código de país (SMS, voz, WhatsApp); *Chat ID* (Telegram); *Name in the message* (Slack,
-  Teams e IFTTT: su webhook o applet decide el destino); *Routing key* (webhook o custom workflow). Las filas que se
-  dejan vacías se ignoran. Desde la lista de verificación, **Save and next** pasa a la siguiente persona sin método
-  de contacto. Los números de teléfono y los chat IDs son legibles para cualquier usuario de la app. Se enmascaran en
-  las listas. El correo electrónico no es un canal aparte: envía correos a través de un gateway de webhook.
+- **Contact methods** (persona → *Add* o *Edit*): cada fila tiene un canal, la dirección y una etiqueta opcional, más
+  **Send test**. Para una persona sin métodos de contacto, el panel se abre con una fila lista para completar. El campo
+  de la dirección lleva el nombre del canal: *Phone number* en E.164 con el código de país (SMS, voz, WhatsApp); *Chat
+  ID* (Telegram); *Name in the message* (Slack, Teams e IFTTT: su webhook o applet decide el destino); *Routing key*
+  (webhook o custom workflow). Las filas que se dejan vacías se ignoran. Desde la lista de verificación, **Save and
+  next** pasa a la siguiente persona sin método de contacto. Los números de teléfono y los chat IDs son legibles para
+  cualquier usuario de la app. Se enmascaran en las listas. El correo electrónico no es un canal aparte: envía correos a
+  través de un gateway de webhook.
 - **Notification rules (optional)** (reglas de notificación, opcionales): sin reglas, se usan todos los métodos de
   contacto a la vez. Una regla dice: *use* (usar) este método *after N minutes* (después de N minutos, contados desde
   que se dispara el paso) *for priorities* (para las prioridades) P1 a Px, o todas. Cuando una persona tiene reglas,
@@ -309,8 +310,8 @@ campos, los operadores y el orden de enrutamiento se listan en la
 [referencia de alertas](alerts-reference.md#cómo-una-alerta-se-convierte-en-incidente).
 
 **Service**: nombre (los eventos lo referencian por nombre o ID en `cc.service`; las demás alertas, como los problemas
-de Davis, necesitan una regla de enrutamiento), descripción, equipo propietario, política de escalamiento (vacía = la
-predeterminada del equipo) y prioridad predeterminada.
+que Davis detecta por sí solo, necesitan una regla de enrutamiento), descripción, equipo propietario, política de
+escalamiento (vacía = la predeterminada del equipo) y prioridad predeterminada.
 
 ## Integrations
 

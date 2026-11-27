@@ -246,13 +246,13 @@ Uma frase de prévia diz exatamente o que vai acontecer.
 Os papéis são orientações: o App State não tem permissões por chave, então tecnicamente qualquer usuário do app pode
 alterar a configuração.
 
-- **Contact methods** (pessoa → *Add* ou *Edit*): a tela abre com uma linha pronta para preencher: canal, o endereço
-  e um rótulo opcional, mais **Send test**. O campo do endereço leva o nome do canal: *Phone number* em E.164 com o
-  código do país (SMS, voz, WhatsApp); *Chat ID* (Telegram); *Name in the message* (Slack, Teams e IFTTT: o webhook ou
-  o applet decide o destino); *Routing key* (webhook ou custom workflow). Linhas deixadas vazias são ignoradas. A
-  partir da checklist, **Save and next** segue para a próxima pessoa sem método de contato. Números de telefone e chat
-  IDs podem ser lidos por todos os usuários do app. Eles ficam mascarados nas listas. Email não é um canal separado:
-  envie emails por meio de um gateway de webhook.
+- **Contact methods** (pessoa → *Add* ou *Edit*): cada linha tem um canal, o endereço e um rótulo opcional, mais **Send
+  test**. Para uma pessoa sem métodos de contato, a tela abre com uma linha pronta para preencher. O campo do endereço
+  leva o nome do canal: *Phone number* em E.164 com o código do país (SMS, voz, WhatsApp); *Chat ID* (Telegram); *Name
+  in the message* (Slack, Teams e IFTTT: o webhook ou o applet decide o destino); *Routing key* (webhook ou custom
+  workflow). Linhas deixadas vazias são ignoradas. A partir da checklist, **Save and next** segue para a próxima pessoa
+  sem método de contato. Números de telefone e chat IDs podem ser lidos por todos os usuários do app. Eles ficam
+  mascarados nas listas. Email não é um canal separado: envie emails por meio de um gateway de webhook.
 - **Notification rules (optional)** (regras de notificação, opcionais): sem regras, todos os métodos de contato são
   usados de uma vez. Uma regra diz: *use* este método *after N minutes* (contados a partir do momento em que o passo
   dispara) *for priorities* P1 a Px, ou todas. Depois que uma pessoa tem regras, só os incidentes cobertos por alguma
@@ -307,9 +307,9 @@ vem com nome e apontando para essa equipe, de modo que só falta a condição. O
 campos, os operadores e a ordem de roteamento estão listados na
 [referência de alertas](alerts-reference.md#como-um-alerta-vira-um-incidente).
 
-**Serviço**: nome (os eventos o referenciam pelo nome ou ID em `cc.service`; os demais alertas, como os problemas do
-Davis, precisam de uma regra de roteamento), descrição, equipe responsável, política de escalonamento (vazio = a padrão
-da equipe) e prioridade padrão.
+**Serviço**: nome (os eventos o referenciam pelo nome ou ID em `cc.service`; os demais alertas, como os problemas que o
+Davis detecta sozinho, precisam de uma regra de roteamento), descrição, equipe responsável, política de escalonamento
+(vazio = a padrão da equipe) e prioridade padrão.
 
 ## Integrations (integrações)
 

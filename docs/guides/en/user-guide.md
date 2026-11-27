@@ -234,13 +234,13 @@ says exactly what will happen.
 Roles are guidance: App State has no per-key permissions, so every user of the app can technically change
 configuration.
 
-- **Contact methods** (person → *Add* or *Edit*): the sheet opens with a row to fill in: channel, the address and an
-  optional label, plus **Send test**. The address field is named after the channel: *Phone number* in E.164 with the
-  country code (SMS, voice, WhatsApp); *Chat ID* (Telegram); *Name in the message* (Slack, Teams and IFTTT: their
-  webhook or applet decides the destination); *Routing key* (webhook or custom workflow). Rows left empty are
-  ignored. From the checklist, **Save and next** moves on to the next person without a contact method. Phone numbers
-  and chat IDs are readable by every user of the app. They are masked in lists. Email is not a separate channel: send
-  email through a webhook gateway.
+- **Contact methods** (person → *Add* or *Edit*): each row has a channel, the address and an optional label, plus **Send
+  test**. For a person without contact methods, the sheet opens with a row ready to fill in. The address field is named
+  after the channel: *Phone number* in E.164 with the country code (SMS, voice, WhatsApp); *Chat ID* (Telegram); *Name
+  in the message* (Slack, Teams and IFTTT: their webhook or applet decides the destination); *Routing key* (webhook or
+  custom workflow). Rows left empty are ignored. From the checklist, **Save and next** moves on to the next person
+  without a contact method. Phone numbers and chat IDs are readable by every user of the app. They are masked in lists.
+  Email is not a separate channel: send email through a webhook gateway.
 - **Notification rules (optional)**: without rules, every contact method is used at once. A rule says: *use* this
   method *after N minutes* (counted from when the step fires) *for priorities* P1 to Px, or all. Once a person has
   rules, only incidents covered by a rule notify them; the sheet says which priorities are left out. A step with
@@ -289,8 +289,9 @@ nobody)*. Opened from a team's checklist (*Add routing rule*), the rule is alrea
 only the condition is left. Fields, operators and the
 routing order are listed in the [alerts reference](alerts-reference.md#how-an-alert-becomes-an-incident).
 
-**Service**: name (events reference it by name or ID in `cc.service`; other alerts, such as Davis problems, need a
-routing rule), description, owning team, escalation policy (empty = the team's default) and default priority.
+**Service**: name (events reference it by name or ID in `cc.service`; other alerts, such as problems that Davis detects
+on its own, need a routing rule), description, owning team, escalation policy (empty = the team's default) and default
+priority.
 
 ## Integrations
 
