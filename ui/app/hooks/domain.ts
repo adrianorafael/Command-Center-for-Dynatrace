@@ -14,6 +14,8 @@ export { effectiveIncident } from "../domain/incidents/actions";
 export { onCallAt, onCallUids, layerOnCallAt } from "../domain/schedule/resolve";
 export type { OnCall } from "../domain/schedule/resolve";
 export { scheduleTimeline, layerTimeline, overrideTimeline, onCallNowAndNext, onCallHoursByUser } from "../domain/schedule/timeline";
+export { firstHandoff } from "../domain/schedule/resolve";
+export { startOfLocalDay, weekdayInZone } from "../domain/time/tz";
 export type { ShiftSegment } from "../domain/schedule/timeline";
 export { routeAlert, ruleMatches, evaluateCondition, fieldValues, RULE_FIELDS } from "../domain/routing/match";
 export type { RouteDecision } from "../domain/routing/match";

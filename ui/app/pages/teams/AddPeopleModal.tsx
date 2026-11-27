@@ -26,8 +26,8 @@ export const ROLE_CHOICES: { role: TeamRole; label: string; help: string }[] = [
  * "Add people" (team detail): search tenant users by name or email, tick several, pick one role,
  * add them in one save. Calls onAdded with the uids that were added.
  */
-export const AddPeopleModal = ({ team, show, onClose, onAdded }: { team: Team; show: boolean; onClose: () => void; onAdded: (uids: string[]) => void }) => {
-  const { mutate, rememberUsers, setPaused } = useAppData();
+export const AddPeopleModal = ({ team, show, onClose, onAdded }: { team: Team; show: boolean; onClose: () => void; onAdded?: (uids: string[]) => void }) => {
+  const { mutate, rememberUsers, setPaused, currentUser, users } = useAppData();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<DirectoryUser[]>([]);
   const [picked, setPicked] = useState<Map<string, DirectoryUser>>(new Map());
@@ -94,13 +94,16 @@ export const AddPeopleModal = ({ team, show, onClose, onAdded }: { team: Team; s
     mutate((s) => s.saveTeam(nextRev({ ...team, members: [...team.members, ...added.map((uid) => ({ uid, role }))] })), `${n} ${n === 1 ? "person" : "people"} added`)
       .then(() => {
         onClose();
-        onAdded(added);
+        onAdded?.(added);
       })
       .catch(() => undefined)
       .finally(() => setBusy(false));
   };
 
-  const hint = q.trim().length < MIN_CHARS ? "Results appear after 3 letters." : loading ? "Searching…" : results.length ? `${results.length} found` : "No users found. Try the email address.";
+  const searching = q.trim().length >= MIN_CHARS;
+  // Before a search, offer the signed-in person: the quickest way to get a first responder into a team.
+  const me: DirectoryUser = users.get(currentUser.uid) ?? currentUser;
+  const listed = searching ? results : memberIds.has(me.uid) ? [] : [me];
 
   return (
     <Modal
@@ -121,7 +124,7 @@ export const AddPeopleModal = ({ team, show, onClose, onAdded }: { team: Team; s
         <FormField>
           <Label>Find people</Label>
           <TextInput value={q} onChange={setQ} placeholder="Type a name or email (at least 3 letters)" aria-label="Search tenant users" />
-          {error ? <FieldError>{error}</FieldError> : <FieldHint>{hint}</FieldHint>}
+          {error ? <FieldError>{error}</FieldError> : searching && !loading && results.length > 0 ? <FieldHint>{`${results.length} found`}</FieldHint> : null}
         </FormField>
         <Surface padding={8} style={{ maxHeight: 280, overflowY: "auto", minHeight: 96 }}>
           {loading && (
@@ -129,15 +132,20 @@ export const AddPeopleModal = ({ team, show, onClose, onAdded }: { team: Team; s
               <ProgressCircle size="small" aria-label="Searching users" />
             </Flex>
           )}
-          {!loading && results.length === 0 && (
+          {!loading && searching && results.length === 0 && !error && (
             <Flex padding={16} justifyContent="center">
               <Text style={{ color: Colors.Text.Neutral.Subdued }}>
-                {q.trim().length < MIN_CHARS ? "Search for Dynatrace users of this environment." : "No matching users."}
+                No users found. Only people who have signed in to Dynatrace at least once can be found. Try the email address.
               </Text>
             </Flex>
           )}
+          {!loading && !searching && listed.length === 0 && (
+            <Flex padding={16} justifyContent="center">
+              <Text style={{ color: Colors.Text.Neutral.Subdued }}>Type at least 3 letters to search the Dynatrace users of this environment.</Text>
+            </Flex>
+          )}
           {!loading &&
-            results.map((u) => {
+            listed.map((u) => {
               const already = memberIds.has(u.uid);
               return (
                 <Flex key={u.uid} alignItems="center" gap={12} padding={8}>
@@ -148,7 +156,7 @@ export const AddPeopleModal = ({ team, show, onClose, onAdded }: { team: Team; s
                     onChange={(on) => toggle(u, on)}
                   />
                   <Avatar size="small" abbreviation={initials(u.name)}>
-                    <Avatar.Label>{u.name}</Avatar.Label>
+                    <Avatar.Label>{u.uid === currentUser.uid && !searching && !/^you\b/i.test(u.name) ? `${u.name} (you)` : u.name}</Avatar.Label>
                     {u.email && <Avatar.Subtitle>{u.email}</Avatar.Subtitle>}
                   </Avatar>
                   {already && (

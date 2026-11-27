@@ -30,7 +30,7 @@ export const PolicyView = ({ policy }: { policy: EscalationPolicy }) => (
             <TargetView key={j} target={t} />
           ))}
         </Flex>
-        <Text textStyle="small">{s.channels?.length ? s.channels.map((c) => CHANNEL_LABEL[c]).join(", ") : "Notification rules"}</Text>
+        {s.channels?.length ? <Text textStyle="small">only {s.channels.map((c) => CHANNEL_LABEL[c]).join(", ")}</Text> : null}
       </Flex>
     ))}
     {policy.repeat > 0 && (
@@ -56,8 +56,22 @@ export const PolicySimulation = ({ policy }: { policy: EscalationPolicy }) => {
     }));
   }, [policy, data, now]);
   if (!policy.steps.length) return <Text>Add a step to see who would be paged.</Text>;
+  // People the policy would page who cannot be reached yet (no contact method).
+  const unreachable = [...new Set(rows.flatMap((r) => r.who.map((w) => w.uid)))].filter(
+    (uid) => (data?.contacts.find((c) => c.uid === uid)?.methods.length ?? 0) === 0,
+  );
   return (
     <Flex flexDirection="column" gap={12}>
+      {unreachable.length > 0 && (
+        <Container color="warning" padding={8}>
+          <Flex gap={8} alignItems="center">
+            <WarningIcon />
+            <Text>
+              No contact method yet: {unreachable.map(userName).join(", ")}. Add one in the team, or they can't be reached.
+            </Text>
+          </Flex>
+        </Container>
+      )}
       {rows.map(({ f, who }) => (
         <Flex key={f.ordinal} flexDirection="column" gap={4}>
           <Flex gap={12} alignItems="center">
@@ -67,9 +81,11 @@ export const PolicySimulation = ({ policy }: { policy: EscalationPolicy }) => {
             <Text textStyle="base-emphasized">
               {f.pass > 0 ? `Repeat ${f.pass} · ` : ""}Step {f.stepIndex + 1}
             </Text>
-            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
-              {f.step.channels?.length ? f.step.channels.map((c) => CHANNEL_LABEL[c]).join(" + ") : "Notification rules"}
-            </Text>
+            {f.step.channels?.length ? (
+              <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+                only {f.step.channels.map((c) => CHANNEL_LABEL[c]).join(" + ")}
+              </Text>
+            ) : null}
           </Flex>
           {who.length ? (
             <Flex gap={8} alignItems="center" style={{ paddingLeft: 60 }}>
@@ -90,6 +106,11 @@ export const PolicySimulation = ({ policy }: { policy: EscalationPolicy }) => {
           )}
         </Flex>
       ))}
+      {policy.steps.length === 1 && policy.repeat === 0 && (
+        <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+          If nobody acknowledges, nothing else happens. Add a step or turn on Repeat to keep escalating.
+        </Text>
+      )}
     </Flex>
   );
 };

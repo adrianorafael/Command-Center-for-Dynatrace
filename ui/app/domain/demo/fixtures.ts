@@ -101,7 +101,8 @@ function demoSettings(): Settings {
   s.defaults.teamId = "noc-core";
   s.defaults.policyId = "pol-noc";
   s.ui.timeZone = "America/Sao_Paulo";
-  const vault: Record<string, number> = { "twilio-sms": 1, "twilio-voice": 2, "twilio-whatsapp": 3, ifttt: 4, slack: 5, teams: 6 };
+  // Every channel the demo people use has its provider on, so the demo teams show as ready to page.
+  const vault: Record<string, number> = { "twilio-sms": 1, "twilio-voice": 2, "twilio-whatsapp": 3, ifttt: 4, slack: 5, teams: 6, telegram: 7 };
   s.providers = s.providers.map((p) => {
     const v = vault[p.id];
     if (v === undefined) return p;

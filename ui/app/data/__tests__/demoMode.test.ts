@@ -34,3 +34,18 @@ describe("#19 demo mode detection", () => {
     expect(isDemo()).toBe(true);
   });
 });
+
+describe("?demo=empty (offline preview): first-time setup from nothing", () => {
+  it("starts without teams, schedules or incidents, but only without the platform runtime", async () => {
+    const { getStore, resetAdaptersForTests } = await import("../demoMode");
+    env.id = "dt.missing.environment.id";
+    browser("?demo=empty");
+    resetAdaptersForTests();
+    expect(await getStore().listTeams()).toEqual([]);
+    expect((await getStore().getSettings()).defaults.teamId).toBeUndefined();
+    browser("?demo=1");
+    resetAdaptersForTests();
+    expect((await getStore().listTeams()).length).toBeGreaterThan(0);
+    resetAdaptersForTests();
+  });
+});

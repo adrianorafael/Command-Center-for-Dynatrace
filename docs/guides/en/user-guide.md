@@ -57,7 +57,7 @@ not shown either.
 blue and **P5** grey. Meanings: P1 critical (major outage or customer impact), P2 high (a service is degraded), P3
 moderate (needs attention soon), P4 low (can wait for business hours), P5 informational. Priority does not decide
 *whether* someone is paged: the escalation policy does, and a routing rule can suppress. Priority selects people's
-notification rules ("for priority up to P2…") and the quiet-hours behaviour.
+notification rules ("for priorities P1–P2…") and the quiet-hours behaviour.
 
 **Notification (delivery) status**
 
@@ -180,18 +180,27 @@ A war room is a meeting link plus the incidents it handles and its notebooks.
 
 | Tab | Content |
 | --- | --- |
-| Now | One card per team: who is on call until when, their contact methods (greyed out when not configured), who is next, and each layer. *No one is on call* comes with **Add override**. Below: *Upcoming shifts* (Gantt: shifts in green, overrides in a separate colour, gaps in amber, a *Now* marker). Filters: Team, Range (24 h, 7 days, 14 days). |
-| Schedules | Name, team, time zone, layers, on call now, next handoff, coverage for the next 7 days. Edit, Duplicate, Delete. |
+| Now | One card per team: who is on call until when, their contact methods (greyed out when not configured), who is next, and each layer. *No one is on call* comes with **Add override**. While there is no team yet, the page says *Start with a team*. Below: *Upcoming shifts* (Gantt: shifts in green, overrides in a separate colour, gaps in amber, a *Now* marker). Filters: Team, Range (24 h, 7 days, 14 days). |
+| Schedules | Name, team, time zone, layers, on call now, next handoff, coverage for the next 7 days (in %). Edit, Duplicate, Delete. |
 | Overrides | Who covers, for whom, schedule, from, to, reason. Upcoming or past. Remove. |
 
 **Schedule editor** ![Schedule editor](../../screenshots/schedule-editor.png)
 
+A new schedule is ready to save: it is named after its team, the team's people who get paged are already in the
+rotation, and it starts today, so someone is on call at once.
+
 - **Schedule**: name, team, time zone (handoffs and restrictions follow it, including daylight saving time).
-- **Layers**: each layer has a name, a rotation (*Daily*, *Weekly*, or *Custom* with a shift length of 1–672 hours),
-  a start, a handoff time (HH:mm), optionally *Only during specific hours* (weekdays and from/to), and participants in
-  rotation order (drag to reorder). **Later layers take precedence over earlier ones**, and overrides beat every
-  layer.
-- **Coverage preview** (1, 2 or 4 weeks): *Full coverage* or *N gaps, … uncovered*, with a *Final schedule* row.
+- **Rotation**: *People in the rotation* come first, in the order they take turns (drag to reorder). *Add from the
+  team* adds a team member with one click; *Add someone else* searches all users. Then the *Rotation type* (*Daily*,
+  *Weekly*, or *Custom* with a shift length of 1–672 hours), the *Handoff time* (HH:mm) and when the *Rotation
+  starts*. A sentence under these fields says when people swap, for example *People swap every Fri at 09:00
+  (America/Sao_Paulo)*; the weekday is that of the first handoff in the schedule's time zone. *Only during specific
+  hours* limits the rotation to weekdays and hours.
+- **Add layer** (optional) adds a second rotation for certain hours, for example nights or weekends. With several
+  layers, each one has a name, **the layer further down the list is on call where their hours overlap**, and
+  overrides beat every layer.
+- **Coverage preview** (1, 2 or 4 weeks): *Full coverage* or *N gaps, … uncovered*, the Gantt with a *Final schedule*
+  row, and **Who is on call, from when**: the next handoffs as a list, in the schedule's time zone.
 
 **New override**: schedule, who covers, from, to (default: the next full hour, for 8 hours), reason. A preview sentence
 says exactly what will happen.
@@ -202,11 +211,19 @@ says exactly what will happen.
 
 - **Teams list**: name, members, on call now, escalation policy, services, open incidents per priority. A team that is
   still used by policies, rules or services cannot be deleted until those references are removed.
+- **New team**: a name and an optional description. **Default team** is ticked while no default team exists: the
+  default team receives every alert that no routing rule sends elsewhere. Problems that Davis detects on its own carry no team, so without a
+  default team or routing rules they page nobody. **Edit team** also sets the team's default escalation policy.
 - **Team detail tabs**: *Members*, *On-call*, *Escalation*, *Quiet hours*, *Services*.
-- **Ready to page?** A checklist of 5 steps with a fix button each: people who get paged, contact methods, an on-call
-  schedule, an escalation policy, and alerts routed to the team.
-- **Add people**: type at least 3 letters of a name or an email. Results come from Dynatrace IAM: active users of the
-  account that owns the environment. Roles:
+- **Ready to page?** A checklist of 5 steps, in order: people who get paged, contact methods, an on-call schedule, an
+  escalation policy, and alerts routed to the team. The next step has the highlighted button; steps that need people
+  first show none. Step 5 is done when the team is the default team or an enabled routing rule sends alerts to it. A
+  service alone is not enough: only events that name it in `cc.service` arrive. Its button is *Receive all unrouted
+  alerts* while no default team exists, otherwise *Add routing rule*. With all five steps done, the checklist still
+  warns when a channel the team uses has no provider switched on, or when the engine has never run.
+- **Add people**: your own user is offered first. For others, type at least 3 letters of a name or an email. Results
+  come from Dynatrace IAM: active users of the account that owns the environment (people who never signed in are not
+  found). Roles:
 
 | Role | Paged? | Meant for |
 | --- | --- | --- |
@@ -217,15 +234,17 @@ says exactly what will happen.
 Roles are guidance: App State has no per-key permissions, so every user of the app can technically change
 configuration.
 
-- **Contact methods** (person → *Edit contact methods*): channel, address and label, plus **Send test** per method.
-  Address formats: phone in E.164 with the country code (SMS, voice, WhatsApp); Telegram chat ID; any label for
-  Slack, Teams and IFTTT (their webhook or applet decides the destination, and messages show the person's name); a
-  routing key for the webhook or custom workflow. Phone numbers and chat IDs are
-  readable by every user of the app. They are masked in lists. Email is not a separate channel: send email through a
-  webhook gateway.
-- **When I'm paged** (notification rules): *method*, *after N minutes* (counted from when the step fires) and *for
-  priority up to Px*. A person with methods but no rules gets every method immediately. A step with forced channels
-  uses the first method of each channel, with no delay.
+- **Contact methods** (person → *Add* or *Edit*): each row has a channel, the address and an optional label, plus **Send
+  test**. For a person without contact methods, the sheet opens with a row ready to fill in. The address field is named
+  after the channel: *Phone number* in E.164 with the country code (SMS, voice, WhatsApp); *Chat ID* (Telegram); *Name
+  in the message* (Slack, Teams and IFTTT: their webhook or applet decides the destination); *Routing key* (webhook or
+  custom workflow). Rows left empty are ignored. From the checklist, **Save and next** moves on to the next person
+  without a contact method. Phone numbers and chat IDs are readable by every user of the app. They are masked in lists.
+  Email is not a separate channel: send email through a webhook gateway.
+- **Notification rules (optional)**: without rules, every contact method is used at once. A rule says: *use* this
+  method *after N minutes* (counted from when the step fires) *for priorities* P1 to Px, or all. Once a person has
+  rules, only incidents covered by a rule notify them; the sheet says which priorities are left out. A step with
+  forced channels uses the first method of each channel, with no delay.
 - **Quiet hours**: windows (days, from/to, time zone; a window may cross midnight) during which incidents **less
   urgent** than a priority are either **held** (no paging until the window ends) or paged with **low-urgency** channels
   only (Slack, Teams, Telegram, IFTTT, webhook). More urgent incidents always page. When windows overlap, *hold* wins.
@@ -234,16 +253,21 @@ configuration.
 
 ![Escalations](../../screenshots/escalations.png) ![Policy editor](../../screenshots/policy-editor.png)
 
-- **List**: name, team, steps (`N · summary`), repeat, used by, last triggered. Deleting a policy makes its incidents
+- **List**: name, team, steps (who is notified at each step and the wait in between, for example *on-call of
+  Payments on-call → 10 min → team Payments*), repeat, used by, last triggered. Deleting a policy makes its incidents
   fall back to their team's default policy, or else the default policy from Settings.
-- **Editor**: steps run in order until someone acknowledges. Each step waits a number of minutes (0–1440) **counted
-  from the previous step**, then notifies its targets: *On-call of schedule*, *Team (all responders)*, which means
-  every non-observer, including admins, or a *User*. *Channels* are optional: leave them empty to use each person's
-  notification rules (recommended). Channels without a configured provider are disabled.
+- **Editor**: a new policy is ready to save. It is named after its team; step 1 notifies the on-call person of the
+  team's schedule and step 2 the whole team after 10 minutes (without a schedule: the whole team at once). Steps run
+  in order until someone acknowledges. Each step waits a number of minutes (0–1440) **counted from the previous
+  step**, then notifies its targets: *On-call of schedule*, *Team (all responders)*, which means every non-observer,
+  including admins, or a *User*. **Add step** adds a step that notifies the whole team after 5 minutes. Each person
+  is notified through their own contact methods; **Force channels** opens the *Channels* field to override that for
+  one step. Channels without a provider switched on are disabled.
 - **Repeat**: *Repeat policy if nobody acknowledges* 1–5 times. Each repeat starts after the last step's delay (5
   minutes if that delay is 0). When all repeats are done the policy is **exhausted** and the incident stays triggered.
-- **Simulation** (always visible in the editor): *If an incident is triggered now* lists, minute by minute, who would be paged on which channels, and
-  warns when a step pages no one (a schedule gap or an empty team).
+- **Simulation** (always visible in the editor): *If an incident is triggered now* lists, minute by minute, who would
+  be paged. It warns when a step pages no one (a schedule gap or an empty team), names the people who have no contact
+  method yet, and says so when nothing follows the only step.
 
 Timing precision equals the engine interval: a step fires on the first engine run after it is due. On the trial
 environment, with a 1-minute interval, every step of a four-step test policy fired within one minute of being due.
@@ -255,17 +279,19 @@ environment, with a 1-minute interval, every step of a four-step test policy fir
 | Tab | Content |
 | --- | --- |
 | Services | Service, team, escalation policy (or *Team default*), rules, open incidents, noise last 7 days |
-| Routing rules (N) | Ordered rules (drag to reorder). **The first enabled rule that matches wins.** A new rule is placed above the first catch-all rule (a rule without conditions). Columns: #, name, conditions, actions, enabled, matched in 24 h. The last, fixed row is the default route. |
+| Routing rules (N) | Ordered rules (drag to reorder). **The first enabled rule that matches wins.** A new rule is placed above the first catch-all rule (a rule without conditions). Columns: #, name, conditions, actions, matched in 24 h, and a switch that turns the rule on or off. The last, fixed row is the default route; it warns when there is no default team. On this tab the page button is **New rule**. |
 | Test a rule | Load a recent alert or an example, edit the JSON, **Run test**: shows the matched rule (or the closest one), each condition ✔/✖, and the resulting service, team, policy and priority with its source |
 | Priority mapping | Priority by Davis category and by severity, plus the fallback |
 
 **Rule editor**: name, enabled, *Match all / any*, conditions (field, operator, value, *Not*), and **Then**: service,
 team, escalation policy, priority (or *Use priority mapping*), add tags, and *Suppress (create the incident, page
-nobody)*. Fields, operators and the
+nobody)*. Opened from a team's checklist (*Add routing rule*), the rule is already named and points to that team, so
+only the condition is left. Fields, operators and the
 routing order are listed in the [alerts reference](alerts-reference.md#how-an-alert-becomes-an-incident).
 
-**Service**: name (events reference it by name or ID in `cc.service`), description, owning team, escalation policy
-(empty = the team's default) and default priority.
+**Service**: name (events reference it by name or ID in `cc.service`; other alerts, such as problems that Davis detects
+on its own, need a routing rule), description, owning team, escalation policy (empty = the team's default) and default
+priority.
 
 ## Integrations
 
@@ -302,6 +328,7 @@ zone.
 
 ## Help
 
-**Get started** ticks itself from your data: create a team, a schedule, an escalation policy, configure a provider,
-install the engine workflow (a heartbeat exists), and send a test event (an incident exists). Then come concepts,
+**Get started** has five steps and ticks itself from your data: create a team, finish the team's *Ready to page?*
+checklist (ticked when one team has all five steps done), switch on a provider, install the engine workflow (a
+heartbeat exists), and send a test event (an incident exists). Then come concepts,
 Console workflow, sending events, notifications, keyboard shortcuts, troubleshooting and privacy.

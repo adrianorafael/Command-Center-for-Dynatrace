@@ -149,15 +149,24 @@ Then use **Send test** with one address. Details: [integrations](integrations.md
 
 ## Step 7 — People, schedules, policies and routing
 
-1. **Teams** → create a team → **Add people** (type at least 3 characters of a name or email) → set roles.
-2. For each person: **Contact methods** (phone in E.164, Telegram chat ID, a label for Slack/Teams/IFTTT, a routing key
-   for the webhook) and **notification rules**, for example "P1–P2: voice now, SMS after 5 minutes".
-3. **On-call → Schedules** → layers, rotation, handoff time and time zone. The coverage preview shows gaps.
-4. **Escalations** → a policy, for example: step 1 the schedule's on-call person after 0 minutes, step 2 the whole team
-   after 10 minutes, repeat once. The **Simulation** section shows who is notified when.
-5. **Services** → a service with an owning team, a policy and a default priority. Then add **routing rules** and
-   **Test a rule**.
-6. **Settings → Routing defaults** → the team and policy used when nothing else decides.
+The team page guides you: its **Ready to page?** checklist always highlights the next step.
+
+1. **Teams → New team**: type a name and leave **Default team** ticked. The team then receives every alert that no
+   routing rule sends elsewhere. This matters because problems that Davis detects on its own carry no team.
+2. **Add people**: your own user is offered first; for others, type at least 3 characters of a name or email.
+3. **Add contact methods**: a row is ready for each person (phone in E.164, Telegram chat ID, a name for
+   Slack/Teams/IFTTT, a routing key for the webhook). **Save and next** moves on to the next person. Notification
+   rules are optional, for example "P1–P2: voice now, SMS after 5 minutes".
+4. **Create schedule**: it opens named after the team, with its people in the rotation. Adjust the rotation type and
+   the handoff time if needed, then save. The coverage preview shows gaps and the next handoffs.
+5. **Create policy**: it opens with the on-call person first and the whole team after 10 minutes. Save it. The
+   **Simulation** section shows who is notified when.
+6. Optional: **Services** and **routing rules** send certain alerts to other teams; **Test a rule** checks them.
+   **Settings → Routing defaults** shows the default team and policy.
+
+Measured in the offline preview, from an empty app: 21 clicks and typed fields for a team of three. A problem that
+Davis detects on its own is then routed to the team and its escalation policy; check it in your environment with
+**Services → Test a rule**.
 
 Details for every screen: [user guide](user-guide.md).
 

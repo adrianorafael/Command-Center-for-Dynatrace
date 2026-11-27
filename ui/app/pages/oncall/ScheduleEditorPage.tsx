@@ -12,8 +12,6 @@ import {
   FormField,
   Label,
   NumberInputV2 as NumberInput,
-  Radio,
-  RadioGroup,
   Select,
   Switch,
   TextInput,
@@ -24,7 +22,7 @@ import { Heading, Text } from "@dynatrace/strato-components/typography";
 import { PlusIcon, XmarkIcon } from "@dynatrace/strato-icons";
 import { SCHEMA_VERSION, type RotationLayer, type Schedule } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
-import { newId, validateSchedule } from "../../hooks/domain";
+import { firstHandoff, newId, scheduleTimeline, startOfLocalDay, validateSchedule, weekdayInZone } from "../../hooks/domain";
 import { LIST_TABLE_VARIANT, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { UserPicker } from "../../components/UserPicker";
@@ -33,29 +31,43 @@ import { Health } from "../../components/StatusIndicator";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { IconButton } from "../../components/IconButton";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
-import { browserTimeZone, formatDuration, initials, msToIso, pickerToMs, plural, timeZones } from "../../components/format";
+import { browserTimeZone, formatDayDateTime, formatDuration, initials, msToIso, pickerToMs, plural, timeZones } from "../../components/format";
 import { ContactIcons } from "./OnCallPage";
 
 const DAY = 86_400_000;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function newLayer(index: number, now: number): RotationLayer {
-  const start = new Date(now);
-  start.setHours(9, 0, 0, 0);
+/**
+ * A new layer starts at the beginning of today (schedule zone), so somebody is on call as soon as it is saved,
+ * and hands off at 09:00.
+ */
+function newLayer(index: number, now: number, timeZone: string, participants: string[] = []): RotationLayer {
   return {
     id: newId(`layer${index + 1}`),
     name: index === 0 ? "Primary" : index === 1 ? "Secondary" : `Layer ${index + 1}`,
-    participants: [],
+    participants,
     rotation: { type: "weekly" },
-    startsAt: start.getTime(),
+    startsAt: startOfLocalDay(now, timeZone),
     handoffTime: "09:00",
   };
 }
 
-function rotationSummary(l: RotationLayer): string {
+/** Weekday of the weekly handoff, from the domain's first handoff in the schedule zone. */
+function handoffWeekday(l: RotationLayer, timeZone: string): string {
+  return WEEKDAYS[weekdayInZone(firstHandoff(l, timeZone), timeZone)] ?? "";
+}
+
+function rotationSummary(l: RotationLayer, timeZone: string): string {
   const kind = l.rotation.type === "custom" ? `Every ${l.rotation.lengthHours ?? "?"} h` : l.rotation.type === "daily" ? "Daily" : "Weekly";
-  const day = l.rotation.type === "weekly" ? `${WEEKDAYS[new Date(l.startsAt).getDay()]} ` : "";
+  const day = l.rotation.type === "weekly" ? `${handoffWeekday(l, timeZone)} ` : "";
   return `${kind} · ${plural(l.participants.length, "person", "people")} · handoff ${day}${l.handoffTime}`;
+}
+
+/** One sentence that says when people swap, in the schedule's time zone. */
+function handoffSentence(l: RotationLayer, timeZone: string): string {
+  if (l.rotation.type === "weekly") return `People swap every ${handoffWeekday(l, timeZone)} at ${l.handoffTime} (${timeZone}).`;
+  if (l.rotation.type === "daily") return `People swap every day at ${l.handoffTime} (${timeZone}).`;
+  return `People swap every ${l.rotation.lengthHours ?? 12} hours, counted from ${l.handoffTime} (${timeZone}).`;
 }
 
 /** Friendly messages for validator paths (patterns/error-messages). */
@@ -77,22 +89,34 @@ function describeErrors(s: Schedule, errs: { path: string; message: string }[]):
 
 const LayerEditor = ({
   layer,
-  index,
+  timeZone,
+  teamUids,
+  showLayerControls,
   onChange,
   onRemove,
   onDuplicate,
 }: {
   layer: RotationLayer;
-  index: number;
+  /** The schedule's time zone: handoffs are computed in it. */
+  timeZone: string;
+  /** People of the schedule's team who get paged: offered for one-click adding. */
+  teamUids: string[];
+  /** Layer name, duplicate and delete only matter when the schedule has several layers. */
+  showLayerControls: boolean;
   onChange: (l: RotationLayer) => void;
   onRemove: () => void;
   onDuplicate: () => void;
 }) => {
   const { userName } = useAppData();
-  const [pick, setPick] = useState<string | null>(null);
   const restricted = !!layer.restrictions?.length;
   const r = layer.restrictions?.[0] ?? { days: [1, 2, 3, 4, 5], from: "09:00", to: "17:00" };
   const rows = layer.participants.map((uid, i) => ({ uid, pos: i + 1 }));
+  const add = (uid: string) => {
+    if (layer.participants.includes(uid)) return;
+    markCreated("participant", uid);
+    onChange({ ...layer, participants: [...layer.participants, uid] });
+  };
+  const candidates = teamUids.filter((u) => !layer.participants.includes(u));
   const columns: DataTableColumnDef<{ uid: string; pos: number }>[] = [
     { id: "pos", header: "#", accessor: "pos", width: 48 },
     {
@@ -110,25 +134,76 @@ const LayerEditor = ({
   ];
   return (
     <Flex flexDirection="column" gap={16}>
-      <FormField required>
-        <Label>Layer name</Label>
-        <TextInput value={layer.name} onChange={(v) => onChange({ ...layer, name: v })} />
-      </FormField>
+      {showLayerControls && (
+        <FormField required>
+          <Label>Layer name</Label>
+          <TextInput value={layer.name} onChange={(v) => onChange({ ...layer, name: v })} />
+        </FormField>
+      )}
+      <Flex flexDirection="column" gap={8}>
+        <Text textStyle="base-emphasized">People in the rotation</Text>
+        {rows.length ? (
+          <>
+            <DataTable
+              data={rows}
+              columns={withCreatedMarker(columns, "participant", (x) => x.uid)}
+              rowId={(x) => x.uid}
+              fullWidth
+              variant={LIST_TABLE_VARIANT}
+              rowOrdering={{ enableDragAndDrop: true }}
+              rowOrder={layer.participants}
+              onRowOrderChange={(order) => onChange({ ...layer, participants: order })}
+            >
+              <DataTable.RowActions>
+                {(row) => (
+                  <IconButton
+                    size="condensed"
+                    label="Remove"
+                    icon={<XmarkIcon />}
+                    onClick={() => onChange({ ...layer, participants: layer.participants.filter((u) => u !== (row as { uid: string }).uid) })}
+                  />
+                )}
+              </DataTable.RowActions>
+            </DataTable>
+            <FieldHint>{rows.length > 1 ? "They take turns in this order. Drag a row to change the order." : "Add a second person to make it a rotation."}</FieldHint>
+          </>
+        ) : (
+          <Text textStyle="small">Nobody yet. Add at least one person.</Text>
+        )}
+        {candidates.length > 0 && (
+          <Flex gap={4} alignItems="center" flexWrap="wrap">
+            <Text textStyle="small">Add from the team:</Text>
+            {candidates.map((uid) => (
+              <Button key={uid} size="condensed" onClick={() => add(uid)}>
+                <Button.Prefix>
+                  <PlusIcon />
+                </Button.Prefix>
+                {userName(uid)}
+              </Button>
+            ))}
+          </Flex>
+        )}
+        <FormField>
+          <Label>{teamUids.length ? "Add someone else" : "Add a person"}</Label>
+          {/* Selecting a person adds them at once; the key resets the picker for the next one. */}
+          <UserPicker key={layer.participants.length} value={null} onChange={(u) => u && add(u)} exclude={layer.participants} />
+        </FormField>
+      </Flex>
       <FormField required>
         <Label>Rotation type</Label>
-        <RadioGroup
+        <ToggleButtonGroup
           value={layer.rotation.type}
-          onChange={(v) =>
+          onChange={(v: string) =>
             onChange({
               ...layer,
               rotation: v === "custom" ? { type: "custom", lengthHours: layer.rotation.lengthHours ?? 12 } : { type: v as "daily" | "weekly" },
             })
           }
         >
-          <Radio value="daily">Daily</Radio>
-          <Radio value="weekly">Weekly</Radio>
-          <Radio value="custom">Custom</Radio>
-        </RadioGroup>
+          <ToggleButtonGroup.Item value="daily">Daily</ToggleButtonGroup.Item>
+          <ToggleButtonGroup.Item value="weekly">Weekly</ToggleButtonGroup.Item>
+          <ToggleButtonGroup.Item value="custom">Custom</ToggleButtonGroup.Item>
+        </ToggleButtonGroup>
       </FormField>
       {layer.rotation.type === "custom" && (
         <FormField required>
@@ -141,25 +216,28 @@ const LayerEditor = ({
           />
         </FormField>
       )}
-      <Flex gap={16} flexWrap="wrap">
-        <FormField required>
-          <Label>Rotation starts</Label>
-          <DateTimePicker
-            type="datetime"
-            precision="minutes"
-            value={msToIso(layer.startsAt)}
-            onChange={(v) => {
-              const t = pickerToMs(v);
-              if (t) onChange({ ...layer, startsAt: t });
-            }}
-          />
-          <FieldHint>Weekly handoffs happen on this weekday ({WEEKDAYS[new Date(layer.startsAt).getDay()]}).</FieldHint>
-        </FormField>
-        <FormField required>
-          <Label>Handoff time</Label>
-          <TextInput value={layer.handoffTime} onChange={(v) => onChange({ ...layer, handoffTime: v })} placeholder="HH:mm" />
-          <FieldHint>24-hour time in the schedule time zone</FieldHint>
-        </FormField>
+      <Flex flexDirection="column" gap={4}>
+        <Flex gap={16} flexWrap="wrap">
+          <FormField required>
+            <Label>Handoff time</Label>
+            <TextInput value={layer.handoffTime} onChange={(v) => onChange({ ...layer, handoffTime: v })} placeholder="HH:mm" />
+          </FormField>
+          <FormField required>
+            <Label>Rotation starts</Label>
+            <DateTimePicker
+              type="datetime"
+              precision="minutes"
+              value={msToIso(layer.startsAt)}
+              onChange={(v) => {
+                const t = pickerToMs(v);
+                if (t) onChange({ ...layer, startsAt: t });
+              }}
+            />
+          </FormField>
+        </Flex>
+        <FieldHint>
+          {handoffSentence(layer, timeZone)} {layer.participants[0] ? `${userName(layer.participants[0])} takes the first shift.` : ""}
+        </FieldHint>
       </Flex>
       <Switch
         value={restricted}
@@ -195,65 +273,17 @@ const LayerEditor = ({
               <TextInput value={r.to} onChange={(v) => onChange({ ...layer, restrictions: [{ ...r, to: v }] })} placeholder="HH:mm" />
             </FormField>
           </Flex>
+          <FieldHint>Outside these hours this layer covers nobody: add another layer for the remaining hours, or accept the gap.</FieldHint>
         </Flex>
       )}
-      <Flex flexDirection="column" gap={8}>
-        <Text textStyle="base-emphasized">Participants (in rotation order)</Text>
-        <Flex gap={8} alignItems="flex-end">
-          <Flex flexGrow={1} flexDirection="column">
-            <FormField>
-              <Label>Add member</Label>
-              <UserPicker value={pick} onChange={(u) => setPick(u)} exclude={layer.participants} />
-            </FormField>
-          </Flex>
-          <Button
-            disabled={!pick}
-            onClick={() => {
-              if (!pick) return;
-              markCreated("participant", pick);
-              onChange({ ...layer, participants: [...layer.participants, pick] });
-              setPick(null);
-            }}
-          >
-            <Button.Prefix>
-              <PlusIcon />
-            </Button.Prefix>
-            Add member
+      {showLayerControls && (
+        <Flex gap={8} flexWrap="wrap">
+          <Button onClick={onDuplicate}>Duplicate layer</Button>
+          <Button color="critical" onClick={onRemove}>
+            Delete layer
           </Button>
         </Flex>
-        {rows.length ? (
-          <DataTable
-            data={rows}
-            columns={withCreatedMarker(columns, "participant", (x) => x.uid)}
-            rowId={(x) => x.uid}
-            fullWidth
-            variant={LIST_TABLE_VARIANT}
-            rowOrdering={{ enableDragAndDrop: true }}
-            rowOrder={layer.participants}
-            onRowOrderChange={(order) => onChange({ ...layer, participants: order })}
-          >
-            <DataTable.RowActions>
-              {(row) => (
-                <IconButton
-                  size="condensed"
-                  label="Remove"
-                  icon={<XmarkIcon />}
-                  onClick={() => onChange({ ...layer, participants: layer.participants.filter((u) => u !== (row as { uid: string }).uid) })}
-                />
-              )}
-            </DataTable.RowActions>
-          </DataTable>
-        ) : (
-          <Text textStyle="small">No members yet. Search tenant users above to add the first one.</Text>
-        )}
-      </Flex>
-      <Flex gap={8}>
-        <Button onClick={onDuplicate}>Duplicate layer</Button>
-        <Button color="critical" onClick={onRemove}>
-          Delete layer
-        </Button>
-        <Text textStyle="small">Layer {index + 1}: later layers take precedence over earlier ones.</Text>
-      </Flex>
+      )}
     </Flex>
   );
 };
@@ -268,7 +298,7 @@ export const ScheduleEditorPage = () => {
     return r && r.startsWith("/") && !r.startsWith("//") ? r : undefined;
   })();
   const navigate = useNavigate();
-  const { data, isLoading, error, refresh, now, mutate } = useAppData();
+  const { data, isLoading, error, refresh, now, mutate, userName } = useAppData();
   const existing = data?.schedules.find((s) => s.id === id);
   const isNew = id === "new";
   const [draft, setDraft] = useState<Schedule>();
@@ -281,23 +311,34 @@ export const ScheduleEditorPage = () => {
   const [expanded, setExpanded] = useState<(string | number)[]>([]);
   const [preview, setPreview] = useState<Schedule>();
 
+  /** People of a team who get paged (responders and team admins), in team order. */
+  const pagedOf = (teamId: string | undefined): string[] =>
+    (data?.teams.find((t) => t.id === teamId)?.members ?? []).filter((m) => m.role !== "observer").map((m) => m.uid);
+  const defaultName = (teamId: string | undefined): string => {
+    const team = data?.teams.find((t) => t.id === teamId);
+    return team ? `${team.name} on-call` : "";
+  };
+
   useEffect(() => {
     if (draft || !data) return;
     const tz = data.settings.ui.timeZone ?? browserTimeZone();
+    const teamId = presetTeam ?? data.teams[0]?.id;
+    // A new schedule starts ready to save: named after its team, with the team's paged people in the rotation.
     const base: Schedule =
       existing ??
       ({
         schemaVersion: SCHEMA_VERSION,
         id: newId("schedule"),
-        name: "",
-        teamId: presetTeam ?? data.teams[0]?.id,
+        name: defaultName(teamId),
+        teamId,
         timeZone: tz,
         rev: 0,
-        layers: [newLayer(0, now)],
+        layers: [newLayer(0, now, tz, pagedOf(teamId))],
         overrides: [],
       } satisfies Schedule);
     setDraft(base);
     setExpanded(base.layers.slice(0, 1).map((l) => l.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, existing, draft, now, presetTeam]);
 
   // Debounced coverage preview (300 ms).
@@ -357,6 +398,33 @@ export const ScheduleEditorPage = () => {
   };
   const gapHours = cov ? cov.gaps.reduce((a, g) => a + (g.to - g.from), 0) : 0;
   const hasMembers = draft.layers.some((l) => l.participants.length > 0);
+  const single = draft.layers.length === 1;
+  const teamUids = pagedOf(draft.teamId);
+  /** While a new schedule still has its suggested name and people, they follow the chosen team. */
+  const changeTeam = (teamId: string | undefined) => {
+    const first = draft.layers[0];
+    const untouchedPeople = isNew && single && !!first && JSON.stringify(first.participants) === JSON.stringify(pagedOf(draft.teamId));
+    const untouchedName = isNew && draft.name === defaultName(draft.teamId);
+    update({
+      ...draft,
+      teamId,
+      name: untouchedName ? defaultName(teamId) : draft.name,
+      layers: untouchedPeople && first ? [{ ...first, participants: pagedOf(teamId) }] : draft.layers,
+    });
+  };
+  // The next handoffs as text: who is on call from when, straight from the schedule logic.
+  const upcoming = preview ? scheduleTimeline(preview, from, to).slice(0, 8) : [];
+  const layerEditor = (l: RotationLayer, i: number) => (
+    <LayerEditor
+      layer={l}
+      timeZone={draft.timeZone}
+      teamUids={teamUids}
+      showLayerControls={!single}
+      onChange={(nl) => setLayer(i, nl)}
+      onRemove={() => setDeleteLayer(i)}
+      onDuplicate={() => update({ ...draft, layers: [...draft.layers, copyLayer(l)] })}
+    />
+  );
 
   return (
     <PageLayout.Content>
@@ -368,7 +436,7 @@ export const ScheduleEditorPage = () => {
             { label: draft.name || "New schedule" },
           ]}
           title={draft.name || "New schedule"}
-          subtitle="Layers rotate members; later layers and overrides take precedence"
+          subtitle="Who is on call, and when they hand over to the next person"
           action={
             <Flex gap={8}>
               <Button onClick={() => (dirty ? setConfirmDiscard(true) : navigate(returnTo ?? "/on-call?tab=schedules"))}>Cancel</Button>
@@ -393,11 +461,11 @@ export const ScheduleEditorPage = () => {
               <Flex flexDirection="column" gap={16}>
                 <FormField required>
                   <Label>Name</Label>
-                  <TextInput value={draft.name} onChange={(v) => update({ ...draft, name: v })} placeholder="For example: Payments primary" />
+                  <TextInput value={draft.name} onChange={(v) => update({ ...draft, name: v })} placeholder="For example: Payments on-call" />
                 </FormField>
                 <FormField required>
                   <Label>Team</Label>
-                  <Select value={draft.teamId ?? null} onChange={(v) => update({ ...draft, teamId: v ?? undefined })}>
+                  <Select value={draft.teamId ?? null} onChange={(v) => changeTeam(v ?? undefined)}>
                     <Select.Content>
                       {(data?.teams ?? []).map((t) => (
                         <Select.Option key={t.id} value={t.id}>
@@ -424,50 +492,47 @@ export const ScheduleEditorPage = () => {
               </Flex>
             </FieldSet>
             <Flex flexDirection="column" gap={8}>
-              <Heading level={4}>Layers</Heading>
-              <Accordion multiple showDividers expanded={expanded} onExpandChange={(v) => setExpanded(v)}>
-                {draft.layers.map((l, i) => (
-                  <Accordion.Section key={l.id} id={l.id}>
-                    <Accordion.SectionLabel>
-                      <Flex flexDirection="column" gap={0}>
-                        <CreatedMarker kind="layer" id={l.id} />
-                        <Text textStyle="base-emphasized">
-                          Layer {i + 1} · {l.name || "Unnamed"}
-                        </Text>
-                        <Text textStyle="small">{rotationSummary(l)}</Text>
-                      </Flex>
-                    </Accordion.SectionLabel>
-                    <Accordion.SectionContent>
-                      <LayerEditor
-                        layer={l}
-                        index={i}
-                        onChange={(nl) => setLayer(i, nl)}
-                        onRemove={() => setDeleteLayer(i)}
-                        onDuplicate={() =>
-                          update({
-                            ...draft,
-                            layers: [...draft.layers, copyLayer(l)],
-                          })
-                        }
-                      />
-                    </Accordion.SectionContent>
-                  </Accordion.Section>
-                ))}
-              </Accordion>
-              <Flex>
-                <Button
-                  onClick={() => {
-                    const l = newLayer(draft.layers.length, now);
-                    markCreated("layer", l.id);
-                    update({ ...draft, layers: [...draft.layers, l] });
-                    setExpanded((e) => [...e, l.id]);
-                  }}
-                >
-                  <Button.Prefix>
-                    <PlusIcon />
-                  </Button.Prefix>
-                  Add layer
-                </Button>
+              <Heading level={4}>{single ? "Rotation" : "Layers"}</Heading>
+              {single ? (
+                draft.layers.map((l, i) => <React.Fragment key={l.id}>{layerEditor(l, i)}</React.Fragment>)
+              ) : (
+                <>
+                  <FieldHint>Layers stack: where their hours overlap, the layer further down the list is the one on call.</FieldHint>
+                  <Accordion multiple showDividers expanded={expanded} onExpandChange={(v) => setExpanded(v)}>
+                    {draft.layers.map((l, i) => (
+                      <Accordion.Section key={l.id} id={l.id}>
+                        <Accordion.SectionLabel>
+                          <Flex flexDirection="column" gap={0}>
+                            <CreatedMarker kind="layer" id={l.id} />
+                            <Text textStyle="base-emphasized">
+                              Layer {i + 1} · {l.name || "Unnamed"}
+                            </Text>
+                            <Text textStyle="small">{rotationSummary(l, draft.timeZone)}</Text>
+                          </Flex>
+                        </Accordion.SectionLabel>
+                        <Accordion.SectionContent>{layerEditor(l, i)}</Accordion.SectionContent>
+                      </Accordion.Section>
+                    ))}
+                  </Accordion>
+                </>
+              )}
+              <Flex flexDirection="column" gap={4}>
+                <Flex>
+                  <Button
+                    onClick={() => {
+                      const l = newLayer(draft.layers.length, now, draft.timeZone);
+                      markCreated("layer", l.id);
+                      update({ ...draft, layers: [...draft.layers, l] });
+                      setExpanded((e) => [...e, l.id]);
+                    }}
+                  >
+                    <Button.Prefix>
+                      <PlusIcon />
+                    </Button.Prefix>
+                    Add layer
+                  </Button>
+                </Flex>
+                {single && <FieldHint>Optional: a second rotation for certain hours, for example nights or weekends.</FieldHint>}
               </Flex>
             </Flex>
           </Flex>
@@ -493,6 +558,18 @@ export const ScheduleEditorPage = () => {
                     </Health>
                   )}
                   {preview && <ShiftGantt schedules={[preview]} from={from} to={to} now={now} draft />}
+                  {upcoming.length > 0 && (
+                    <Flex flexDirection="column" gap={4}>
+                      <Text textStyle="base-emphasized">Who is on call, from when</Text>
+                      {upcoming.map((seg, i) => (
+                        <Text key={`${seg.from}-${seg.uid}`}>
+                          {i === 0 && seg.from <= now ? "Now" : formatDayDateTime(seg.from, draft.timeZone)} · {userName(seg.uid)}
+                          {seg.source === "override" ? " (override)" : ""}
+                        </Text>
+                      ))}
+                      <FieldHint>Times in {draft.timeZone}.</FieldHint>
+                    </Flex>
+                  )}
                 </>
               )}
             </Flex>

@@ -216,6 +216,7 @@ fetch dt.davis.events, from: now() - 72h
 | Pestaña Workflows: *Installed as a standard workflow* | El intent create-workflow no tiene campo de tipo. Elimina ese workflow y sube el JSON descargado, o ejecuta `scripts/install-workflow.mjs`. |
 | Pestaña Workflows: *Update available* | La app se actualizó. Reinstala y luego elimina el workflow anterior. |
 | No aparecen incidentes | Settings → Event sources; verifica que el evento llegó a Grail (`fetch dt.davis.events` en un Notebook) y que su tipo abre un problema. Si no, activa la fuente de eventos de Davis. |
+| Un incidente queda sin equipo y no se avisa a nadie | Ninguna regla de enrutamiento coincidió y no hay equipo predeterminado. Los problemas que Davis detecta por sí solo no traen equipo (solo los eventos que tú envías pueden nombrar un servicio en `cc.service`). Abre el equipo y selecciona *Receive all unrouted alerts* en su lista de verificación **Ready to page?** (o defínelo en Settings → Routing defaults), o agrega una regla de enrutamiento. La lista también muestra qué más le falta al equipo. |
 | El enrutamiento ignora `cc.service` | El nombre o el ID no coincide con un servicio, o una regla anterior definió otro servicio. Usa Services → Test a rule. |
 | Una notificación **falló** | Incidente → Notifications muestra el error del proveedor. Causas habituales: falta el host en External requests, una entrada del vault que el actor no puede leer, tipo de credencial incorrecto, teléfono que no está en E.164, API key de Twilio sin *Account SID*. |
 | Una notificación muestra **No result** | La ejecución terminó antes de que la llamada respondiera. Se reintenta hasta *Delivery attempts*. |
@@ -250,6 +251,12 @@ No verificado, o solo en parte:
 - La **búsqueda de usuarios** no devolvió a nadie para usuarios que acababan de ser invitados. Una búsqueda de usuarios
   activos en una sesión iniciada no se confirmó en el entorno trial. Con un platform token, IAM respondió *User not
   authorized*.
+- **Configuración inicial** (equipo nuevo → *Ready to page?* → métodos de contacto → calendario → política): se
+  recorrió en la vista previa sin conexión, empezando sin datos, y no en una sesión iniciada en un entorno. Que un
+  problema que Davis detecta por sí solo va al equipo predeterminado se comprobó ahí con el probador de reglas y está
+  cubierto por una prueba unitaria; no se observó con un problema real.
+- **Add people → tu propio usuario**: se ofrece a partir del ID del usuario que inició sesión. Que ese ID sea el ID
+  de usuario de IAM que usa la pertenencia a equipos no se confirmó en una sesión iniciada.
 - Los **problemas abiertos por más tiempo que el look-back** (72 h) ya no se leen; su incidente permanece abierto hasta
   que se resuelva manualmente.
 - Las **respuestas bidireccionales** (reconocer por SMS o chat) no están implementadas.

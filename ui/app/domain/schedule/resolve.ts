@@ -86,6 +86,14 @@ function anchorOf(layer: RotationLayer, tz: string): Anchor {
   return { date, handoffMin, start };
 }
 
+/**
+ * First handoff of a layer at or after its start, in the schedule's time zone. Weekly rotations hand off on the
+ * weekday of this instant (not on the weekday of `startsAt` in the viewer's browser zone).
+ */
+export function firstHandoff(layer: RotationLayer, timeZone: string): number {
+  return anchorOf(layer, safeTimeZone(timeZone)).start;
+}
+
 function mod(a: number, n: number): number {
   return ((a % n) + n) % n;
 }

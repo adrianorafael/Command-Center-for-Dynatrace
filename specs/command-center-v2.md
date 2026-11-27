@@ -40,6 +40,43 @@ linked by title. The engine keeps reading alerts and escalating, and hands each 
 to that workflow (`automation:workflows:run`); the action sends and writes the ledger result. Unlinked or unrunnable
 workflows fall back to a direct send.
 
+## Amendment A3 (2026-11-27, 2.2.0) — first-time setup that ends in a page
+
+A usability pass at the owner's request (configuration should be as simple and intuitive as possible), walked through
+from an empty app in the offline preview. It supersedes what this spec and `design/DESIGN.md` say about the team form,
+the *Ready to page?* checklist, the contact sheet, the schedule and policy editors, the routing rules tab and Help's
+*Get started*.
+
+- **Default team:** the team form (*New team*, *Edit team*) sets `settings.defaults.teamId`; it is ticked for a new
+  team while no default team exists, and deleting the default team clears it. Reason: a problem that Davis detects on
+  its own carries no `cc.service`, so without a default team or a routing rule it gets no team and pages nobody.
+- **Ready to page?** (`ui/app/pages/teams/readiness.ts`, pure and unit-tested): five steps in setup order (people,
+  contact methods, schedule, policy, routing). Step 5 is done only when the team is the default team or an enabled,
+  non-suppressing rule targets the team or one of its services; owning a service is not enough. The next open step
+  has the primary button; steps that need people first have none. What stops delivery outside the team (a channel in
+  use without an enabled provider; no engine heartbeat outside demo mode) is listed even when all five steps are
+  done, and says whether everything or only some channels are affected.
+- **Contact sheet:** opens with one empty row; rows without an address are dropped on save; the address label follows
+  the channel; *Save and next* walks through the people without a method. Notification rules are an optional section;
+  a new rule covers all priorities (`maxPriority: "P5"`), and the sheet names the priorities a person's rules leave
+  out.
+- **New schedule:** named `<team> on-call`, the team's paged members as participants, `startsAt` at the start of the
+  current day in the schedule's time zone, so coverage starts at once. The handoff weekday on screen comes from
+  `firstHandoff(layer, timeZone)`. Layer name and layer controls appear only with more than one layer; the preview
+  adds a list of the next handoffs.
+- **New escalation policy:** named `<team> escalation`; step 1 is the on-call person of the team's schedule after 0
+  minutes, step 2 the whole team after 10 minutes (without a schedule: the whole team at once). *Add step* adds a team
+  target after 5 minutes. Step channels are edited only after *Force channels*.
+- **Routing rules tab:** no separate Enabled column; the default row warns when no default team exists; a rule opened
+  from a team's checklist is prefilled with a name and the team; the tester evaluates only the alert it is given.
+- **Help → Get started:** five steps; the team steps are one link to the team's checklist, ticked when one team has
+  all five steps done.
+- **Demo:** `?demo=empty` (offline preview only) starts the in-memory repository without fixtures. The demo settings
+  switch on a provider for every channel the demo people use.
+- No change to `contracts.ts` (schemaVersion 1), no new scope, no new query.
+- **Not verified on a tenant:** the flow was exercised in the offline preview only; see *Verified and not verified*
+  in `docs/guides/en/operations.md`.
+
 ## Goal
 
 Replace dedicated event consoles (Splunk On-Call / VictorOps, Atlassian Opsgenie, Moogsoft) for a NOC team, natively on

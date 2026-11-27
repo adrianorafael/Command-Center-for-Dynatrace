@@ -12,7 +12,6 @@ import { PRIORITIES, type ConditionOp, type Priority, type RoutingRule, type Rul
 import { useAppData } from "../../hooks/AppDataContext";
 import { RULE_FIELDS, validateRule } from "../../hooks/domain";
 import { IconButton } from "../../components/IconButton";
-import { PriorityChip } from "../../components/PriorityChip";
 
 export const OP_LABEL: Record<ConditionOp, string> = {
   equals: "equals",
@@ -191,14 +190,16 @@ export const RuleSheet = ({ rule, onClose, onSave }: { rule?: RoutingRule; onClo
             </FormField>
             <FormField>
               <Label>Priority</Label>
-              <RadioGroup value={draft.then.priority ?? "mapping"} onChange={(v) => setThen({ priority: v === "mapping" ? undefined : (v as Priority) })}>
-                <Radio value="mapping">Use priority mapping</Radio>
-                {PRIORITIES.map((p) => (
-                  <Radio key={p} value={p}>
-                    <PriorityChip priority={p} size="condensed" />
-                  </Radio>
-                ))}
-              </RadioGroup>
+              <Select value={draft.then.priority ?? "mapping"} onChange={(v) => setThen({ priority: !v || v === "mapping" ? undefined : (v as Priority) })}>
+                <Select.Content>
+                  <Select.Option value="mapping">Use priority mapping</Select.Option>
+                  {PRIORITIES.map((p) => (
+                    <Select.Option key={p} value={p}>
+                      {p}
+                    </Select.Option>
+                  ))}
+                </Select.Content>
+              </Select>
             </FormField>
             <FormField>
               <Label>Add tags</Label>

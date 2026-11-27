@@ -24,15 +24,27 @@ import { PolicySimulation } from "./PolicyView";
 
 type TargetKind = EscalationTarget["type"];
 
-const TargetEditor = ({ target, onChange, onRemove }: { target: EscalationTarget; onChange: (t: EscalationTarget) => void; onRemove: () => void }) => {
+const TargetEditor = ({
+  target,
+  teamId,
+  onChange,
+  onRemove,
+}: {
+  target: EscalationTarget;
+  /** The policy's team: its schedule, the team itself and its people are offered first. */
+  teamId?: string;
+  onChange: (t: EscalationTarget) => void;
+  onRemove: () => void;
+}) => {
   const { data } = useAppData();
+  const team = data?.teams.find((t) => t.id === teamId);
   const kind = target.type;
   const setKind = (k: TargetKind) =>
     onChange(
       k === "schedule"
-        ? { type: "schedule", scheduleId: data?.schedules[0]?.id ?? "" }
+        ? { type: "schedule", scheduleId: (data?.schedules.find((x) => x.teamId === teamId) ?? data?.schedules[0])?.id ?? "" }
         : k === "team"
-          ? { type: "team", teamId: data?.teams[0]?.id ?? "" }
+          ? { type: "team", teamId: team?.id ?? data?.teams[0]?.id ?? "" }
           : { type: "user", uid: "" },
     );
   return (
@@ -71,7 +83,11 @@ const TargetEditor = ({ target, onChange, onRemove }: { target: EscalationTarget
               </Select.Content>
             </Select>
           ) : (
-            <UserPicker value={target.uid || null} onChange={(u) => onChange({ type: "user", uid: u ?? "" })} />
+            <UserPicker
+              value={target.uid || null}
+              onChange={(u) => onChange({ type: "user", uid: u ?? "" })}
+              suggested={(team?.members ?? []).filter((m) => m.role !== "observer").map((m) => m.uid)}
+            />
           )}
         </FormField>
       </Flex>
@@ -114,6 +130,8 @@ export const PolicyEditorPage = () => {
   const [tried, setTried] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  /** Steps whose "Channels" field was opened by hand (it is hidden while empty). */
+  const [forceOpen, setForceOpen] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (draft || !data) return;
@@ -121,19 +139,27 @@ export const PolicyEditorPage = () => {
       existing ?? {
         schemaVersion: SCHEMA_VERSION,
         id: newId("policy"),
-        name: "",
+        // Named after its team so that a new policy can be saved as it is.
+        name: (() => {
+          const t = data.teams.find((x) => x.id === (presetTeam ?? data.teams[0]?.id));
+          return t ? `${t.name} escalation` : "";
+        })(),
         teamId: presetTeam ?? data.teams[0]?.id,
         rev: 0,
         repeat: 0,
-        steps: [
-          {
-            delayMinutes: 0,
-            targets: (() => {
-              const sch = data.schedules.find((x) => x.teamId === (presetTeam ?? data.teams[0]?.id)) ?? data.schedules[0];
-              return sch ? [{ type: "schedule" as const, scheduleId: sch.id }] : [];
-            })(),
-          },
-        ],
+        // Ready to save: the on-call person first, then the whole team if nobody acknowledges within 10 minutes.
+        // Without a schedule for the team, the whole team is paged at once.
+        steps: (() => {
+          const teamId = presetTeam ?? data.teams[0]?.id;
+          const sch = data.schedules.find((x) => x.teamId === teamId);
+          const wholeTeam = teamId ? [{ type: "team" as const, teamId }] : [];
+          return sch
+            ? [
+                { delayMinutes: 0, targets: [{ type: "schedule" as const, scheduleId: sch.id }] },
+                ...(teamId ? [{ delayMinutes: 10, targets: wholeTeam }] : []),
+              ]
+            : [{ delayMinutes: 0, targets: wholeTeam }];
+        })(),
       },
     );
   }, [data, existing, draft, presetTeam]);
@@ -232,7 +258,7 @@ export const PolicyEditorPage = () => {
               <Flex flexDirection="column" gap={16}>
                 <FormField required>
                   <Label>Name</Label>
-                  <TextInput value={draft.name} onChange={(v) => update({ ...draft, name: v })} placeholder="For example: Payments default" />
+                  <TextInput value={draft.name} onChange={(v) => update({ ...draft, name: v })} placeholder="For example: Payments escalation" />
                 </FormField>
                 <FormField required>
                   <Label>Team</Label>
@@ -303,6 +329,7 @@ export const PolicyEditorPage = () => {
                         <TargetEditor
                           key={j}
                           target={t}
+                          teamId={draft.teamId}
                           onChange={(nt) => setStep(i, { ...s, targets: s.targets.map((x, k) => (k === j ? nt : x)) })}
                           onRemove={() => setStep(i, { ...s, targets: s.targets.filter((_, k) => k !== j) })}
                         />
@@ -318,30 +345,48 @@ export const PolicyEditorPage = () => {
                           Add target
                         </Button>
                       </Flex>
-                      <FormField>
-                        <Label>Channels</Label>
-                        <Select
-                          multiple
-                          clearable
-                          value={s.channels ?? []}
-                          onChange={(v) => setStep(i, { ...s, channels: v && v.length ? v : undefined })}
-                        >
-                          <Select.Content>
-                            {CHANNELS.map((c) => (
-                              <Select.Option key={c} value={c} disabled={!configured.has(c)}>
-                                {configured.has(c) ? CHANNEL_LABEL[c] : `${CHANNEL_LABEL[c]} (configure in Integrations first)`}
-                              </Select.Option>
-                            ))}
-                          </Select.Content>
-                        </Select>
-                        <FieldHint>Leave empty to use each person's notification rules (recommended)</FieldHint>
-                      </FormField>
+                      {s.channels?.length || forceOpen.has(i) ? (
+                        <FormField>
+                          <Label>Channels</Label>
+                          <Select
+                            multiple
+                            clearable
+                            value={s.channels ?? []}
+                            onChange={(v) => setStep(i, { ...s, channels: v && v.length ? v : undefined })}
+                          >
+                            <Select.Content>
+                              {CHANNELS.map((c) => (
+                                <Select.Option key={c} value={c} disabled={!configured.has(c)}>
+                                  {configured.has(c) ? CHANNEL_LABEL[c] : `${CHANNEL_LABEL[c]} (configure in Integrations first)`}
+                                </Select.Option>
+                              ))}
+                            </Select.Content>
+                          </Select>
+                          <FieldHint>Leave empty to use each person's notification rules (recommended)</FieldHint>
+                        </FormField>
+                      ) : (
+                        <Flex alignItems="center" gap={8} flexWrap="wrap">
+                          <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+                            Each person is notified through their own contact methods.
+                          </Text>
+                          <Button size="condensed" onClick={() => setForceOpen(new Set([...forceOpen, i]))}>
+                            Force channels
+                          </Button>
+                        </Flex>
+                      )}
                     </Flex>
                   </Surface>
                 </React.Fragment>
               ))}
               <Flex>
-                <Button onClick={() => { markCreated("step", String(draft.steps.length)); update({ ...draft, steps: [...draft.steps, { delayMinutes: 5, targets: [] }] }); }}>
+                <Button
+                  onClick={() => {
+                    markCreated("step", String(draft.steps.length));
+                    // A new step is ready to use: after 5 minutes, the whole team (the usual next level after the on-call person).
+                    const teamId = draft.teamId ?? data?.teams[0]?.id;
+                    update({ ...draft, steps: [...draft.steps, { delayMinutes: 5, targets: teamId ? [{ type: "team", teamId }] : [] }] });
+                  }}
+                >
                   <Button.Prefix>
                     <PlusIcon />
                   </Button.Prefix>

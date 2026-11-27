@@ -150,17 +150,27 @@ nada se perde. Depois use **Send test** com um endereço. Detalhes: [integraçõ
 
 ## Passo 7 — Pessoas, escalas, políticas e roteamento
 
-1. **Teams** → crie uma equipe → **Add people** (digite pelo menos 3 caracteres de um nome ou email) → defina os
-   papéis.
-2. Para cada pessoa: **Contact methods** (telefone em E.164, chat ID do Telegram, um rótulo para Slack/Teams/IFTTT,
-   uma routing key para o webhook) e **regras de notificação**, por exemplo "P1–P2: voz agora, SMS após 5 minutos".
-3. **On-call → Schedules** → camadas, rodízio, horário de passagem de plantão e fuso horário. A prévia de cobertura
-   mostra as lacunas.
-4. **Escalations** → uma política, por exemplo: passo 1, a pessoa de plantão da escala após 0 minutos; passo 2, a
-   equipe inteira após 10 minutos; repetir uma vez. A seção **Simulation** mostra quem é notificado e quando.
-5. **Services** → um serviço com uma equipe responsável, uma política e uma prioridade padrão. Depois adicione
-   **regras de roteamento** e use **Test a rule**.
-6. **Settings → Routing defaults** → a equipe e a política usadas quando nada mais decide.
+A página da equipe conduz você: a checklist **Ready to page?** sempre destaca o próximo passo.
+
+1. **Teams → New team**: digite um nome e deixe **Default team** (equipe padrão) marcado. A equipe passa a receber
+   todo alerta que nenhuma regra de roteamento envia para outro lugar. Isso importa porque os problemas que o Davis
+   detecta sozinho não trazem equipe.
+2. **Add people**: o seu próprio usuário é oferecido primeiro; para os demais, digite pelo menos 3 caracteres de um
+   nome ou email.
+3. **Add contact methods**: há uma linha pronta para cada pessoa (telefone em E.164, chat ID do Telegram, um nome para
+   Slack/Teams/IFTTT, uma routing key para o webhook). **Save and next** segue para a próxima pessoa. As regras de
+   notificação são opcionais, por exemplo "P1–P2: voz agora, SMS após 5 minutos".
+4. **Create schedule**: a escala abre com o nome da equipe e com as pessoas dela no rodízio. Ajuste o tipo de rodízio
+   e o horário de passagem de plantão, se precisar, e salve. A prévia de cobertura mostra as lacunas e as próximas
+   passagens de plantão.
+5. **Create policy**: a política abre com a pessoa de plantão primeiro e a equipe inteira depois de 10 minutos. Salve.
+   A seção **Simulation** mostra quem é notificado e quando.
+6. Opcional: **Services** e **regras de roteamento** enviam certos alertas para outras equipes; **Test a rule** as
+   confere. **Settings → Routing defaults** mostra a equipe e a política padrão.
+
+Medido na prévia offline, a partir de um app vazio: 21 cliques e campos digitados para uma equipe de três pessoas. Um
+problema que o Davis detecta sozinho é então roteado para a equipe e para a política de escalonamento dela; confira no
+seu ambiente em **Services → Test a rule**.
 
 Detalhes de cada tela: [guia do usuário](user-guide.md).
 

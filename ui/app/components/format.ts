@@ -50,6 +50,11 @@ export function formatDayTime(at: number, timeZone?: string): string {
   return fmt(at, timeZone, { weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 }
 
+/** "Fri, Dec 4, 09:00" */
+export function formatDayDateTime(at: number, timeZone?: string): string {
+  return fmt(at, timeZone, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+}
+
 /** "Nov 26, 2026, 14:02:31 CET" */
 export function formatDateTime(at: number, timeZone?: string): string {
   return fmt(at, timeZone, {

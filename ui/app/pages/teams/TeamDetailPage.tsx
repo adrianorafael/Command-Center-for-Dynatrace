@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { Flex, Grid, PageLayout } from "@dynatrace/strato-components/layouts";
 import { Button, InlineButton } from "@dynatrace/strato-components/buttons";
-import { Avatar, Chip, InformationOverlay, MessageContainer } from "@dynatrace/strato-components/content";
+import { Avatar, Chip, InformationOverlay } from "@dynatrace/strato-components/content";
 import { Menu, Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Heading, Link, Paragraph, Text } from "@dynatrace/strato-components/typography";
@@ -21,11 +21,11 @@ import { CHANNEL_LABEL } from "../../components/ChannelIcon";
 import { OnCallCard } from "../oncall/OnCallPage";
 import { OverrideModal } from "../oncall/OverrideModal";
 import { PolicyView } from "../escalations/PolicyView";
-import { TeamFormModal, teamReferences } from "./TeamsPage";
+import { TeamFormModal, deleteTeamAndDefault, teamReferences } from "./TeamsPage";
 import { ContactSheet } from "./ContactSheet";
 import { QuietHoursEditor } from "./QuietHoursEditor";
 import { AddPeopleModal } from "./AddPeopleModal";
-import { TeamReadiness, teamReadiness, type ReadinessFix } from "./TeamReadiness";
+import { TeamReadiness, deliveryIssues, teamReadiness, type ReadinessFix } from "./TeamReadiness";
 
 export const ROLE_LABEL: Record<TeamRole, string> = { admin: "Team admin", responder: "Responder", observer: "Observer" };
 const ROLE_HELP = "Team admins edit the team, schedules and policies. Responders receive pages and can acknowledge and resolve. Observers have read-only access and get no pages. Roles are guidance: every app user can technically write app state.";
@@ -40,11 +40,12 @@ interface MemberRow extends TeamMember {
 export const TeamDetailPage = () => {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const { data, isLoading, error, refresh, now, userName, users, mutate } = useAppData();
+  const { data, isLoading, error, refresh, now, userName, users, mutate, demo } = useAppData();
   const team = data?.teams.find((t) => t.id === id);
   const [tab, setTab] = useState(0);
   const [addPeople, setAddPeople] = useState(false);
-  const [needContacts, setNeedContacts] = useState<string[]>([]);
+  /** True while contact methods are being filled in for one person after another (checklist flow). */
+  const [contactSequence, setContactSequence] = useState(false);
   const [edit, setEdit] = useState(false);
   const [contactUid, setContactUid] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -93,19 +94,31 @@ export const TeamDetailPage = () => {
   const readiness = teamReadiness(team, data, userName);
   const back = `returnTo=${encodeURIComponent(`/teams/${team.id}`)}`;
   const hasContact = (uid: string) => (data.contacts.find((c) => c.uid === uid)?.methods.length ?? 0) > 0;
+  /** People who get paged but have no contact method yet, in table order. */
+  const missingContacts = team.members.filter((m) => m.role !== "observer" && !hasContact(m.uid)).map((m) => m.uid);
+  const nextContactUid = contactSequence ? missingContacts.find((u) => u !== contactUid) : undefined;
   const fix = (key: ReadinessFix) => {
     if (key === "members") {
       setTab(0);
       setAddPeople(true);
     } else if (key === "contacts") {
       setTab(0);
-      const first = team.members.find((m) => m.role !== "observer" && !hasContact(m.uid));
-      if (first) setContactUid(first.uid);
+      const first = missingContacts[0];
+      if (first) {
+        setContactSequence(true);
+        setContactUid(first);
+      }
     } else if (key === "schedule") navigate(`/on-call/schedules/new?teamId=${team.id}&${back}`);
     else if (key === "policy") {
       if (data.policies.some((p) => p.teamId === team.id)) setEdit(true);
       else navigate(`/escalations/new?teamId=${team.id}&${back}`);
-    } else navigate(`/services/new?teamId=${team.id}&${back}`);
+    } else if (readiness.find((r) => r.key === "routing")?.routingFix === "default-team") {
+      // No default team yet: one click makes this team receive everything that no rule routes elsewhere.
+      void mutate(
+        (s) => s.saveSettings(nextRev({ ...data.settings, defaults: { ...data.settings.defaults, teamId: team.id } })),
+        `${team.name} now receives every alert that no routing rule sends elsewhere`,
+      ).catch(() => undefined);
+    } else navigate(`/services?tab=rules&newRule=1&teamId=${encodeURIComponent(team.id)}`);
   };
   const help = (text: string) => (
     <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
@@ -171,8 +184,8 @@ export const TeamDetailPage = () => {
             <Flex style={{ minWidth: 0 }} flexGrow={1}>
               <CellText>{rowData.methods}</CellText>
             </Flex>
-            <InlineButton onClick={() => setContactUid(rowData.uid)} aria-label={`Add a contact method for ${rowData.name}`}>
-              + Add
+            <InlineButton onClick={() => (setContactSequence(false), setContactUid(rowData.uid))} aria-label={`Edit the contact methods of ${rowData.name}`}>
+              Edit
             </InlineButton>
           </Flex>
         ) : (
@@ -180,7 +193,7 @@ export const TeamDetailPage = () => {
           <Flex alignItems="center" gap={8}>
             <WarningIcon style={{ color: Colors.Icon.Warning.Default }} />
             <Text>{rowData.role === "observer" ? "No contact method" : "No contact method: can't be paged"}</Text>
-            <InlineButton onClick={() => setContactUid(rowData.uid)} aria-label={`Add a contact method for ${rowData.name}`}>
+            <InlineButton onClick={() => (setContactSequence(true), setContactUid(rowData.uid))} aria-label={`Add a contact method for ${rowData.name}`}>
               Add
             </InlineButton>
           </Flex>
@@ -223,34 +236,18 @@ export const TeamDetailPage = () => {
             </Flex>
           }
         />
-        <TeamReadiness items={readiness} onFix={fix} />
+        <TeamReadiness items={readiness} onFix={fix} delivery={deliveryIssues(team, data, demo)} onOpen={(to) => navigate(to)} />
         <Tabs selectedIndex={tab} onChange={setTab}>
           <Tab title={`Members (${team.members.length})`}>
             <Flex flexDirection="column" gap={12} paddingTop={16}>
-              <Flex alignItems="center" justifyContent="space-between" gap={8} flexWrap="wrap">
-                {help("Members are Dynatrace users. Responders and team admins can be paged when an escalation policy targets this team or its on-call schedule; observers are never paged. Each person needs a contact method to be reached.")}
-                {team.members.length > 0 && addPeopleButton}
-              </Flex>
-              {needContacts.length > 0 && (
-                <MessageContainer variant="warning">
-                  <MessageContainer.Title>
-                    {needContacts.length} {needContacts.length === 1 ? "person can't" : "people can't"} be notified yet
-                  </MessageContainer.Title>
-                  <MessageContainer.Description>
-                    {needContacts.map(userName).join(", ")} {needContacts.length === 1 ? "has" : "have"} no contact method (SMS, voice, chat or webhook).
-                  </MessageContainer.Description>
-                  <MessageContainer.Actions>
-                    <Button onClick={() => setContactUid(needContacts[0])}>Add contact methods</Button>
-                    <Button onClick={() => setNeedContacts([])}>Later</Button>
-                  </MessageContainer.Actions>
-                </MessageContainer>
+              {team.members.length > 0 && (
+                <Flex alignItems="center" justifyContent="space-between" gap={8} flexWrap="wrap">
+                  {help("Responders and team admins get paged. Observers only watch.")}
+                  {addPeopleButton}
+                </Flex>
               )}
               {team.members.length === 0 ? (
-                <SimpleEmpty
-                  title="Add the people who respond for this team"
-                  details="1. Add people (Dynatrace users). 2. Give each a contact method. 3. Create an on-call schedule. 4. Choose an escalation policy. 5. Route a service or rule to this team. The checklist above tracks your progress."
-                  actions={addPeopleButton}
-                />
+                <SimpleEmpty title="Add the people who respond for this team" details="Search your Dynatrace users and choose who gets paged." />
               ) : (
               <DataTable data={rows} columns={withCreatedMarker(columns, "member", (r) => r.uid)} rowId={(r) => r.uid} fullWidth sortable variant={LIST_TABLE_VARIANT}>
                 <DataTable.RowActions>
@@ -280,7 +277,7 @@ export const TeamDetailPage = () => {
                               ))}
                             </Menu.SubContent>
                           </Menu.Sub>
-                          <Menu.Item onSelect={() => setContactUid(r.uid)}>Edit contact methods</Menu.Item>
+                          <Menu.Item onSelect={() => (setContactSequence(false), setContactUid(r.uid))}>Edit contact methods</Menu.Item>
                           <Menu.Item onSelect={() => void saveMembers(team.members.filter((m) => m.uid !== r.uid), "Member removed")}>Remove</Menu.Item>
                         </Menu.Content>
                       </Menu>
@@ -348,7 +345,11 @@ export const TeamDetailPage = () => {
           </Tab>
           <Tab title={`Services (${services.length})`}>
             <Flex flexDirection="column" gap={8} paddingTop={16}>
-              {help("Services and routing rules decide which alerts become this team's incidents. Without one, the team receives no incidents.")}
+              {help(
+                data.settings.defaults.teamId === team.id
+                  ? "This is the default team: it receives every alert that no routing rule sends elsewhere. Services and routing rules refine that."
+                  : "Routing rules decide which alerts become this team's incidents. An event can also name one of the team's services in cc.service.",
+              )}
               {services.length === 0 ? (
                 <Flex flexDirection="column" gap={8}>
                   <Paragraph>No services are routed to this team.</Paragraph>
@@ -371,18 +372,11 @@ export const TeamDetailPage = () => {
       <ContactSheet
         uid={contactUid}
         show={!!contactUid}
-        onClose={() => {
-          const done = contactUid;
-          setContactUid(undefined);
-          setNeedContacts((list) => list.filter((u) => u !== done));
-        }}
+        onClose={() => setContactUid(undefined)}
+        next={nextContactUid ? { uid: nextContactUid, name: userName(nextContactUid) } : undefined}
+        onNext={(uid) => setContactUid(uid)}
       />
-      <AddPeopleModal
-        team={team}
-        show={addPeople}
-        onClose={() => setAddPeople(false)}
-        onAdded={(uids) => setNeedContacts(uids.filter((u) => !hasContact(u)))}
-      />
+      <AddPeopleModal team={team} show={addPeople} onClose={() => setAddPeople(false)} />
       <OverrideModal request={override} onClose={() => setOverride(undefined)} />
       {refs.length > 0 ? (
         <ConfirmModal
@@ -400,7 +394,7 @@ export const TeamDetailPage = () => {
           show={confirmDelete}
           title={`Delete ${team.name}?`}
           onDismiss={() => setConfirmDelete(false)}
-          onConfirm={() => mutate((s) => s.deleteTeam(team.id), "Team deleted").then(() => navigate("/teams"), () => undefined)}
+          onConfirm={() => mutate((s) => deleteTeamAndDefault(s, team.id, data), "Team deleted").then(() => navigate("/teams"), () => undefined)}
         >
           The team and its member list are deleted.
         </ConfirmModal>

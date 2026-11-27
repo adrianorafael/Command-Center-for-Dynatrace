@@ -96,10 +96,22 @@ let directory: Directory | undefined;
 let installer: EngineInstaller | undefined;
 let store: Store | undefined;
 
+/**
+ * Offline preview only (runtime missing): `?demo=empty` starts with no teams, schedules, policies, services or
+ * incidents, to walk through the first-time setup. The synthetic user directory stays available.
+ */
+function emptyDemoRequested(): boolean {
+  try {
+    return isRuntimeMissing() && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("demo") === "empty";
+  } catch {
+    return false;
+  }
+}
+
 export function getRepository(): Repository {
   if (!repo) {
     repo = isDemo()
-      ? new MemoryRepository(demoSeed(Date.now()), { actor: DEMO_ACTOR })
+      ? new MemoryRepository(emptyDemoRequested() ? [] : demoSeed(Date.now()), { actor: DEMO_ACTOR })
       : new AppStateRepository();
   }
   return repo;

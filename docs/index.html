@@ -190,7 +190,7 @@
 <header class="hero">
   <div class="wrap hero-inner">
     <img class="hero-logo" src="icon.svg" alt="Command Center icon" />
-    <span class="eyebrow">Demo Dynatrace App · Built with vibecoding · v2.1.1</span>
+    <span class="eyebrow">Demo Dynatrace App · Built with vibecoding · v2.2.0</span>
     <h1>Command Center<br /><span class="grad">for Dynatrace</span></h1>
     <p class="subtitle">
       A <strong>NOC event console with on-call teams, schedules and escalation policies</strong> — inside Dynatrace.
@@ -460,7 +460,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
 <section id="setup">
   <div class="wrap">
     <div class="sec-head"><span class="kicker">Make it page</span><h2>Paging setup</h2>
-      <p>Full detail in the getting-started guide. The app's Help page has the same checklist and ticks it off.</p></div>
+      <p>Full detail in the getting-started guide. The app's Help page has a short checklist that ticks itself off, and every team page has its own <b>Ready to page?</b> checklist.</p></div>
     <ol class="steps">
       <li><b>Credential Vault.</b> One entry per provider (IDs like <code>CREDENTIAL_VAULT_ENTRY-…</code>), scope <b>AppEngine</b>, owned by the workflow actor.
         Twilio: username/password (SID and token). IFTTT, Slack, Teams, Telegram, webhook: token.</li>
@@ -471,8 +471,8 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
       <li><b>Authorization settings.</b> Workflows app → Settings → Authorization settings: enable Grail read, App State and Credential Vault read for the workflow actor.</li>
       <li><b>Providers.</b> Integrations → Outbound: switch on only the providers you use, paste their vault entry IDs, sender numbers or IFTTT event name,
         then <b>Send test</b>. For any other tool, <b>Custom workflow → Create example workflow</b> prefills a workflow you edit in the Workflows app.</li>
-      <li><b>Teams, schedules, policies, routing.</b> Add members from IAM with contact methods and rules; build schedules;
-        create escalation policies; add services and routing rules; set routing defaults.</li>
+      <li><b>A team that can be paged.</b> Teams → <b>New team</b>, with <b>Default team</b> ticked (problems that Davis detects on its own carry no team). Then follow the team's
+        <b>Ready to page?</b> checklist: people from IAM, their contact methods, a schedule and an escalation policy, both prefilled. Services and routing rules are optional.</li>
       <li><b>Send an event.</b> A platform token with <code>openpipeline:events.davis:ingest</code>, and
         <code>cc.service</code>, <code>cc.priority</code>, <code>cc.tags</code> as properties.</li>
     </ol>
@@ -499,6 +499,8 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
               <td>The create-workflow intent has no type field. Delete that workflow and upload the downloaded JSON, or run the admin script.</td></tr>
           <tr><td>No incidents appear</td>
               <td>Settings → Event sources; check that the event reached Grail and that its type opens a problem. Otherwise enable the Davis-events source.</td></tr>
+          <tr><td>An incident has no team and nobody was paged</td>
+              <td>No routing rule matched and there is no default team. Problems that Davis detects on its own carry no team. Open the team and select <b>Receive all unrouted alerts</b> in its checklist, or add a routing rule.</td></tr>
           <tr><td>Routing ignores <code>cc.service</code></td>
               <td>The name or ID does not match a service, or an earlier rule set another service. Use <b>Services → Test a rule</b>.</td></tr>
           <tr><td>A notification shows <b>Failed</b></td>
@@ -552,7 +554,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
       Built by <a href="https://github.com/adrianorafael" target="_blank" rel="noopener">@adrianorafael</a> ·
       <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace" target="_blank" rel="noopener">Source on GitHub</a> ·
       <a href="https://developer.dynatrace.com/" target="_blank" rel="noopener">Dynatrace Developer</a> ·
-      Version 2.1.1
+      Version 2.2.0
     </div>
     <p class="fnote">
       Not affiliated with, endorsed by, or supported by Dynatrace. Provided "as is" for study and demonstration

@@ -4,6 +4,10 @@ Owner: product design. Audience: the developers implementing `ui/app`. Status: r
 Target stack (verified in `node_modules`): `@dynatrace/strato-components` **3.18.1**, `@dynatrace/strato-design-tokens` **1.8.1**,
 `@dynatrace/strato-icons` **2.7.0**, `react` 18, `react-router-dom` 6.
 
+> **Later changes.** The team form, the *Ready to page?* checklist, the contact sheet, the schedule and policy
+> editors, the routing rules tab and Help's *Get started* changed in 2.2.0: see Amendment A3 in
+> `specs/command-center-v2.md`. Where this document differs, the amendments and the user guides win.
+
 ## 0. How to read this spec
 
 - **Verification legend.** Every component, subcomponent, prop, token and icon named below was checked against

@@ -39,7 +39,7 @@ y usando **Strato**, el sistema de diseño de Dynatrace.
 | **Almacenamiento** | Dynatrace App State. Sin base de datos externa. Los secretos de los proveedores permanecen en el Credential Vault. |
 | **Modo demo** | Por navegador: datos de ejemplo en todas partes, nada se lee ni se escribe, nada se envía. Desactivado: solo datos reales. |
 
-Versión actual: **2.1.1** — consulta [CHANGELOG.md](CHANGELOG.md).
+Versión actual: **2.2.0** — consulta [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentación
 
@@ -63,7 +63,7 @@ También disponible en inglés en [docs/guides/en](docs/guides/en/) y en portugu
 | Línea de tiempo y auditoría del incidente | Línea de tiempo de solo anexado por incidente: quién, cuándo, qué |
 | Calendarios de guardia, rotaciones, overrides | Capas (diarias, semanales, cada N horas), hora de traspaso, zona horaria, restricciones por día de la semana/hora, overrides, dejar/tomar la guardia desde el encabezado |
 | Políticas de escalamiento | Pasos ordenados con demoras, destinos (calendario, usuario, equipo completo), canales forzados opcionales, repeticiones; se detiene al reconocer |
-| Métodos de contacto y reglas personales | SMS, voz, WhatsApp, Telegram, Slack, Teams, IFTTT, webhook, con "prioridad hasta Px → este método después de N minutos" |
+| Métodos de contacto y reglas personales | SMS, voz, WhatsApp, Telegram, Slack, Teams, IFTTT, webhook, con reglas opcionales "para las prioridades P1 a Px → este método después de N minutos" |
 | Reglas de enrutamiento / de alertas | Servicios más reglas ordenadas (gana la primera coincidencia), con un probador de reglas |
 | Mantenimiento y horas de silencio | Las ventanas de mantenimiento de Davis suprimen los avisos (configurable); las horas de silencio del equipo retienen o rebajan los avisos menos urgentes |
 | War rooms / puentes | Enlace de reunión, incidentes vinculados, notebooks, plantilla de post-mortem |
@@ -144,7 +144,8 @@ npm run lint          # ESLint incl. security and secret rules
 npm run check         # lint + typecheck + test + build
 ```
 
-Vista previa sin conexión en modo demo: `npx dt-app build && node scripts/preview-server.mjs --port 4173`, luego abre
+Vista previa sin conexión en modo demo (agrega `?demo=empty` para empezar sin datos y recorrer la configuración
+inicial): `npx dt-app build && node scripts/preview-server.mjs --port 4173`, luego abre
 `http://127.0.0.1:4173/ui/`. `node scripts/screenshot.mjs ./out` toma una captura de pantalla por ruta.
 
 | Script | Descripción |
