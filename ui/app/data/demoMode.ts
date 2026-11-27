@@ -130,7 +130,7 @@ export function withLiveDemoHeartbeat(inner: Repository, now: () => number = Dat
   };
 }
 
-/** The process-wide Repository: MemoryRepository with demo fixtures in demo mode, App State otherwise. Cached. */
+/** The process-wide Repository: demo fixtures in memory (live heartbeat) in demo mode, App State otherwise. Cached. */
 export function getRepository(): Repository {
   if (!repo) {
     repo = isDemo()

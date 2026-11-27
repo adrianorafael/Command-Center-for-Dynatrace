@@ -122,7 +122,7 @@ export function renderMessage(inc: Incident, channel: Channel, ctx: TemplateCont
   };
 }
 
-/** Relative app path used when the absolute app URL is unknown (links then only work inside Dynatrace). */
+/** Relative app path used when the absolute app URL is unknown. */
 export const DEFAULT_APP_BASE_URL = "/ui/apps/my.command.center";
 
 /** Link to the incident detail page. `appBaseUrl` should be absolute for outbound messages. */

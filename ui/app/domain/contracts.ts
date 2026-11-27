@@ -289,8 +289,9 @@ export type ConditionOp = "equals" | "contains" | "regex" | "in" | "exists" | "l
 
 export interface RuleCondition {
   /**
-   * Alert field: title, description, category, severity, source, sourceStatus,
-   * entity.name, entity.type, entity.id, tag, rootCause.name, or fields.<name>.
+   * Alert field: title, description, category, severity, source, sourceStatus, displayId,
+   * entity.name, entity.type, entity.id, tag, rootCause.name, rootCause.id, or fields.<name>
+   * (routing/match.ts RULE_FIELDS).
    */
   field: string;
   op: ConditionOp;

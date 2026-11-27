@@ -97,7 +97,7 @@ export function closeWarRoom(w: WarRoom, by: string, now: number, summary?: stri
   return { ...w, status: "closed", closedAt: Math.max(now, w.openedAt), closedBy: by, ...(summary ? { summary } : {}), rev: w.rev + 1 };
 }
 
-/** Reopened copy of a room: close fields cleared, rev + 1. */
+/** Reopened copy of a room: closedAt/closedBy removed (summary kept), rev + 1. */
 export function reopenWarRoom(w: WarRoom): WarRoom {
   const { closedAt: _a, closedBy: _b, ...rest } = w;
   void _a;

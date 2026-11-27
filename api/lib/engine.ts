@@ -51,6 +51,7 @@ export { addRollup };
 export const NOTIFICATION_TTL_MS = 14 * 24 * 3600_000;
 const DAY_MS = 24 * 3600_000;
 
+/** Injected I/O of one tick (MemoryRepository and a fake Grail in tests). */
 export interface EngineDeps {
   repo: Repository;
   runQuery: QueryRunner;

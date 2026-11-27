@@ -33,6 +33,7 @@ export interface CycleResult {
   errors: string[];
 }
 
+/** Everything a cycle needs from outside: state, Grail, the senders' I/O and the clock. */
 export interface CycleDeps extends SenderDeps {
   repo: Repository;
   runQuery: QueryRunner;

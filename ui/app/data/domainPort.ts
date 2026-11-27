@@ -11,7 +11,7 @@ import { defaultSettings as domainDefaultSettings } from "../domain/validation/d
  * Fixed id of the engine workflow (settings.engine.workflowId) when none is stored.
  * Workflow ids are per tenant, so one well-known UUID lets scripts/install-workflow.mjs find "its" workflow again
  * (get → update; trash → restore) and the in-app status check look it up, without any extra bookkeeping. A workflow
- * created through the Workflows app gets a new id; the status check then finds it by title.
+ * created through the Workflows app may get another id; the status check then finds it by title.
  */
 export const DEFAULT_ENGINE_WORKFLOW_ID = "6f1c9a52-3d2e-4b7a-9c41-cc2e5a0d7e01";
 

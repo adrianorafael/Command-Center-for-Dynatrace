@@ -21,6 +21,7 @@ import type { AlertSource } from "../../ui/app/domain/contracts";
 /** Health of one inbound source in a tick; the engine passes it to the domain as `sourceStatus`. */
 export type SourceHealth = "ok" | "failed" | "truncated";
 
+/** Raw records of one tick plus per-source health. */
 export interface SourceRecords {
   problems: GrailRecord[];
   davisEvents: GrailRecord[];

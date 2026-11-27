@@ -1,7 +1,7 @@
 /**
  * The one seam between the UI and the lower layers: the pure domain (ui/app/domain) and the data/platform
  * adapters (ui/app/data). Pages import domain logic and platform calls from here, so a signature change on either
- * side is reconciled in this file. Every platform call here switches to its offline stand-in in demo mode.
+ * side is reconciled in this file.
  */
 import { exportOnProblemDefinition, getOnProblemStatus, openOnProblemIntent, type OnProblemWorkflowStatus } from "../data/workflows/installer";
 import { exportCustomWorkflow, exportProviderWorkflow, findCustomWorkflows, findProviderWorkflows, openCustomWorkflowIntent, openProviderWorkflowIntent, type CustomWorkflowInfo } from "../data/workflows/installer";

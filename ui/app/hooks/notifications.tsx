@@ -9,7 +9,7 @@ import type React from "react";
 import { useSyncExternalStore } from "react";
 import { showToast } from "@dynatrace/strato-components/notifications";
 
-/** Categories the viewer can mute separately (Settings → Notifications). */
+/** Categories whose pop-ups the viewer can turn off separately (header bell menu). */
 export type NotificationCategory = "incident" | "action" | "error" | "engine";
 
 /** Label of each category in the preferences UI. */

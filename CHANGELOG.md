@@ -11,6 +11,23 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-11-27
+
+### Added
+- **Console → Show tabs** above the incident table (Open, Triggered, Acknowledged, Snoozed, Resolved, All), each with
+  a count that follows the other filters; they replace the Status filter. Links with `status=…` keep working.
+- **Add people** keeps the people picked across several searches in a *Selected (n)* list, each with **Remove**.
+- **External requests**: a built-in provider's **Configure** shows the host to allow (Settings → General →
+  Environment management → External requests). When Dynatrace refuses a host, the ledger records
+  *Host not allowed: <host>* with the fix, and the provider card says so (runtime message verified on a trial tenant).
+- Project page redesigned, with a demo video of the whole app in demo mode (dark theme) and dark screenshots;
+  reproducible with `scripts/record-demo.mjs`, `scripts/edit-demo.sh` and `scripts/doc-screenshots.mjs`.
+
+### Fixed
+- Demo mode no longer warns after a few minutes that the paging engine is not running.
+- Code comments: module headers and API docs throughout; stale comments from the old workflow-script design and the
+  2.3.0 delivery change corrected. No behaviour change.
+
 ### Changed
 - **Help holds the full documentation** in English, Portuguese (BR) and Spanish. The six guides (getting started,
   user guide, alerts reference, integrations, configuration, operations) open inside the app, with a table of

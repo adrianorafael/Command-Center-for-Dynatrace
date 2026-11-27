@@ -30,6 +30,7 @@ export interface Credential {
   password?: string;
 }
 
+/** Injected I/O for the senders (real fetch and vault reader in production, fakes in tests). */
 export interface SenderDeps {
   fetch: typeof fetch;
   readCredential: (vaultId: string) => Promise<Credential>;
@@ -231,13 +232,15 @@ const sendWebhook: SendFn = async (n, provider, cred, deps) => {
   return res.headers.get("x-request-id") ?? undefined;
 };
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Custom workflow: runs a workflow the customer owns, passing the notification as run params
  * (POST /platform/automation/v1/workflows/{id}/run, scope automation:workflows:run). The prefilled example
  * workflow reads them with the expression {{ execution().params | to_json }} (verified on a trial tenant).
  * "Sent" means the run was accepted; what the workflow does afterwards is the customer's.
+ * sendAll uses the same call for the opt-in hand-off to an integration's own workflow.
  */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function runWorkflow(deps: SenderDeps, id: string, n: NotificationRequest): Promise<string | undefined> {
   const res = await post(deps, `/platform/automation/v1/workflows/${id}/run`, {
     headers: { "Content-Type": "application/json" },

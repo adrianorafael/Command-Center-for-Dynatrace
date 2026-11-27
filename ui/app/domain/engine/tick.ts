@@ -129,7 +129,7 @@ export interface TickOutput {
   deferred: number;
 }
 
-/** An action whose incident is unknown is kept this long (its incident may appear later), then deleted. */
+/** An action whose incident is not in this tick's state is kept this long, then deleted. */
 export const ORPHAN_ACTION_MAX_AGE_MS = 24 * HOUR_MS;
 /** Refresh `lastSeenAt` of unchanged incidents at most this often (limits writes). */
 export const LAST_SEEN_REFRESH_MS = 10 * 60_000;

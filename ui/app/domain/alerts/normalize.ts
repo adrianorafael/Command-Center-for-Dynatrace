@@ -22,7 +22,7 @@ import { dedupKeyFor } from "../ids";
 /** One Grail record as returned by a query. */
 export type RawRecord = Record<string, unknown>;
 
-/** Size caps on what an Alert keeps (characters / field count), so one noisy record cannot bloat App State. */
+/** Size caps on what an Alert keeps (characters / field count). */
 export const MAX_TITLE = 500;
 export const MAX_DESCRIPTION = 4000;
 export const MAX_FIELDS = 120;

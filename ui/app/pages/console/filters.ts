@@ -75,7 +75,7 @@ export function writeFilters(params: URLSearchParams, f: ConsoleFilters): URLSea
   return next;
 }
 
-/** True when nothing differs from the default view (the "Clear filters" state). */
+/** True when nothing differs from the default view. */
 export function isDefaultFilter(f: ConsoleFilters): boolean {
   return (
     f.status.length === DEFAULT_STATUS.length &&

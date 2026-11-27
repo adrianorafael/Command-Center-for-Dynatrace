@@ -29,7 +29,7 @@ interface GanttRow {
   subRows?: GanttRow[];
 }
 
-/** Uncovered intervals of [from, to) given covering segments. */
+/** Uncovered intervals of [from, to) given covering segments; gaps of a minute or less are dropped. */
 export function gapsOf(segs: { from: number; to: number }[], from: number, to: number): { from: number; to: number }[] {
   const sorted = [...segs].sort((a, b) => a.from - b.from);
   const out: { from: number; to: number }[] = [];

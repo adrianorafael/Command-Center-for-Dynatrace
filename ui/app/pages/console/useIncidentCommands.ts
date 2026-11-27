@@ -44,6 +44,7 @@ export function useIncidentCommands() {
   return { ack, resolve, reopen, snoozeFor, escalate };
 }
 
+/** Snooze durations offered in menus (`ms` from now). */
 export const SNOOZE_PRESETS: { label: string; ms: number }[] = [
   { label: "15 min", ms: 15 * 60_000 },
   { label: "30 min", ms: 30 * 60_000 },

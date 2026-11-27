@@ -118,12 +118,13 @@ export function timeZones(): string[] {
     const list = intl.supportedValuesOf?.("timeZone");
     if (list && list.length) return list.includes("UTC") ? list : ["UTC", ...list];
   } catch {
-    // ignore
+    // fall back to the short list below
   }
   return ["UTC", "Europe/Vienna", "Europe/Berlin", "Europe/London", "America/New_York", "America/Chicago",
     "America/Los_Angeles", "America/Sao_Paulo", "Asia/Tokyo", "Asia/Singapore", "Australia/Sydney"];
 }
 
+/** Text of any thrown value, for toasts and error banners. */
 export function errorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (typeof e === "string") return e;
@@ -134,6 +135,7 @@ export function errorMessage(e: unknown): string {
   }
 }
 
+/** "1 team" / "3 teams"; pass `pluralWord` for irregular plurals. */
 export function plural(n: number, word: string, pluralWord = `${word}s`): string {
   return `${n} ${n === 1 ? word : pluralWord}`;
 }
@@ -152,6 +154,7 @@ export function pickerToMs(v: unknown): number | undefined {
   return undefined;
 }
 
+/** Epoch ms → ISO string for picker values; null when unset. */
 export function msToIso(ms: number | undefined): string | null {
   return ms === undefined || !Number.isFinite(ms) ? null : new Date(ms).toISOString();
 }

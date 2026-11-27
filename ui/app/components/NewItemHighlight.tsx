@@ -1,6 +1,3 @@
-import React, { useEffect, useRef } from "react";
-import Colors from "@dynatrace/strato-design-tokens/colors";
-
 /**
  * "Just created" highlight, used for every item a user creates in a list with a button.
  *
@@ -13,6 +10,8 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
  *   Surface (cards in forms), else its parent.
  * - `<NewItemHighlight active>`: wrapper for small lists the caller controls directly (form drafts).
  */
+import React, { useEffect, useRef } from "react";
+import Colors from "@dynatrace/strato-design-tokens/colors";
 
 const WINDOW_MS = 6_000;
 const created = new Map<string, number>();

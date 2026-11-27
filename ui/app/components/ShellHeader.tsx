@@ -240,6 +240,7 @@ const OnCallNowAction = () => {
   );
 };
 
+/** Rendered once by App.tsx above every page. */
 export const ShellHeader = () => {
   const navigate = useNavigate();
   const { data } = useAppData();
