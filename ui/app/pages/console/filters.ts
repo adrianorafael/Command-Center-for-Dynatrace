@@ -4,6 +4,7 @@
  * Also owns the "today" bound of the Resolved and All views (`createdBound`), so the table and every tab count
  * use the same rule.
  */
+import type { Timeframe } from "@dynatrace/strato-components/core";
 import type { Incident, IncidentStatus, Priority } from "../../domain/contracts";
 import { startOfLocalDay } from "../../domain/time/tz";
 
@@ -202,3 +203,17 @@ export const SOURCE_LABEL: Record<string, string> = {
   "davis-event": "Davis event",
   "generic-event": "Event API",
 };
+
+/**
+ * Timeframe for a `created=<hours>h` URL value (1–720 h), relative to now; null for anything else. Only read when the
+ * page opens: after that the Created selector owns the timeframe.
+ */
+export function timeframeFromParam(v: string | null, now = Date.now()): Timeframe | null {
+  const m = /^(\d{1,3})h$/.exec(v ?? "");
+  const hours = m ? Number(m[1]) : 0;
+  if (hours < 1 || hours > 720) return null;
+  return {
+    from: { absoluteDate: new Date(now - hours * 3_600_000).toISOString(), value: `now()-${hours}h`, type: "expression" },
+    to: { absoluteDate: new Date(now).toISOString(), value: "now()", type: "expression" },
+  };
+}

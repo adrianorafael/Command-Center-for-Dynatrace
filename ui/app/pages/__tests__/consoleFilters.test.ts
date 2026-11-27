@@ -120,3 +120,14 @@ describe("console 'today' bound of Resolved and All", () => {
     expect(today).toEqual({ open: 2, triggered: 1, acknowledged: 1, snoozed: 1, resolved: 1, all: 2 });
   });
 });
+
+describe("created=<hours>h link parameter", () => {
+  it("opens the Console with the last N hours picked, and ignores anything else", async () => {
+    const { timeframeFromParam } = await import("../console/filters");
+    const now = Date.UTC(2026, 10, 27, 12, 0, 0);
+    const tf = timeframeFromParam("24h", now);
+    expect(tf?.from).toEqual({ absoluteDate: "2026-11-26T12:00:00.000Z", value: "now()-24h", type: "expression" });
+    expect(tf?.to.value).toBe("now()");
+    for (const bad of [null, "", "0h", "721h", "24", "1d", "-5h"]) expect(timeframeFromParam(bad, now)).toBeNull();
+  });
+});
