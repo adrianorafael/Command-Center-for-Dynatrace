@@ -13,7 +13,6 @@ import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink, Cell, withCreatedMar
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ConfirmModal } from "../../components/ConfirmModal";
-import { CHANNEL_LABEL } from "../../components/ChannelIcon";
 import { formatRelative } from "../../components/format";
 
 interface PolicyRow {
@@ -35,14 +34,19 @@ export const PoliciesPage = () => {
   const rows = useMemo<PolicyRow[]>(
     () =>
       (data?.policies ?? []).map((p) => {
+        // Who is notified at each step (first target, "+N" for more), with the wait before later steps.
         const summary = p.steps
-          .map((s) => {
-            if (s.channels?.length) return s.channels.map((c) => CHANNEL_LABEL[c]).join("+");
+          .map((s, i) => {
             const t = s.targets[0];
-            if (!t) return "?";
-            if (t.type === "user") return userName(t.uid);
-            if (t.type === "team") return data?.teams.find((x) => x.id === t.teamId)?.name ?? "Team";
-            return data?.schedules.find((x) => x.id === t.scheduleId)?.name ?? "On call";
+            const who = !t
+              ? "nobody"
+              : t.type === "user"
+                ? userName(t.uid)
+                : t.type === "team"
+                  ? `team ${data?.teams.find((x) => x.id === t.teamId)?.name ?? "?"}`
+                  : `on-call of ${data?.schedules.find((x) => x.id === t.scheduleId)?.name ?? "?"}`;
+            const more = s.targets.length > 1 ? ` +${s.targets.length - 1}` : "";
+            return `${i > 0 ? `${s.delayMinutes} min → ` : ""}${who}${more}`;
           })
           .join(" → ");
         const used = (data?.services ?? []).filter((s) => s.policyId === p.id).length + (data?.teams ?? []).filter((t) => t.defaultPolicyId === p.id).length;

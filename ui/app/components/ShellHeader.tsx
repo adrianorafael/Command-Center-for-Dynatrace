@@ -172,8 +172,9 @@ const OnCallNowAction = () => {
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  width: 24,
-                  height: 24,
+                  // Same box as a header icon (20 px), so the header keeps its height when you go on call.
+                  width: 20,
+                  height: 20,
                   borderRadius: "50%",
                   background: Colors.Background.Container.Success.Accent,
                   color: Colors.Text.Success.OnAccent.Default,

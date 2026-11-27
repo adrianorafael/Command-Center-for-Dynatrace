@@ -1,5 +1,5 @@
 import { markCreated } from "../../components/NewItemHighlight";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -7,7 +7,7 @@ import { Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typography";
 import { FormField, Label, Select, Switch, TextArea } from "@dynatrace/strato-components/forms";
-import { PlayIcon, PlusIcon, SuccessIcon, XmarkIcon, LockIcon } from "@dynatrace/strato-icons";
+import { PlayIcon, PlusIcon, SuccessIcon, WarningIcon, XmarkIcon, LockIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Timeseries } from "@dynatrace/strato-components/charts";
 import { PRIORITIES, SCHEMA_VERSION, type Alert, type Priority, type RoutingRule, type Service } from "../../domain/contracts";
@@ -164,9 +164,31 @@ export function emptyRule(serviceId?: string): RoutingRule {
   return { id: newId("rule"), name: "", enabled: true, match: "all", conditions: [{ field: "title", op: "contains", value: "" }], then: serviceId ? { serviceId } : {} };
 }
 
-export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
+export const RulesTab = ({
+  onlyService,
+  newRequest,
+  presetTeamId,
+}: {
+  onlyService?: string;
+  /** Changes each time the page's "New rule" button is used (the rules page owns that button). */
+  newRequest?: number;
+  /** Opens a new rule that sends alerts to this team (from a team's setup checklist). */
+  presetTeamId?: string;
+}) => {
   const { data, now, mutate } = useAppData();
+  const navigate = useNavigate();
   const [editing, setEditing] = useState<RoutingRule>();
+  useEffect(() => {
+    if (newRequest) setEditing(emptyRule(onlyService));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newRequest]);
+  useEffect(() => {
+    if (!presetTeamId) return;
+    // Named after the team, so only the condition is left to fill in.
+    const team = data?.teams.find((t) => t.id === presetTeamId);
+    setEditing({ ...emptyRule(), name: team ? `Alerts for ${team.name}` : "", then: { teamId: presetTeamId } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetTeamId]);
   const [toDelete, setToDelete] = useState<RoutingRule>();
   const rules = useMemo(() => data?.rules.rules ?? [], [data]);
   const rows = useMemo<RuleRow[]>(
@@ -191,6 +213,7 @@ export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
         .filter((r) => !onlyService || r.then.serviceId === onlyService),
     [rules, data, now, onlyService],
   );
+  const defaultTeam = data?.teams.find((t) => t.id === data.settings.defaults.teamId);
   const saveRules = (list: RoutingRule[], msg: string) => {
     if (!data) return Promise.resolve();
     return mutate((s) => s.saveRules(nextRev({ ...data.rules, schemaVersion: SCHEMA_VERSION, rules: list })), msg);
@@ -207,25 +230,20 @@ export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
       cell: ({ rowData }) => <CellText code>{rowData.summary}</CellText>,
     },
     { id: "then", header: "Actions", accessor: "thenText", width: 300, cell: ({ rowData }) => <CellText>{rowData.thenText}</CellText> },
-    {
-      id: "enabled",
-      header: "Enabled",
-      accessor: (r) => (r.enabled ? "Yes" : "No"),
-      width: 90,
-      cell: ({ rowData }) => <Cell>{rowData.enabled ? <Health status="ideal">On</Health> : <Health status="neutral">Off</Health>}</Cell>,
-    },
     { id: "matched", header: "Matched 24 h", accessor: "matched24", width: 120 },
   ];
   return (
     <Flex flexDirection="column" gap={12}>
       <Flex justifyContent="space-between" alignItems="center" gap={8} flexWrap="wrap">
         <Paragraph>Rules are evaluated top to bottom. The first enabled rule that matches wins. Drag rows to reorder.</Paragraph>
-        <Button onClick={() => setEditing(emptyRule(onlyService))}>
-          <Button.Prefix>
-            <PlusIcon />
-          </Button.Prefix>
-          New rule
-        </Button>
+        {newRequest === undefined && (
+          <Button onClick={() => setEditing(emptyRule(onlyService))}>
+            <Button.Prefix>
+              <PlusIcon />
+            </Button.Prefix>
+            New rule
+          </Button>
+        )}
       </Flex>
       <DataTable
         data={rows}
@@ -264,14 +282,22 @@ export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
         </DataTable.EmptyState>
       </DataTable>
       <Surface padding={12}>
-        <Flex alignItems="center" gap={8}>
+        <Flex alignItems="center" gap={8} flexWrap="wrap">
           <LockIcon />
           <Text textStyle="base-emphasized">Default (no rule matched)</Text>
-          <Text>
-            → cc.service from the event, else team{" "}
-            {data?.teams.find((t) => t.id === data.settings.defaults.teamId)?.name ?? "none"}, priority by severity/category mapping (fallback{" "}
-            {data?.settings.defaults.priority})
-          </Text>
+          {defaultTeam ? (
+            <Text>
+              → cc.service from the event, else team {defaultTeam.name}, priority by severity/category mapping (fallback {data?.settings.defaults.priority})
+            </Text>
+          ) : (
+            <>
+              <WarningIcon style={{ color: Colors.Icon.Warning.Default }} />
+              <Text>→ cc.service from the event, else no team: nobody is paged. Choose a default team.</Text>
+              <Button size="condensed" onClick={() => navigate("/settings#defaults")}>
+                Choose default team
+              </Button>
+            </>
+          )}
         </Flex>
       </Surface>
       <RuleSheet
@@ -324,7 +350,21 @@ export const TestTab = () => {
   const run = () => {
     try {
       const parsed = JSON.parse(text) as Partial<Alert>;
-      const alert: Alert = { ...SAMPLE, entities: [], tags: [], fields: {}, ...parsed };
+      // Only structural defaults: values of the example must not leak into a pasted alert.
+      const alert: Alert = {
+        source: "generic-event",
+        sourceId: "test",
+        dedupKey: "test",
+        title: "",
+        sourceStatus: "ACTIVE",
+        startedAt: 0,
+        entities: [],
+        tags: [],
+        underMaintenance: false,
+        muted: false,
+        fields: {},
+        ...parsed,
+      };
       setResult({ alert });
     } catch (e) {
       const m = /position (\d+)/.exec(e instanceof Error ? e.message : "");
@@ -517,19 +557,31 @@ export const ServicesPage = () => {
   const [params, setParams] = useSearchParams();
   const tab = Math.max(0, TABS.indexOf((params.get("tab") ?? "services") as (typeof TABS)[number]));
   const createNew = () => navigate("/services/new");
+  const [newRule, setNewRule] = useState(0);
+  // /services?tab=rules&newRule=1&teamId=… (from a team's checklist) opens a rule that sends alerts to that team.
+  const [presetTeamId] = useState(() => (params.get("newRule") === "1" ? (params.get("teamId") ?? undefined) : undefined));
   return (
     <PageLayout.Content>
       <Flex flexDirection="column" gap={16} padding={16}>
         <PageTitle
           title="Services"
-          subtitle="Services, ordered routing rules (first match wins), and the priority mapping"
+          subtitle="Where alerts go: services, routing rules (first match wins) and the priority mapping"
           action={
-            <Button color="primary" variant="accent" onClick={createNew}>
-              <Button.Prefix>
-                <PlusIcon />
-              </Button.Prefix>
-              New service
-            </Button>
+            tab === 1 ? (
+              <Button color="primary" variant="accent" onClick={() => setNewRule((n) => n + 1)}>
+                <Button.Prefix>
+                  <PlusIcon />
+                </Button.Prefix>
+                New rule
+              </Button>
+            ) : (
+              <Button color="primary" variant="accent" onClick={createNew}>
+                <Button.Prefix>
+                  <PlusIcon />
+                </Button.Prefix>
+                New service
+              </Button>
+            )
           }
         />
         <QueryState isLoading={isLoading} error={error} errorTitle="Couldn't load services" onRetry={() => void refresh()}>
@@ -542,7 +594,7 @@ export const ServicesPage = () => {
               </Tab>
               <Tab title={`Routing rules (${data.rules.rules.length})`}>
                 <Flex paddingTop={16} flexDirection="column">
-                  <RulesTab />
+                  <RulesTab newRequest={newRule} presetTeamId={presetTeamId} />
                 </Flex>
               </Tab>
               <Tab title="Test a rule">

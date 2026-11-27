@@ -1,16 +1,18 @@
 import { markCreated } from "../../components/NewItemHighlight";
 import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Flex, PageLayout } from "@dynatrace/strato-components/layouts";
 import { Button } from "@dynatrace/strato-components/buttons";
-import { SearchInput, FormField, Label, TextInput, TextArea, Select } from "@dynatrace/strato-components/forms";
+import { Checkbox, SearchInput, FormField, Label, TextInput, TextArea, Select } from "@dynatrace/strato-components/forms";
 import { Modal } from "@dynatrace/strato-components/overlays";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Text } from "@dynatrace/strato-components/typography";
 import { PlusIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import { PRIORITIES, SCHEMA_VERSION, type Priority, type Team } from "../../domain/contracts";
-import { useAppData } from "../../hooks/AppDataContext";
+import { useAppData, nextRev, type AppData } from "../../hooks/AppDataContext";
+import type { Store } from "../../data/repository";
+import { FieldHint } from "../../components/FieldHint";
 import { newId, onCallAt, validateTeam } from "../../hooks/domain";
 import { CellEmpty, CellPeople, CellText, LIST_TABLE_VARIANT, CellLink, Cell, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
@@ -31,7 +33,10 @@ interface TeamRow {
   openTotal: number;
 }
 
-/** Team create/edit modal (name, description, default policy). */
+/**
+ * Team create/edit modal: name, description, whether it is the default team (receives alerts that no routing
+ * rule sends elsewhere) and, when editing, its default escalation policy.
+ */
 export const TeamFormModal = ({ team, show, onClose }: { team?: Team; show: boolean; onClose: (saved?: Team) => void }) => {
   const { data, mutate } = useAppData();
   const [name, setName] = useState(team?.name ?? "");
@@ -39,13 +44,18 @@ export const TeamFormModal = ({ team, show, onClose }: { team?: Team; show: bool
   const [policyId, setPolicyId] = useState<string | null>(team?.defaultPolicyId ?? null);
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
+  const currentDefault = data?.teams.find((t) => t.id === data.settings.defaults.teamId);
+  const [isDefault, setIsDefault] = useState(false);
   React.useEffect(() => {
     if (show) {
       setName(team?.name ?? "");
       setDescription(team?.description ?? "");
       setPolicyId(team?.defaultPolicyId ?? null);
+      // A new team becomes the default team when there is none yet: otherwise its alerts would have nowhere to go.
+      setIsDefault(team ? currentDefault?.id === team.id : !currentDefault);
       setTried(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, team]);
   const draft: Team = {
     schemaVersion: SCHEMA_VERSION,
@@ -63,7 +73,19 @@ export const TeamFormModal = ({ team, show, onClose }: { team?: Team; show: bool
     if (errors.length) return;
     setBusy(true);
     if (!team) markCreated("team", draft.id);
-    mutate((s) => s.saveTeam(draft), team ? "Team saved" : "Team created")
+    const wasDefault = currentDefault?.id === draft.id;
+    mutate(
+      async (s) => {
+        await s.saveTeam(draft);
+        if (data && isDefault !== wasDefault) {
+          const defaults = { ...data.settings.defaults };
+          if (isDefault) defaults.teamId = draft.id;
+          else delete defaults.teamId;
+          await s.saveSettings(nextRev({ ...data.settings, defaults }));
+        }
+      },
+      team ? "Team saved" : isDefault ? "Team created: it receives every alert that no routing rule sends elsewhere" : "Team created",
+    )
       .then(() => onClose(draft))
       .catch(() => undefined)
       .finally(() => setBusy(false));
@@ -92,22 +114,45 @@ export const TeamFormModal = ({ team, show, onClose }: { team?: Team; show: bool
           <Label>Description</Label>
           <TextArea value={description} onChange={setDescription} />
         </FormField>
-        <FormField>
-          <Label>Default escalation policy</Label>
-          <Select value={policyId} onChange={(v) => setPolicyId(v)} clearable>
-            <Select.Content>
-              {(data?.policies ?? []).map((p) => (
-                <Select.Option key={p.id} value={p.id}>
-                  {p.name}
-                </Select.Option>
-              ))}
-            </Select.Content>
-          </Select>
-        </FormField>
+        {team && (data?.policies.length ?? 0) > 0 && (
+          <FormField>
+            <Label>Default escalation policy</Label>
+            <Select value={policyId} onChange={(v) => setPolicyId(v)} clearable>
+              <Select.Content>
+                {(data?.policies ?? []).map((p) => (
+                  <Select.Option key={p.id} value={p.id}>
+                    {p.name}
+                  </Select.Option>
+                ))}
+              </Select.Content>
+            </Select>
+            <FieldHint>Who is notified, and in which order, when an incident of this team triggers</FieldHint>
+          </FormField>
+        )}
+        <Flex flexDirection="column" gap={4}>
+          <Checkbox value={isDefault} onChange={(v) => setIsDefault(v === true)}>
+            Default team: receives every alert that no routing rule sends elsewhere
+          </Checkbox>
+          <FieldHint>
+            {currentDefault && currentDefault.id !== draft.id
+              ? `The default team is ${currentDefault.name} now. Tick this to make it ${name.trim() || "this team"} instead.`
+              : "Davis problems carry no team. Without a default team or routing rules they page nobody."}
+          </FieldHint>
+        </Flex>
       </Flex>
     </Modal>
   );
 };
+
+/** Deletes a team; if it was the default team, the default is cleared so Settings never points to a missing team. */
+export async function deleteTeamAndDefault(s: Store, teamId: string, data: AppData | undefined): Promise<void> {
+  await s.deleteTeam(teamId);
+  if (data && data.settings.defaults.teamId === teamId) {
+    const defaults = { ...data.settings.defaults };
+    delete defaults.teamId;
+    await s.saveSettings(nextRev({ ...data.settings, defaults }));
+  }
+}
 
 export function teamReferences(teamId: string, data: NonNullable<ReturnType<typeof useAppData>["data"]>): string[] {
   const refs: string[] = [];
@@ -124,7 +169,9 @@ export const TeamsPage = () => {
   const { data, isLoading, error, refresh, now, userName, mutate } = useAppData();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
-  const [showNew, setShowNew] = useState(false);
+  const [search] = useSearchParams();
+  // /teams?new=1 opens the form at once (used by empty states that need a team first).
+  const [showNew, setShowNew] = useState(search.get("new") === "1");
   const [toDelete, setToDelete] = useState<Team>();
 
   const rows = useMemo<TeamRow[]>(() => {
@@ -285,7 +332,7 @@ export const TeamsPage = () => {
           show={!!toDelete}
           title={`Delete ${toDelete?.name ?? "team"}?`}
           onDismiss={() => setToDelete(undefined)}
-          onConfirm={() => (toDelete ? mutate((s) => s.deleteTeam(toDelete.id), "Team deleted").catch(() => undefined) : undefined)}
+          onConfirm={() => (toDelete ? mutate((s) => deleteTeamAndDefault(s, toDelete.id, data), "Team deleted").catch(() => undefined) : undefined)}
         >
           The team and its member list are deleted. Schedules keep their participants.
         </ConfirmModal>

@@ -2,16 +2,7 @@ import React from "react";
 import { CallIcon, ChatIcon, HttpIcon, MobileIcon } from "@dynatrace/strato-icons";
 import type { Channel } from "../domain/contracts";
 
-export const CHANNEL_LABEL: Record<Channel, string> = {
-  sms: "SMS",
-  voice: "Voice",
-  whatsapp: "WhatsApp",
-  telegram: "Telegram",
-  slack: "Slack",
-  teams: "Microsoft Teams",
-  ifttt: "IFTTT",
-  webhook: "Webhook",
-};
+export { CHANNEL_LABEL } from "./channelLabels";
 
 /** SMS → Mobile, Voice → Call, chat apps → Chat, webhooks → Http (DESIGN §14). */
 export const ChannelIcon = ({ channel }: { channel: Channel }) => {

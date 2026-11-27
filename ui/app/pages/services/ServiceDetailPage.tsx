@@ -33,7 +33,8 @@ export const ServiceDetailPage = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!draft && data) setDraft(existing ?? { ...newService(presetTeam ?? data.teams[0]?.id), policyId: data.teams.find((t) => t.id === presetTeam)?.defaultPolicyId });
+    // A new service follows its team's default policy unless one is chosen here.
+    if (!draft && data) setDraft(existing ?? newService(presetTeam ?? data.teams[0]?.id));
   }, [data, existing, draft, presetTeam]);
 
   if (!draft || isLoading || error)
@@ -56,6 +57,7 @@ export const ServiceDetailPage = () => {
     );
 
   const errors = validateService(draft, { teams: data?.teams, policies: data?.policies });
+  const teamPolicy = data?.policies.find((p) => p.id === data.teams.find((t) => t.id === draft.teamId)?.defaultPolicyId);
   const save = () => {
     setTried(true);
     if (errors.length) return;
@@ -82,8 +84,11 @@ export const ServiceDetailPage = () => {
         <Flex flexDirection="column" gap={16}>
           <FormField required>
             <Label>Name</Label>
-            <TextInput value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} />
-            <FieldHint>Events can reference the service by this name or its ID ({draft.id}) in cc.service</FieldHint>
+            <TextInput value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} placeholder="For example: Checkout" />
+            <FieldHint>
+              An event that carries cc.service = "{draft.name.trim() || "this name"}"{isNew ? "" : ` (or the ID ${draft.id})`} goes to this service. Other alerts,
+              such as Davis problems, need a routing rule.
+            </FieldHint>
           </FormField>
           <FormField>
             <Label>Description</Label>
@@ -112,7 +117,9 @@ export const ServiceDetailPage = () => {
                 ))}
               </Select.Content>
             </Select>
-            <FieldHint>Empty: the team's default policy</FieldHint>
+            <FieldHint>
+              Empty: the team's default policy{teamPolicy ? ` (${teamPolicy.name})` : ""}
+            </FieldHint>
           </FormField>
           <FormField>
             <Label>Default priority</Label>
@@ -125,7 +132,7 @@ export const ServiceDetailPage = () => {
                 ))}
               </Select.Content>
             </Select>
-            <FieldHint>Used when no rule and no cc.priority set one</FieldHint>
+            <FieldHint>Optional. Used when no rule and no cc.priority set one; empty: the priority mapping decides</FieldHint>
           </FormField>
         </Flex>
       </FieldSet>

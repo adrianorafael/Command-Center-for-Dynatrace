@@ -132,7 +132,6 @@ export const OnCallCard = ({ schedule, onAddOverride }: { schedule: Schedule; on
 
 const NowTab = ({ onAddOverride }: { onAddOverride: (s: Schedule) => void }) => {
   const { data, now, currentUser } = useAppData();
-  const navigate = useNavigate();
   const myTeams = useMemo(
     () => (data?.teams ?? []).filter((t) => t.members.some((m) => m.uid === currentUser.uid)).map((t) => t.id),
     [data, currentUser.uid],
@@ -145,15 +144,7 @@ const NowTab = ({ onAddOverride }: { onAddOverride: (s: Schedule) => void }) => 
   const from = now - 2 * 3_600_000;
   if (data && data.schedules.length === 0)
     return (
-      <SimpleEmpty
-        title="No on-call schedules yet"
-        details="Create a schedule to define who gets notified and when."
-        actions={
-          <Button variant="accent" color="primary" onClick={() => navigate("/on-call/schedules/new")}>
-            New schedule
-          </Button>
-        }
-      />
+      <NoSchedules />
     );
   return (
     <Flex flexDirection="column" gap={16}>
@@ -270,6 +261,7 @@ const SchedulesTab = () => {
         min: 0,
         max: 100,
         showValue: "right",
+        formatter: (v: number) => `${v}%`,
         thresholds: [
           { value: 0, color: Colors.Charts.Threshold.Bad.Default },
           { value: 99.9, color: Colors.Charts.Threshold.Good.Default },
@@ -279,15 +271,7 @@ const SchedulesTab = () => {
   ];
   if (data && rows.length === 0)
     return (
-      <SimpleEmpty
-        title="No on-call schedules yet"
-        details="Create a schedule to define who gets notified and when."
-        actions={
-          <Button variant="accent" color="primary" onClick={() => navigate("/on-call/schedules/new")}>
-            New schedule
-          </Button>
-        }
-      />
+      <NoSchedules />
     );
   return (
     <>
@@ -416,8 +400,35 @@ const OverridesTab = ({ onNew }: { onNew: () => void }) => {
   );
 };
 
+/** Empty state shared by the Now and Schedules tabs: a schedule needs a team with people first. */
+const NoSchedules = () => {
+  const { data } = useAppData();
+  const navigate = useNavigate();
+  return data && data.teams.length === 0 ? (
+    <SimpleEmpty
+      title="Start with a team"
+      details="A schedule rotates the people of a team. Create the team and add its people first."
+      actions={
+        <Button variant="accent" color="primary" onClick={() => navigate("/teams?new=1")}>
+          New team
+        </Button>
+      }
+    />
+  ) : (
+    <SimpleEmpty
+      title="No on-call schedules yet"
+      details="A schedule decides who is on call at any moment. Escalation policies page that person."
+      actions={
+        <Button variant="accent" color="primary" onClick={() => navigate("/on-call/schedules/new")}>
+          New schedule
+        </Button>
+      }
+    />
+  );
+};
+
 export const OnCallPage = () => {
-  const { isLoading, error, refresh } = useAppData();
+  const { isLoading, error, refresh, data } = useAppData();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const tab = Math.max(0, TABS.indexOf((params.get("tab") ?? "now") as (typeof TABS)[number]));
@@ -429,7 +440,7 @@ export const OnCallPage = () => {
           title="On-call"
           subtitle="Who's responsible right now and who's next"
           action={
-            tab === 1 ? (
+            data && data.teams.length === 0 ? undefined : tab === 1 || (data && data.schedules.length === 0) ? (
               <Button color="primary" variant="accent" onClick={() => navigate("/on-call/schedules/new")}>
                 <Button.Prefix>
                   <PlusIcon />

@@ -136,3 +136,19 @@ describe("schedule timeline", () => {
     expect(r.next?.from).toBe(Date.UTC(2026, 0, 2, 9));
   });
 });
+
+describe("firstHandoff (what the schedule editor shows as the handoff weekday)", () => {
+  it("is the first handoff at or after the start, in the schedule zone, not the weekday of startsAt elsewhere", async () => {
+    const { firstHandoff } = await import("../schedule/resolve");
+    const { weekdayInZone } = await import("../time/tz");
+    // Starts Thu 2026-11-26 23:30 UTC = Fri 08:30 in Tokyo (UTC+9); handoff 09:00 Tokyo → Fri 09:00 Tokyo = Fri 00:00 UTC.
+    const l = layer({ startsAt: Date.UTC(2026, 10, 26, 23, 30), handoffTime: "09:00", rotation: { type: "weekly" } });
+    const first = firstHandoff(l, "Asia/Tokyo");
+    expect(first).toBe(Date.UTC(2026, 10, 27, 0, 0));
+    expect(weekdayInZone(first, "Asia/Tokyo")).toBe(5); // Friday, although startsAt is a Thursday in UTC
+    // Start after that day's handoff: the first handoff is the next day.
+    const late = layer({ startsAt: Date.UTC(2026, 10, 27, 12, 0), handoffTime: "09:00", rotation: { type: "weekly" } });
+    expect(firstHandoff(late, "UTC")).toBe(Date.UTC(2026, 10, 28, 9, 0));
+    expect(layerShiftAt(late, "UTC", Date.UTC(2026, 10, 28, 9, 0))?.start).toBe(Date.UTC(2026, 10, 28, 9, 0));
+  });
+});
