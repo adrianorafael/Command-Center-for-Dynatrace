@@ -11,7 +11,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { TeamMember, TeamRole } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { newId, onCallAt } from "../../hooks/domain";
-import { Cell, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
+import { Cell, CellText, LIST_TABLE_VARIANT, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ShiftGantt } from "../../components/ShiftGantt";
@@ -252,7 +252,7 @@ export const TeamDetailPage = () => {
                   actions={addPeopleButton}
                 />
               ) : (
-              <DataTable data={rows} columns={columns} rowId={(r) => r.uid} fullWidth sortable variant={LIST_TABLE_VARIANT}>
+              <DataTable data={rows} columns={withCreatedMarker(columns, "member", (r) => r.uid)} rowId={(r) => r.uid} fullWidth sortable variant={LIST_TABLE_VARIANT}>
                 <DataTable.RowActions>
                   {(row) => {
                     const r = row as MemberRow;

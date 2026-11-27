@@ -1,3 +1,4 @@
+import { markCreated } from "../../components/NewItemHighlight";
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Flex, PageLayout } from "@dynatrace/strato-components/layouts";
@@ -8,7 +9,7 @@ import { PlusIcon } from "@dynatrace/strato-icons";
 import type { EscalationPolicy } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { newId } from "../../hooks/domain";
-import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink, Cell } from "../../components/tableKit";
+import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink, Cell, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ConfirmModal } from "../../components/ConfirmModal";
@@ -122,7 +123,7 @@ export const PoliciesPage = () => {
             />
           }
         >
-          <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
+          <DataTable data={rows} columns={withCreatedMarker(columns, "policy", (r) => r.id)} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
             <DataTable.RowActions>
               {(row) => {
                 const r = row as PolicyRow;
@@ -134,7 +135,7 @@ export const PoliciesPage = () => {
                     <Button
                       size="condensed"
                       onClick={() =>
-                        void mutate((s) => s.savePolicy({ ...r.policy, id: newId(r.name), name: `${r.name} (copy)`, rev: 0 }), "Policy duplicated").catch(
+                        void mutate((s) => { const id = newId(r.name); markCreated("policy", id); return s.savePolicy({ ...r.policy, id, name: `${r.name} (copy)`, rev: 0 }); }, "Policy duplicated").catch(
                           () => undefined,
                         )
                       }

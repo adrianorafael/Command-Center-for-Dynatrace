@@ -1,3 +1,4 @@
+import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -24,7 +25,7 @@ import { PlusIcon, XmarkIcon } from "@dynatrace/strato-icons";
 import { SCHEMA_VERSION, type RotationLayer, type Schedule } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { newId, validateSchedule } from "../../hooks/domain";
-import { LIST_TABLE_VARIANT } from "../../components/tableKit";
+import { LIST_TABLE_VARIANT, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { UserPicker } from "../../components/UserPicker";
 import { ShiftGantt, coverage } from "../../components/ShiftGantt";
@@ -209,6 +210,7 @@ const LayerEditor = ({
             disabled={!pick}
             onClick={() => {
               if (!pick) return;
+              markCreated("participant", pick);
               onChange({ ...layer, participants: [...layer.participants, pick] });
               setPick(null);
             }}
@@ -222,7 +224,7 @@ const LayerEditor = ({
         {rows.length ? (
           <DataTable
             data={rows}
-            columns={columns}
+            columns={withCreatedMarker(columns, "participant", (x) => x.uid)}
             rowId={(x) => x.uid}
             fullWidth
             variant={LIST_TABLE_VARIANT}
@@ -338,6 +340,7 @@ export const ScheduleEditorPage = () => {
     setTried(true);
     if (errors.length) return;
     setSaving(true);
+    if (isNew) markCreated("schedule", draft.id);
     mutate((s) => s.saveSchedule(nextRev(draft)), isNew ? "Schedule created" : "Schedule saved")
       .then(() => {
         setDirty(false);
@@ -347,6 +350,11 @@ export const ScheduleEditorPage = () => {
       .finally(() => setSaving(false));
   };
   const setLayer = (i: number, l: RotationLayer) => update({ ...draft, layers: draft.layers.map((x, j) => (j === i ? l : x)) });
+  const copyLayer = (l: RotationLayer): RotationLayer => {
+    const c = { ...l, id: newId(`layer${draft.layers.length + 1}`), name: `${l.name} (copy)` };
+    markCreated("layer", c.id);
+    return c;
+  };
   const gapHours = cov ? cov.gaps.reduce((a, g) => a + (g.to - g.from), 0) : 0;
   const hasMembers = draft.layers.some((l) => l.participants.length > 0);
 
@@ -422,6 +430,7 @@ export const ScheduleEditorPage = () => {
                   <Accordion.Section key={l.id} id={l.id}>
                     <Accordion.SectionLabel>
                       <Flex flexDirection="column" gap={0}>
+                        <CreatedMarker kind="layer" id={l.id} />
                         <Text textStyle="base-emphasized">
                           Layer {i + 1} · {l.name || "Unnamed"}
                         </Text>
@@ -437,7 +446,7 @@ export const ScheduleEditorPage = () => {
                         onDuplicate={() =>
                           update({
                             ...draft,
-                            layers: [...draft.layers, { ...l, id: newId(`layer${draft.layers.length + 1}`), name: `${l.name} (copy)` }],
+                            layers: [...draft.layers, copyLayer(l)],
                           })
                         }
                       />
@@ -449,6 +458,7 @@ export const ScheduleEditorPage = () => {
                 <Button
                   onClick={() => {
                     const l = newLayer(draft.layers.length, now);
+                    markCreated("layer", l.id);
                     update({ ...draft, layers: [...draft.layers, l] });
                     setExpanded((e) => [...e, l.id]);
                   }}

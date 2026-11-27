@@ -1,3 +1,4 @@
+import { markCreated } from "../../components/NewItemHighlight";
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex, Surface } from "@dynatrace/strato-components/layouts";
@@ -89,6 +90,7 @@ export const AddPeopleModal = ({ team, show, onClose, onAdded }: { team: Team; s
     setBusy(true);
     const added = [...picked.keys()];
     rememberUsers([...picked.values()]);
+    added.forEach((uid) => markCreated("member", uid));
     mutate((s) => s.saveTeam(nextRev({ ...team, members: [...team.members, ...added.map((uid) => ({ uid, role }))] })), `${n} ${n === 1 ? "person" : "people"} added`)
       .then(() => {
         onClose();

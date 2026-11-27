@@ -127,6 +127,14 @@ Screenshots on the [project page](https://adrianorafael.github.io/Command-Center
   someone else (the next person in the rotation is suggested) through a schedule override, effective immediately.
 - When you take part in a schedule but aren't on call, **Take on-call now…** puts you on call until the current shift ends.
 
+### Created-item highlight
+
+Anything a person creates in a list with a button pulses once for one second (menu-hover background plus an outline), so the new
+row is easy to spot: war rooms, notebooks and links, teams, team members, contact methods, quiet hours, schedules, layers,
+participants, overrides (including **Leave/Take on-call now**), escalation policies and steps, services, routing rules and incident
+notes. With the system setting "reduce motion" it fades once without pulsing. Implemented once in
+`ui/app/components/NewItemHighlight.tsx` (`markCreated` + `CreatedMarker`).
+
 ### Incident detail (`/incidents/:id`)
 Opens beside the console table. Tabs: **Timeline** (every state change, note and notification), **Escalation** (which
 step fired, who is next and when), **Notifications** (the delivery ledger: planned, sent, failed, timed out, with the

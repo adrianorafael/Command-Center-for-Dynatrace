@@ -1,3 +1,4 @@
+import { markCreated } from "../../components/NewItemHighlight";
 import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface } from "@dynatrace/strato-components/layouts";
@@ -12,7 +13,7 @@ import type { Timeseries } from "@dynatrace/strato-components/charts";
 import { PRIORITIES, SCHEMA_VERSION, type Alert, type Priority, type RoutingRule, type Service } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { evaluateCondition, newId, routeAlert, ruleMatches } from "../../hooks/domain";
-import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink, Cell } from "../../components/tableKit";
+import { CellEmpty, CellText, LIST_TABLE_VARIANT, CellLink, Cell, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { PriorityChip } from "../../components/PriorityChip";
@@ -121,7 +122,7 @@ const ServicesTab = ({ onNew }: { onNew: () => void }) => {
     );
   return (
     <>
-      <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
+      <DataTable data={rows} columns={withCreatedMarker(columns, "service", (r) => r.id)} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
         <DataTable.RowActions>
           {(row) => {
             const r = row as ServiceRow;
@@ -228,7 +229,7 @@ export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
       </Flex>
       <DataTable
         data={rows}
-        columns={columns}
+        columns={withCreatedMarker(columns, "rule", (r) => r.id)}
         rowId={(r) => r.id}
         fullWidth
         variant={LIST_TABLE_VARIANT}
@@ -278,6 +279,7 @@ export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
         onClose={() => setEditing(undefined)}
         onSave={(r) => {
           const exists = rules.some((x) => x.id === r.id);
+          if (!exists) markCreated("rule", r.id);
           return saveRules(exists ? rules.map((x) => (x.id === r.id ? r : x)) : [...rules, r], exists ? "Rule saved" : "Rule created");
         }}
       />

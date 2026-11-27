@@ -1,3 +1,4 @@
+import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import { WarRoomModal, type WarRoomRequest } from "../warrooms/WarRoomModal";
 import { isSafeHttpsUrl, openRoomsForIncident } from "../../domain/warrooms";
 import React, { useState } from "react";
@@ -139,6 +140,7 @@ export const IncidentDetails = ({ incident, onModal }: { incident: Incident; onM
   const addNote = () => {
     if (!note.trim()) return;
     setSavingNote(true);
+    markCreated("note", incident.id);
     act(ids, { type: "note", text: note.trim() })
       .then(() => setNote(""))
       .catch(() => undefined)
@@ -324,7 +326,8 @@ export const IncidentDetails = ({ incident, onModal }: { incident: Incident; onM
             </Flex>
             {notes.length === 0 && <Text>No notes yet. Notes are append-only and part of the audit trail.</Text>}
             {notes.map((n, i) => (
-              <Flex key={i} flexDirection="column" gap={4}>
+              <Flex key={i} flexDirection="column" gap={4} data-created-scope>
+                {i === 0 && <CreatedMarker kind="note" id={incident.id} />}
                 <Flex alignItems="center" gap={8}>
                   <Avatar size="small" abbreviation={initials(userName(n.by))}>
                     <Avatar.Label>{userName(n.by)}</Avatar.Label>

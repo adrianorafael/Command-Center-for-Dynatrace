@@ -10,7 +10,7 @@ import { validateWarRoom, type WarRoom, type WarRoomLink } from "../../domain/wa
 import { useAppData } from "../../hooks/AppDataContext";
 import { newId } from "../../hooks/domain";
 import { FieldError, FieldHint } from "../../components/FieldHint";
-import { NewItemHighlight } from "../../components/NewItemHighlight";
+import { CreatedMarker, NewItemHighlight, markCreated } from "../../components/NewItemHighlight";
 import { notify } from "../../hooks/notifications";
 import { errorMessage } from "../../components/format";
 import { createPostmortemNotebook, listNotebooks, type NotebookRef } from "../../data/notebooks";
@@ -94,6 +94,7 @@ export const WarRoomModal = ({ request, onClose }: { request: WarRoomRequest; on
     if (errors.length > 0) return;
     setBusy(true);
     const next = { ...room, title: room.title.trim(), url: room.url.trim(), rev: room.rev + 1 };
+    if (request.mode === "create") markCreated("war-room", next.id);
     mutate((s) => s.saveWarRoom(next), request.mode === "create" ? "War room opened" : "War room updated")
       .then(onClose)
       .catch(() => undefined)
@@ -207,7 +208,8 @@ export const WarRoomModal = ({ request, onClose }: { request: WarRoomRequest; on
             </Flex>
             </NewItemHighlight>
           ) : (
-            <Flex key={i} gap={8} alignItems="flex-start">
+            <Flex key={i} gap={8} alignItems="flex-start" data-created-scope>
+              <CreatedMarker kind="wr-link" id={String(i)} />
               <Flex flexDirection="column" style={{ flex: "0 0 30%" }}>
                 <TextInput value={n.title} onChange={(v) => setNotebook(i, { ...n, title: v })} placeholder="Name" aria-label="Notebook name" />
                 {err(`notebooks[${i}].title`) && <FieldError>{err(`notebooks[${i}].title`)}</FieldError>}
@@ -228,9 +230,10 @@ export const WarRoomModal = ({ request, onClose }: { request: WarRoomRequest; on
           ))}
           <Flex>
             <Button
-              onClick={() =>
-                setRoom((r) => ({ ...r, notebooks: [...r.notebooks, { title: r.notebooks.length === 0 ? "Post-mortem" : "", url: "" }] }))
-              }
+              onClick={() => {
+                markCreated("wr-link", String(room.notebooks.length));
+                setRoom((r) => ({ ...r, notebooks: [...r.notebooks, { title: r.notebooks.length === 0 ? "Post-mortem" : "", url: "" }] }));
+              }}
             >
               <Button.Prefix>
                 <PlusIcon />

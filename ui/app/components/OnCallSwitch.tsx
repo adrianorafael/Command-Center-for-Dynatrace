@@ -1,3 +1,4 @@
+import { markCreated } from "./NewItemHighlight";
 import React, { useMemo, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex } from "@dynatrace/strato-components/layouts";
@@ -59,6 +60,7 @@ export const OnCallSwitchModal = ({ request, onClose }: { request: OnCallSwitchR
       async (store) => {
         for (const p of plan) {
           const o = { id: newId("ovr"), uid: p.uid as string, from: now, to: p.until, note: request.mode === "off" ? "Left on-call from the header" : "Took on-call from the header" };
+          markCreated("override", o.id);
           await store.saveSchedule(nextRev({ ...p.s, overrides: [...p.s.overrides, o] }));
         }
       },

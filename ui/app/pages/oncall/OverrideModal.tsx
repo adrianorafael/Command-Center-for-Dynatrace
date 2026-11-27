@@ -1,3 +1,4 @@
+import { markCreated } from "../../components/NewItemHighlight";
 import React, { useEffect, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex } from "@dynatrace/strato-components/layouts";
@@ -55,6 +56,7 @@ export const OverrideModal = ({ request, onClose }: { request?: { scheduleId?: s
     if (!valid || !schedule || !uid || !from || !to) return;
     setBusy(true);
     const o = { id: newId("ovr"), uid, from, to, ...(note.trim() ? { note: note.trim() } : {}) };
+    markCreated("override", o.id);
     mutate((s) => s.saveSchedule(nextRev({ ...schedule, overrides: [...schedule.overrides, o] })), "Override created")
       .then(onClose)
       .catch(() => undefined)

@@ -1,6 +1,7 @@
 import React from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { DataTable } from "@dynatrace/strato-components/tables";
+import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
+import { CreatedMarker } from "./NewItemHighlight";
 import { Tooltip } from "@dynatrace/strato-components/overlays";
 import { Link, Text, TextEllipsis } from "@dynatrace/strato-components/typography";
 import { Avatar, AvatarGroup } from "@dynatrace/strato-components/content";
@@ -83,3 +84,27 @@ export const CellPeople = ({ names, max = 5 }: { names: string[]; max?: number }
     </Cell>
   );
 };
+
+/**
+ * Adds the "just created" marker to the first column with a custom cell, so a row created by a button
+ * pulses once when it appears (see components/NewItemHighlight). Visuals are unchanged.
+ */
+export function withCreatedMarker<T>(
+  cols: DataTableColumnDef<T>[],
+  kind: string,
+  idOf: (row: T) => string,
+): DataTableColumnDef<T>[] {
+  const target = cols.findIndex((c) => typeof c.cell === "function");
+  if (target < 0) return cols;
+  return cols.map((col, i) => {
+    const render = col.cell;
+    if (i !== target || typeof render !== "function") return col;
+    const marked: typeof render = (ctx) => (
+      <>
+        {render(ctx)}
+        <CreatedMarker kind={kind} id={idOf(ctx.rowData)} />
+      </>
+    );
+    return { ...col, cell: marked } as DataTableColumnDef<T>;
+  });
+}

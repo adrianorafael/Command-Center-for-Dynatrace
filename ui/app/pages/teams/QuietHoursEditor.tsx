@@ -1,3 +1,4 @@
+import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex, Surface } from "@dynatrace/strato-components/layouts";
@@ -59,6 +60,7 @@ export const QuietHoursEditor = ({ team }: { team: Team }) => {
       {list.map((q, i) => (
         <Surface key={i} padding={16}>
           <Flex flexDirection="column" gap={12}>
+            <CreatedMarker kind="quiet" id={`${team.id}.${i}`} />
             <Flex justifyContent="space-between" alignItems="center">
               <Text textStyle="base-emphasized">Window {i + 1}</Text>
               <IconButton label="Remove window" icon={<XmarkIcon />} onClick={() => setList(list.filter((_, j) => j !== i))} />
@@ -122,12 +124,13 @@ export const QuietHoursEditor = ({ team }: { team: Team }) => {
       ))}
       <Flex gap={8} alignItems="center">
         <Button
-          onClick={() =>
+          onClick={() => {
+            markCreated("quiet", `${team.id}.${list.length}`);
             setList([
               ...list,
               { timeZone: data?.settings.ui.timeZone ?? browserTimeZone(), days: [1, 2, 3, 4, 5], from: "22:00", to: "07:00", minPriority: "P2", mode: "hold" },
-            ])
-          }
+            ]);
+          }}
         >
           <Button.Prefix>
             <PlusIcon />

@@ -1,3 +1,4 @@
+import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -99,6 +100,7 @@ export const ContactSheet = ({ uid, show, onClose }: { uid?: string; show: boole
           return (
             <Surface key={m.id} padding={16}>
               <Flex flexDirection="column" gap={12}>
+                <CreatedMarker kind="method" id={m.id} />
                 <Flex alignItems="center" gap={8} justifyContent="space-between">
                   <Flex alignItems="center" gap={8}>
                     <ChannelIcon channel={m.channel} />
@@ -151,7 +153,11 @@ export const ContactSheet = ({ uid, show, onClose }: { uid?: string; show: boole
         })}
         <Flex>
           <Button
-            onClick={() => setDraft({ ...draft, methods: [...draft.methods, { id: newId("cm"), channel: "sms", address: "" }] })}
+            onClick={() => {
+              const id = newId("cm");
+              markCreated("method", id);
+              setDraft({ ...draft, methods: [...draft.methods, { id, channel: "sms", address: "" }] });
+            }}
           >
             <Button.Prefix>
               <PlusIcon />

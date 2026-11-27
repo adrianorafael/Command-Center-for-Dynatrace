@@ -1,3 +1,4 @@
+import { markCreated } from "../../components/NewItemHighlight";
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom";
 import { Flex, Grid, PageLayout, Surface, Container } from "@dynatrace/strato-components/layouts";
@@ -13,7 +14,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Channel, Schedule, ScheduleOverride } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
 import { newId, onCallAt, onCallNowAndNext } from "../../hooks/domain";
-import { CellEmpty, CellPerson, CellText, LIST_TABLE_VARIANT, CellLink } from "../../components/tableKit";
+import { CellEmpty, CellPerson, CellText, LIST_TABLE_VARIANT, CellLink, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ShiftGantt, coverage } from "../../components/ShiftGantt";
@@ -290,7 +291,7 @@ const SchedulesTab = () => {
     );
   return (
     <>
-      <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
+      <DataTable data={rows} columns={withCreatedMarker(columns, "schedule", (r) => r.id)} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
         <DataTable.RowActions>
           {(row) => {
             const r = row as ScheduleRow;
@@ -303,7 +304,11 @@ const SchedulesTab = () => {
                   size="condensed"
                   onClick={() =>
                     void mutate(
-                      (s) => s.saveSchedule({ ...r.schedule, id: newId(r.schedule.name), name: `${r.schedule.name} (copy)`, rev: 0, overrides: [] }),
+                      (s) => {
+                        const id = newId(r.schedule.name);
+                        markCreated("schedule", id);
+                        return s.saveSchedule({ ...r.schedule, id, name: `${r.schedule.name} (copy)`, rev: 0, overrides: [] });
+                      },
                       "Schedule duplicated",
                     ).catch(() => undefined)
                   }
@@ -394,7 +399,7 @@ const OverridesTab = ({ onNew }: { onNew: () => void }) => {
           <ToggleButtonGroup.Item value="past">Past</ToggleButtonGroup.Item>
         </ToggleButtonGroup>
       </Flex>
-      <DataTable data={rows} columns={columns} rowId={(r) => `${r.scheduleId}.${r.id}`} fullWidth sortable variant={LIST_TABLE_VARIANT}>
+      <DataTable data={rows} columns={withCreatedMarker(columns, "override", (r) => r.id)} rowId={(r) => `${r.scheduleId}.${r.id}`} fullWidth sortable variant={LIST_TABLE_VARIANT}>
         <DataTable.RowActions>
           {(row) => <IconButton size="condensed" label="Remove override" icon={<XmarkIcon />} onClick={() => remove(row as OverrideRow)} />}
         </DataTable.RowActions>

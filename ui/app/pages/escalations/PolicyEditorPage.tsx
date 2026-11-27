@@ -1,3 +1,4 @@
+import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -189,6 +190,7 @@ export const PolicyEditorPage = () => {
     setSaving(true);
     // Created from a team's checklist: also make it that team's default policy when it has none.
     const team = presetTeam ? data?.teams.find((t) => t.id === presetTeam && !t.defaultPolicyId) : undefined;
+    if (isNew) markCreated("policy", draft.id);
     mutate(async (s) => {
       await s.savePolicy(nextRev(draft));
       if (team) await s.saveTeam(nextRev({ ...team, defaultPolicyId: draft.id }));
@@ -251,6 +253,7 @@ export const PolicyEditorPage = () => {
               {draft.steps.map((s, i) => (
                 <React.Fragment key={i}>
                   <Flex alignItems="center" gap={8} paddingX={16}>
+                    <CreatedMarker kind="step" id={String(i)} />
                     <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
                       {i === 0 ? "When an incident triggers, wait" : "Then, if nobody acknowledged, wait"}
                     </Text>
@@ -289,7 +292,7 @@ export const PolicyEditorPage = () => {
                             <Menu.Item disabled={i === draft.steps.length - 1} onSelect={() => move(i, 1)}>
                               Move down
                             </Menu.Item>
-                            <Menu.Item onSelect={() => update({ ...draft, steps: [...draft.steps.slice(0, i + 1), { ...s }, ...draft.steps.slice(i + 1)] })}>
+                            <Menu.Item onSelect={() => { markCreated("step", String(i + 1)); update({ ...draft, steps: [...draft.steps.slice(0, i + 1), { ...s }, ...draft.steps.slice(i + 1)] }); }}>
                               Duplicate step
                             </Menu.Item>
                             <Menu.Item onSelect={() => update({ ...draft, steps: draft.steps.filter((_, j) => j !== i) })}>Delete step</Menu.Item>
@@ -338,7 +341,7 @@ export const PolicyEditorPage = () => {
                 </React.Fragment>
               ))}
               <Flex>
-                <Button onClick={() => update({ ...draft, steps: [...draft.steps, { delayMinutes: 5, targets: [] }] })}>
+                <Button onClick={() => { markCreated("step", String(draft.steps.length)); update({ ...draft, steps: [...draft.steps, { delayMinutes: 5, targets: [] }] }); }}>
                   <Button.Prefix>
                     <PlusIcon />
                   </Button.Prefix>

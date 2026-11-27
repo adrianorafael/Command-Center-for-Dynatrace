@@ -11,7 +11,7 @@ import { PlusIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import { closeWarRoom, isTodaysRoom, reopenWarRoom, warRoomDuration, type WarRoom } from "../../domain/warrooms";
 import { useAppData } from "../../hooks/AppDataContext";
-import { Cell, CellPerson, LIST_TABLE_VARIANT } from "../../components/tableKit";
+import { Cell, CellPerson, LIST_TABLE_VARIANT, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { Health } from "../../components/StatusIndicator";
@@ -235,7 +235,7 @@ export const WarRoomsPage = () => {
             />
           }
         >
-          <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
+          <DataTable data={rows} columns={withCreatedMarker(columns, "war-room", (r) => r.id)} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
             <DataTable.RowActions>
               {(row) => {
                 const r = (row as Row).room;

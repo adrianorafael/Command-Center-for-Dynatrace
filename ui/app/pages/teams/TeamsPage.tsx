@@ -1,3 +1,4 @@
+import { markCreated } from "../../components/NewItemHighlight";
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Flex, PageLayout } from "@dynatrace/strato-components/layouts";
@@ -11,7 +12,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import { PRIORITIES, SCHEMA_VERSION, type Priority, type Team } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { newId, onCallAt, validateTeam } from "../../hooks/domain";
-import { CellEmpty, CellPeople, CellText, LIST_TABLE_VARIANT, CellLink, Cell } from "../../components/tableKit";
+import { CellEmpty, CellPeople, CellText, LIST_TABLE_VARIANT, CellLink, Cell, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { PriorityChip } from "../../components/PriorityChip";
@@ -61,6 +62,7 @@ export const TeamFormModal = ({ team, show, onClose }: { team?: Team; show: bool
     setTried(true);
     if (errors.length) return;
     setBusy(true);
+    if (!team) markCreated("team", draft.id);
     mutate((s) => s.saveTeam(draft), team ? "Team saved" : "Team created")
       .then(() => onClose(draft))
       .catch(() => undefined)
@@ -244,7 +246,7 @@ export const TeamsPage = () => {
             />
           }
         >
-          <DataTable data={rows} columns={columns} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
+          <DataTable data={rows} columns={withCreatedMarker(columns, "team", (r) => r.id)} rowId={(r) => r.id} fullWidth sortable variant={LIST_TABLE_VARIANT}>
             <DataTable.TableActions>
               <SearchInput value={q} onChange={setQ} placeholder="Search teams" aria-label="Search teams" />
             </DataTable.TableActions>

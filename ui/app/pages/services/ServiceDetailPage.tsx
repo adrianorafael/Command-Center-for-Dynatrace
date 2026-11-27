@@ -1,3 +1,4 @@
+import { markCreated } from "../../components/NewItemHighlight";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -59,6 +60,7 @@ export const ServiceDetailPage = () => {
     setTried(true);
     if (errors.length) return;
     setSaving(true);
+    if (isNew) markCreated("service", draft.id);
     mutate((s) => s.saveService(nextRev(draft)), isNew ? "Service created" : "Service saved")
       .then(() => isNew && navigate(returnTo ?? `/services/${draft.id}`, { replace: !returnTo }))
       .catch(() => undefined)
