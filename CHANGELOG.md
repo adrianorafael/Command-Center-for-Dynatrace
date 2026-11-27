@@ -11,6 +11,21 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-11-27
+
+### Fixed
+- **Team members shown as ids after a reload** (for example after an app update). Looking names up in
+  the account's users now sends only ids that can be account users, so an id written by a configuration import
+  (or a marker such as `system`) can no longer make the whole lookup fail, and one failing batch no longer loses
+  the names of the others. Membership and contact methods were never affected.
+- A failed name lookup is no longer silent: the team's **Members** tab says why names are missing (no permission
+  to view the account's users, a lookup error with its reason, or a person who is not an active account user).
+
+### Added
+- **Names are kept with the app**: each save of a team, schedule, policy or contact stores the display names known
+  at that moment on the people's contact records (no email is stored), so names still show when the account's
+  user directory cannot be asked.
+
 ## [2.6.0] - 2026-11-27
 
 ### Added

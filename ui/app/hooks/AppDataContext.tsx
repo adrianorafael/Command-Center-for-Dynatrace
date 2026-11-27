@@ -24,7 +24,7 @@ import type {
 } from "../domain/contracts";
 import { SCHEMA_VERSION, engineStaleAfterMs } from "../domain/contracts";
 import type { Store, Stored } from "../data/repository";
-import { createAppStore, effectiveIncident, getCurrentUser, isDemoActive, loadDirectoryUsers } from "./domain";
+import { createAppStore, directoryLookupUsers, effectiveIncident, getCurrentUser, isDemoActive, loadDirectoryUsers, missingSnapshots, referencedUids, saveNameSnapshots } from "./domain";
 import { errorMessage } from "../components/format";
 
 /** Snapshot of every collection, reloaded on each poll. */
@@ -68,6 +68,13 @@ export interface AppDataContextValue {
   currentUser: DirectoryUser;
   users: Map<string, DirectoryUser>;
   userName: (uid: string | undefined) => string;
+  /**
+   * Why the last name lookup in the account's user directory failed (the error as IAM reported it); undefined
+   * when it worked. Names already kept with the app (data/people.ts) still show.
+   */
+  directoryError?: unknown;
+  /** False until the first name lookup has answered (or failed): before that a missing name means "not yet". */
+  namesReady: boolean;
   /** Cache users found through the directory (picker results) for display. */
   rememberUsers: (list: DirectoryUser[]) => void;
   /** Append one operator action per incident; optimistic; returns the appended actions. */
@@ -114,6 +121,16 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
   const [refreshOverride, setRefreshOverride] = useState<number>();
   const [paused, setPaused] = useState(false);
   const [users, setUsers] = useState<Map<string, DirectoryUser>>(() => new Map([[currentUser.uid, currentUser]]));
+  /** Same map as `users`, updated at once: a save right after a pick must already see the picked person's name. */
+  const usersRef = useRef(users);
+  const updateUsers = useCallback((update: (prev: Map<string, DirectoryUser>) => Map<string, DirectoryUser>) => {
+    usersRef.current = update(usersRef.current);
+    setUsers(usersRef.current);
+  }, []);
+  const [directoryError, setDirectoryError] = useState<unknown>();
+  const [namesReady, setNamesReady] = useState(false);
+  /** The configuration as of the last load, for work done right after a save (see keepNames). */
+  const configRef = useRef<Pick<AppData, "teams" | "schedules" | "policies" | "contacts">>();
   const inflight = useRef<Promise<void> | null>(null);
   /** Incident ids seen in the previous load (null before the first load): drives "new incident" notifications. */
   const seenIncidents = useRef<Set<string> | null>(null);
@@ -141,6 +158,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
             store.getHeartbeat(),
             store.listWarRooms(),
           ]);
+        configRef.current = { teams, schedules, policies, contacts };
         const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
         setRaw({
           settings,
@@ -205,24 +223,30 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
           if (i.assignee?.type === "user") uids.add(i.assignee.id);
           if (i.acknowledgedBy) uids.add(i.acknowledgedBy);
         });
+        // Names kept with the app (data/people.ts) show at once; the directory's answer, when it comes, wins.
         const fromContacts = new Map<string, DirectoryUser>();
         contacts.forEach((c) => c.displayName && fromContacts.set(c.uid, { uid: c.uid, name: c.displayName }));
-        loadDirectoryUsers([...uids])
-          .then((list) => {
-            setUsers((prev) => {
-              const next = new Map(prev);
-              fromContacts.forEach((u, k) => next.has(k) || next.set(k, u));
-              list.forEach((u) => next.set(u.uid, u));
-              return next;
-            });
-          })
-          .catch(() =>
-            setUsers((prev) => {
-              const next = new Map(prev);
-              fromContacts.forEach((u, k) => next.has(k) || next.set(k, u));
-              return next;
-            }),
-          );
+        const merge = (list: DirectoryUser[]) =>
+          updateUsers((prev) => {
+            const next = new Map(prev);
+            fromContacts.forEach((u, k) => next.has(k) || next.set(k, u));
+            list.forEach((u) => next.set(u.uid, u));
+            return next;
+          });
+        loadDirectoryUsers([...uids]).then(
+          (list) => {
+            merge(list);
+            setDirectoryError(undefined);
+            setNamesReady(true);
+          },
+          (e: unknown) => {
+            // Never silent: the pages that list people say why names are missing (TeamDetailPage).
+            merge(directoryLookupUsers(e));
+            setDirectoryError(e);
+            setNamesReady(true);
+            console.warn("Command Center: user directory lookup failed", e);
+          },
+        );
       } catch (e) {
         setError(e);
       } finally {
@@ -233,7 +257,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
     })();
     inflight.current = p;
     return p;
-  }, [store]);
+  }, [store, updateUsers]);
 
   useEffect(() => {
     void load();
@@ -286,14 +310,32 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
     [users],
   );
 
-  const rememberUsers = useCallback((list: DirectoryUser[]) => {
-    if (!list.length) return;
-    setUsers((prev) => {
-      const next = new Map(prev);
-      list.forEach((u) => next.set(u.uid, u));
-      return next;
-    });
-  }, []);
+  const rememberUsers = useCallback(
+    (list: DirectoryUser[]) => {
+      if (!list.length) return;
+      updateUsers((prev) => {
+        const next = new Map(prev);
+        list.forEach((u) => next.set(u.uid, u));
+        return next;
+      });
+    },
+    [updateUsers],
+  );
+
+  /**
+   * Keeps the display names of the people the configuration refers to (data/people.ts). Runs as part of a save
+   * the person triggered, never on the periodic refresh. `touched` are the people in what was just saved; the
+   * rest of the configuration is covered too, so one save also stores names that were only known live so far.
+   */
+  const keepNames = useCallback(
+    async (touched: readonly string[]) => {
+      const cfg = configRef.current;
+      const uids = [...touched, ...(cfg ? referencedUids(cfg) : [])];
+      const missing = missingSnapshots(uids, cfg?.contacts ?? [], (uid) => usersRef.current.get(uid));
+      if (missing.length) await saveNameSnapshots(store, missing);
+    },
+    [store],
+  );
 
   const act = useCallback<AppDataContextValue["act"]>(
     async (incidentIds, payload, opts) => {
@@ -353,15 +395,25 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
   const mutate = useCallback<AppDataContextValue["mutate"]>(
     async (fn, successTitle) => {
       try {
-        await fn(store);
+        // Note which people the save refers to, so their names are kept with it (keepNames).
+        const touched: string[] = [];
+        const note = (uids: string[]) => void touched.push(...uids);
+        const tracking: Store = {
+          ...store,
+          saveTeam: (t) => (note(referencedUids({ teams: [t], schedules: [], policies: [] })), store.saveTeam(t)),
+          saveSchedule: (x) => (note(referencedUids({ teams: [], schedules: [x], policies: [] })), store.saveSchedule(x)),
+          savePolicy: (x) => (note(referencedUids({ teams: [], schedules: [], policies: [x] })), store.savePolicy(x)),
+        };
+        await fn(tracking);
         if (successTitle) notify({ category: "action", type: "success", title: successTitle, lifespan: 4_000 });
         await load();
+        await keepNames(touched).catch(() => undefined);
       } catch (e) {
         notify({ category: "error", type: "critical", title: "Couldn't save your changes", message: errorMessage(e), lifespan: "infinite" });
         throw e;
       }
     },
-    [load, store],
+    [keepNames, load, store],
   );
 
   const value: AppDataContextValue = {
@@ -380,6 +432,8 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
     currentUser,
     users,
     userName,
+    directoryError,
+    namesReady,
     rememberUsers,
     act,
     mutate,

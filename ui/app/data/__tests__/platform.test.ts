@@ -7,7 +7,7 @@ import {
   clampHours,
   safeEventTypes,
 } from "../dql";
-import { createIamDirectory, createStaticDirectory, toDirectoryUser, type IamClientLike } from "../directory";
+import { createIamDirectory, createStaticDirectory, DirectoryLookupError, isDirectoryUid, toDirectoryUser, type IamClientLike } from "../directory";
 import { runQuery, type QueryClientLike } from "../grail";
 
 const sources = (over: Record<string, unknown> = {}) =>
@@ -103,18 +103,64 @@ describe("directory", () => {
     );
   });
 
+  /** Synthetic ids in the shape of IAM user ids. */
+  const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+
   it("resolves uids in batches of at most 25", async () => {
     const calls: string[][] = [];
     const client: IamClientLike = {
-      getActiveUsersForOrganizationalLevel: ({ uuid }) => {
-        calls.push(uuid ?? []);
-        return Promise.resolve({ results: (uuid ?? []).map((uid) => ({ uid, email: `${uid}@example.com` })) });
+      getActiveUsersForOrganizationalLevel: ({ uuid: ids }) => {
+        calls.push(ids ?? []);
+        return Promise.resolve({ results: (ids ?? []).map((uid) => ({ uid, email: `${uid}@example.com` })) });
       },
     };
-    const uids = Array.from({ length: 60 }, (_, i) => `user-${String(i).padStart(4, "0")}`);
-    const users = await createIamDirectory(client, () => "env").resolve([...uids, uids[0]]);
+    const uids = Array.from({ length: 60 }, (_, i) => uuid(i));
+    const users = await createIamDirectory(client, () => "env").resolve([...uids, uids[0]!]);
     expect(calls.map((c) => c.length)).toEqual([25, 25, 10]);
     expect(users).toHaveLength(60);
+  });
+
+  it("never sends an id that cannot be an account user: one such id must not cost everyone their name", async () => {
+    const sent: string[] = [];
+    const client: IamClientLike = {
+      getActiveUsersForOrganizationalLevel: ({ uuid: ids }) => {
+        sent.push(...(ids ?? []));
+        // What IAM does with a value that is not a UUID: it refuses the whole request.
+        if ((ids ?? []).some((id) => !isDirectoryUid(id))) return Promise.reject(new Error("400 the values don't meet the requirements"));
+        return Promise.resolve({ results: (ids ?? []).map((uid) => ({ uid, name: "Ana", surname: "Example" })) });
+      },
+    };
+    const dir = createIamDirectory(client, () => "env");
+    const users = await dir.resolve([uuid(1), "sim-ana", "system", "source", "demo-user", "", uuid(2)]);
+    expect(sent).toEqual([uuid(1), uuid(2)]);
+    expect(users.map((u) => u.name)).toEqual(["Ana Example", "Ana Example"]);
+    // Nothing to ask: no request at all.
+    sent.length = 0;
+    expect(await dir.resolve(["sim-ana", "system"])).toEqual([]);
+    expect(sent).toEqual([]);
+  });
+
+  it("a failing batch does not lose the other batches, and the failure is reported with what was found", async () => {
+    let call = 0;
+    const client: IamClientLike = {
+      getActiveUsersForOrganizationalLevel: ({ uuid: ids }) => {
+        call++;
+        if (call === 2) throw new Error("User not authorized.");
+        return Promise.resolve({ results: (ids ?? []).map((uid) => ({ uid, name: "Bruno", surname: "Sample" })) });
+      },
+    };
+    const uids = Array.from({ length: 60 }, (_, i) => uuid(i));
+    const failure = await createIamDirectory(client, () => "env")
+      .resolve(uids)
+      .then(
+        () => undefined,
+        (e: unknown) => e,
+      );
+    expect(failure).toBeInstanceOf(DirectoryLookupError);
+    const e = failure as DirectoryLookupError;
+    expect(e.message).toBe("User not authorized.");
+    expect(e.users).toHaveLength(35);
+    expect((e.cause as Error).message).toBe("User not authorized.");
   });
 
   it("falls back to the email when IAM has no name", () => {

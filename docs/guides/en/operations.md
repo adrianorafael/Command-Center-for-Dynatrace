@@ -324,6 +324,7 @@ fetch dt.davis.problems, from: now() - 2h
 | A notification shows **No result** | The run ended before the call returned. It is retried up to *Delivery attempts*. |
 | *Run engine now* says *Engine is already running* | A scheduled run holds the lease. Wait a few seconds and try again. |
 | The user picker finds nobody | Type at least 3 characters. Only **active** users are returned; invited people must sign in once. *User search is unavailable (IAM returned 403)*: your user must belong to the account that owns the environment and be allowed to view users. |
+| A team member shows as an id, not a name | Nobody was lost: membership, contact methods and paging never depend on the name. The **Members** tab says why. *Names can't be shown (403)*: your user may not view the account's users. *Not an active user of this account*: the person was deactivated or the id never was an account user (for example written by a configuration import); remove them from the team. Names are also kept with the app: each save of a team, schedule, policy or contact stores the names known at that moment, so they still show when the user directory cannot be asked. |
 | Deploy rejected because of the version | `app.version` must be higher than the installed version. |
 | Configuration lost | App State was cleared or the app was uninstalled. Import your last export. |
 
