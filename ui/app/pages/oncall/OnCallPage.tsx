@@ -258,7 +258,7 @@ const SchedulesTab = () => {
       accessor: (r) => r.nextHandoff ?? 0,
       sortType: "number",
       width: 130,
-      cell: ({ rowData }) => <Text>{rowData.nextHandoff ? formatRelative(rowData.nextHandoff, now) : "–"}</Text>,
+      cell: ({ rowData }) => <CellText>{rowData.nextHandoff ? formatRelative(rowData.nextHandoff, now) : "–"}</CellText>,
     },
     {
       id: "coverage",
@@ -368,8 +368,8 @@ const OverridesTab = ({ onNew }: { onNew: () => void }) => {
     },
     { id: "for", header: "For", accessor: (r) => (r.coversFor ? userName(r.coversFor) : "Gap"), width: 170 },
     { id: "schedule", header: "Schedule", accessor: "scheduleName", width: 180 },
-    { id: "from", header: "From", accessor: "from", width: 210, sortType: "number", cell: ({ rowData }) => <Text>{formatDateTime(rowData.from, rowData.timeZone)}</Text> },
-    { id: "to", header: "To", accessor: "to", width: 210, sortType: "number", cell: ({ rowData }) => <Text>{formatDateTime(rowData.to, rowData.timeZone)}</Text> },
+    { id: "from", header: "From", accessor: "from", width: 210, sortType: "number", cell: ({ rowData }) => <CellText>{formatDateTime(rowData.from, rowData.timeZone)}</CellText> },
+    { id: "to", header: "To", accessor: "to", width: 210, sortType: "number", cell: ({ rowData }) => <CellText>{formatDateTime(rowData.to, rowData.timeZone)}</CellText> },
     { id: "note", header: "Reason", accessor: (r) => r.note ?? "", width: "1fr", cell: ({ rowData }) => (rowData.note ? <CellText>{rowData.note}</CellText> : <CellEmpty />) },
   ];
   const remove = (r: OverrideRow) => {

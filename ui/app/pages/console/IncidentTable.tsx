@@ -25,6 +25,7 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { EscalationPolicy, Incident, NotificationRecord } from "../../domain/contracts";
 import { useAppData } from "../../hooks/AppDataContext";
 import { Cell } from "../../components/tableKit";
+import { Avatar } from "@dynatrace/strato-components/content";
 import { WarRoomModal } from "../warrooms/WarRoomModal";
 import { isSafeHttpsUrl, openRoomsForIncident } from "../../domain/warrooms";
 import { PriorityChip } from "../../components/PriorityChip";
@@ -34,7 +35,7 @@ import { AssigneeView } from "../../components/UserAvatar";
 import { EscalationCell, EscalationSteps } from "../../components/EscalationProgress";
 import { ChannelIcon, CHANNEL_LABEL } from "../../components/ChannelIcon";
 import { IconButton } from "../../components/IconButton";
-import { formatRelative, formatTime } from "../../components/format";
+import { formatRelative, formatTime, initials } from "../../components/format";
 import { PRIORITY_RANK, SOURCE_LABEL } from "./filters";
 import { SNOOZE_PRESETS, useIncidentCommands } from "./useIncidentCommands";
 import type { ModalRequest } from "./ActionModals";
@@ -454,7 +455,23 @@ export const IncidentTable = ({
         header: "Assignee",
         accessor: "assigneeName",
         width: 130,
-        cell: ({ rowData }) => <AssigneeView assignee={rowData.assignee} />,
+        cell: ({ rowData }) =>
+          rowData.assignee ? (
+            <Cell>
+              <Tooltip text={rowData.assigneeName}>
+                <Flex alignItems="center" gap={6} style={{ minWidth: 0, width: "100%" }}>
+                  <Avatar size="small" abbreviation={initials(rowData.assigneeName)} />
+                  <Text style={{ minWidth: 0, flex: "1 1 auto" }}>
+                    <TextEllipsis>{rowData.assigneeName}</TextEllipsis>
+                  </Text>
+                </Flex>
+              </Tooltip>
+            </Cell>
+          ) : (
+            <Cell>
+              <AssigneeView assignee={undefined} />
+            </Cell>
+          ),
       },
       {
         id: "escalation",
