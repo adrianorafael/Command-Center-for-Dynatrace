@@ -248,7 +248,7 @@ Offline preview in demo mode (add `?demo=empty` to start with no data and walk t
 | `node scripts/record-demo.mjs` + `bash scripts/edit-demo.sh` | Record the demo-mode product tour with a visible cursor, then cut it with ffmpeg into `docs/media/command-center-demo.mp4` (title card, chapters, poster) |
 | `node scripts/gen-help-content.mjs [--check]` | Regenerate or check the in-app Help guides (English, Portuguese, Spanish) from their markdown |
 
-Deploying to another environment: edit `environmentUrl`, `npx dt-app auth`, `npx dt-app deploy`, then repeat the
+Deploying to another environment: edit `environmentUrl`, then `npx dt-app deploy` (it signs you in through the browser), then repeat the
 engine install, vault entries and allowlist. App State does not migrate: use **Settings → Export and import**.
 
 ## Relevant file structure

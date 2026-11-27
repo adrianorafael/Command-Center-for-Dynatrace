@@ -557,8 +557,7 @@ npm install
 <span class="c"># 2. Point app.config.json at your environment</span>
 <span class="c">#    "environmentUrl": "https://YOUR-ENVIRONMENT.apps.dynatrace.com/"</span>
 
-<span class="c"># 3. Authenticate, then deploy (app.version must increase per environment)</span>
-npx dt-app auth
+<span class="c"># 3. Deploy: it signs you in through the browser (app.version must increase per environment)</span>
 npx dt-app deploy
 
 <span class="c"># Offline preview in demo mode, no environment needed (?demo=empty starts with no data)</span>

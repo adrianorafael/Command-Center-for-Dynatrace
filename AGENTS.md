@@ -164,8 +164,7 @@ node scripts/screenshot.mjs ./screenshots-out          # one PNG per route; need
 node scripts/doc-screenshots.mjs                       # docs/screenshots/*.png, dark theme (preview on port 4310)
 node scripts/record-demo.mjs && bash scripts/edit-demo.sh   # demo video → docs/media/ (see the script headers)
 
-npx dt-app auth          # authenticate against the environment in app.config.json
-npx dt-app dev           # open the printed link, NOT localhost:3000
+npx dt-app dev           # signs in through the browser on first use; open the printed link, NOT localhost:3000
 npx dt-app deploy        # ONLY with explicit approval; name the target tenant first; bump app.version first
 ```
 
