@@ -333,10 +333,10 @@ describe("lease hygiene (late escalation steps diagnosed live)", () => {
     expect(await r.get(KEY.lock)).toBeUndefined();
   });
 
-  it("clamps the configured TTL to 130…180 s", async () => {
+  it("clamps the configured TTL to 130…165 s at the default 1-minute interval", async () => {
     const { effectiveLockTtlSec } = await import("../lib/engine");
     expect(effectiveLockTtlSec(90)).toBe(130);
-    expect(effectiveLockTtlSec(600)).toBe(180);
+    expect(effectiveLockTtlSec(600)).toBe(165);
     expect(effectiveLockTtlSec(Number.NaN)).toBe(130);
   });
 });

@@ -255,6 +255,14 @@ fetch dt.davis.problems, from: now() - 2h
 
 - **Never resolved by absence.** A failed or empty query never resolves anything. Only a CLOSED record,
   `cc.action: "resolve"` or an operator resolves an incident.
+- **An incomplete result is not proof of absence.** When Grail cuts a query result short (record limit, scan limit,
+  sampling), the engine still uses the records it got but treats that source as incomplete for the run: no resolved
+  incident of that source is archived, and the heartbeat's last error names the query and Grail's notice, for example
+  `Q1 problems: result truncated (…)`.
+- **A crashed run blocks few runs.** The engine lease lasts 130–180 seconds, longer than one run can take (120 s). If
+  a run dies without releasing it, the next scheduled runs are skipped until it expires: at most 2 at a 1-minute
+  interval, 1 at 2 minutes, none at 5 minutes. A *Run engine now* or *Engine on problem* run that dies just before a
+  scheduled run can cost one more.
 - **At-least-once paging.** The ledger prevents duplicates in normal operation. In rare races (a run that overlaps a
   slow previous run, a result that arrives after the timeout) a person can be notified twice.
 - **Timing precision = interval.** A step fires on the first run after it is due. The same applies to snooze ends.

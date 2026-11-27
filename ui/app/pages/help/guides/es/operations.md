@@ -264,6 +264,15 @@ fetch dt.davis.problems, from: now() - 2h
 
 - **Nunca se resuelve por ausencia.** Una consulta fallida o vacía nunca resuelve nada. Solo un registro CLOSED,
   `cc.action: "resolve"` o un operador resuelven un incidente.
+- **Un resultado incompleto no prueba ausencia.** Cuando Grail recorta el resultado de una consulta (límite de
+  registros, límite de escaneo, muestreo), el motor sigue usando los registros recibidos, pero trata esa fuente como
+  incompleta en la ejecución: ningún incidente resuelto de esa fuente se archiva, y el último error del heartbeat
+  indica la consulta y el aviso de Grail, por ejemplo `Q1 problems: result truncated (…)`.
+- **Una ejecución que se cae bloquea pocas ejecuciones.** El lease del motor dura de 130 a 180 segundos, más de lo
+  que puede tardar una ejecución (120 s). Si una ejecución muere sin liberarlo, las siguientes ejecuciones programadas
+  se omiten hasta que expire: como máximo 2 con un intervalo de 1 minuto, 1 con 2 minutos, ninguna con 5 minutos. Una
+  ejecución de *Run engine now* o *Engine on problem* que muere justo antes de una ejecución programada puede costar
+  una más.
 - **Avisos al menos una vez.** El registro de notificaciones evita duplicados en la operación normal. En carreras poco
   frecuentes (una ejecución que se superpone con una ejecución anterior lenta, un resultado que llega después del
   timeout) una persona puede ser notificada dos veces.

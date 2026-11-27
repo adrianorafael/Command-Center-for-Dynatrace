@@ -55,7 +55,7 @@ export interface RunQueryOptions {
   client?: QueryClientLike;
 }
 
-/** Records only (truncation notices are dropped). */
+/** Records only (truncation notices are dropped): never hand this to the engine, see runGrailQuery. */
 export type RunQuery = (query: string, options?: RunQueryOptions) => Promise<GrailRecord[]>;
 /** Engine dependency: either form is accepted (tests may return plain record arrays). */
 export type QueryRunner = (query: string, options?: RunQueryOptions) => Promise<GrailRecord[] | GrailResult>;
@@ -79,9 +79,15 @@ function records(r: ResultLike): GrailRecord[] {
  * Truncation signals. Observed on a trial tenant (2026-11-26): a `maxResultRecords` cut yields
  * metadata.grail.notifications[{ notificationType: "API_RECORDS_LIMIT_ADDED", severity: "WARNING" }];
  * a DQL `| limit n` adds NO notification, so callers also compare the record count with their limit.
- * Types per client-query GrailMetadata { notifications?: MetadataNotification[], sampled? }.
+ * Types per client-query 1.29 types/index.d.ts: GrailMetadata { notifications?: MetadataNotification[],
+ * sampled?: boolean ("True if sampling was used for at least one segment"), scannedBytes?, … } and
+ * MetadataNotification { notificationType? ("e.g. LIMIT_ADDED"), severity?, message? }. The SDK lists no
+ * notification codes and has no "scan limit reached" flag, so a scan-limit or fetch-timeout cut is recognised
+ * by its notification type or message only (pattern below, not verified against a live cut). Matching
+ * errs on the side of "truncated": a truncated source is never used for absence decisions (archiving), so a
+ * false positive costs a deferred archive, a false negative could archive an incident that is still open.
  */
-const TRUNCATION_RE = /LIMIT|SCAN|SAMPL|TRUNCAT|PARTIAL/i;
+const TRUNCATION_RE = /LIMIT|SCAN|SAMPL|TRUNCAT|PARTIAL|TIMEOUT|INCOMPLETE/i;
 
 /** Notification types (or message heads) that mean the result is incomplete; "SAMPLED" for sampled results. */
 export function truncationNotices(r: { result?: ResultLike["result"] }): string[] {
@@ -127,18 +133,24 @@ export async function runGrailQuery(query: string, options: RunQueryOptions = {}
 }
 
 /**
- * The runner the engine and actions use. It returns records only, so Grail's truncation notices are lost here and
- * asGrailResult can detect truncation only by record count.
+ * Records only. Grail's truncation notices (scan limit, sampling, …) are dropped here, so this is NOT the engine
+ * runner: actions/run-engine.action.ts and api/engine-run.function.ts pass runGrailQuery, whose full result lets
+ * api/lib/sources.ts mark a cut-short source "truncated" (and the domain then never treats it as proof of absence).
  */
 export const runQuery: RunQuery = async (query, options = {}) => (await runGrailQuery(query, options)).records;
 
-/** Normalise either runner result form. */
+/**
+ * Normalise either runner result form. The record-count check applies to both forms: a DQL `| limit n` cut carries
+ * no Grail notification, so a full result object must still count as truncated when it reaches `limit` (the
+ * caller's DQL limit may differ from the maxResultRecords runGrailQuery checked).
+ */
 export function asGrailResult(r: GrailRecord[] | GrailResult, limit = 1000): GrailResult {
   if (Array.isArray(r)) {
     return r.length >= limit
       ? { records: r, truncated: true, notices: [`RECORDS>=${limit}`] }
       : { records: r, truncated: false, notices: [] };
   }
+  if (!r.truncated && r.records.length >= limit) return { ...r, truncated: true, notices: [...r.notices, `RECORDS>=${limit}`] };
   return r;
 }
 
