@@ -11,6 +11,8 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-11-27
+
 ### Changed
 - Integrations → Inbound → **Show events** opens the Console on *All* with *Created* set to the last 24 hours (same
   window as the "incidents in 24 h" count). Any link can do the same with `?created=<hours>h`.

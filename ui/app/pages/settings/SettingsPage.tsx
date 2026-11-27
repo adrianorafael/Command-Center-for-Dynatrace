@@ -54,9 +54,9 @@ const LEGACY_KEY = "problem-ack-states";
 function appVersion(): string {
   try {
     const v = getAppVersion();
-    return v && !v.startsWith("dt.missing") ? v : "2.5.0";
+    return v && !v.startsWith("dt.missing") ? v : "2.5.1";
   } catch {
-    return "2.5.0";
+    return "2.5.1";
   }
 }
 const BUDGET_BYTES = 50 * 1024 * 1024;
