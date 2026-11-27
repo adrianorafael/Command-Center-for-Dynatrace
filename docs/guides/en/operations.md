@@ -73,6 +73,10 @@ Measured on the trial environment, from the billing events in `dt.system.events`
 The remaining invocations in the new column are the trial-only alert simulator (a standard workflow running
 JavaScript) and our own test calls to the app functions.
 
+Workflow hours, from the `Automation Workflow` billing events: for the hour 01:00–02:00 UTC only the alert simulator
+(a standard workflow) was billed. The simple-workflow engine, which ran every minute in that hour, produced no workflow
+billing event.
+
 ## Cost and consumption
 
 > Read this before running the app in production. The engine runs all day, independently of how many people use the
