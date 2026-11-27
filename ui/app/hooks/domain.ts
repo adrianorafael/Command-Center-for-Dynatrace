@@ -57,10 +57,15 @@ export function getEngineStatus(settings: Settings) {
   return getInstaller().getStatus(settings);
 }
 
-/** Escalate now / test notification: runs the engine workflow immediately (spec §8). */
+/** Run engine now / test notification: one full engine cycle through the app function engine-run. */
 export function runEngineNow(settings: Settings, reason: EngineTickRequest["reason"], testRequest?: { providerId: string; channel: Channel; address: string }) {
   const params: EngineTickRequest = testRequest ? { reason, testRequest } : { reason };
-  return getInstaller().runEngineNow(settings, params, `${reason}-${Date.now()}`);
+  return getInstaller().runEngineNow(settings, params);
+}
+
+/** Opens the Workflows app with the engine workflow pre-filled (the person reviews and saves it). */
+export function openEngineInstallIntent(settings: Settings, intervalMinutes?: number): void {
+  getInstaller().openInstallIntent(settings, intervalMinutes);
 }
 
 export {

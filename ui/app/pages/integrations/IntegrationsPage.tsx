@@ -7,14 +7,14 @@ import { Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { Heading, Paragraph, Text, ExternalLink, Code, List, Strong } from "@dynatrace/strato-components/typography";
 import { MessageContainer, ProgressCircle } from "@dynatrace/strato-components/content";
 import { DataTable, SimpleTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
-import { FormField, Label, Switch, TextInput } from "@dynatrace/strato-components/forms";
+import { FormField, Label, Select, Switch, TextInput } from "@dynatrace/strato-components/forms";
 import { Modal, Sheet, Tooltip } from "@dynatrace/strato-components/overlays";
 import { notify } from "../../hooks/notifications";
 import { DownloadIcon, KeyIcon, PlayIcon, RefreshIcon, FlowIcon } from "@dynatrace/strato-icons";
 import type { Timeseries } from "@dynatrace/strato-components/charts";
 import type { ProviderConfig, Settings } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
-import { exportWorkflowDefinition, getEngineStatus, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
+import { exportWorkflowDefinition, getEngineStatus, openEngineInstallIntent, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
 import { Cell, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { Health } from "../../components/StatusIndicator";
@@ -269,9 +269,14 @@ const TestModal = ({ provider, onClose }: { provider?: ProviderConfig; onClose: 
     setBusy(true);
     runEngineNow(data.settings, "test", { providerId: provider.id, channel: provider.channel, address: address.trim() })
       .then((exec) => {
-        const text = exec ? `Workflow execution ${exec} started. Check the result in the Workflows app.` : "Test requested.";
-        setResult({ ok: true, text });
-        notify({ category: "action", type: "success", title: "Test notification requested", message: provider.name, lifespan: 5000 });
+        const ok = !!exec && exec.sent > 0;
+        const text = !exec
+          ? "Test requested."
+          : ok
+            ? `Sent through ${provider.name}. Check the destination.`
+            : `Not sent: ${exec.errors[0] ?? (exec.failed ? "the provider rejected the message" : "nothing was sent")}`;
+        setResult({ ok, text });
+        notify({ category: ok ? "action" : "error", type: ok ? "success" : "warning", title: ok ? "Test notification sent" : "Test notification not sent", message: text, lifespan: 6000 });
       })
       .catch((e) => {
         setResult({ ok: false, text: errorMessage(e) });
@@ -376,12 +381,6 @@ const HOSTS = [
   { host: "Your webhook host", use: "Generic webhook" },
 ];
 
-function newUuid(): string {
-  const c = globalThis.crypto as Crypto | undefined;
-  if (c?.randomUUID) return c.randomUUID();
-  const h = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
-}
 
 const WorkflowsTab = () => {
   const { data, mutate, demo, now } = useAppData();
@@ -389,6 +388,7 @@ const WorkflowsTab = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>();
   const [running, setRunning] = useState(false);
+  const [interval, setIntervalMin] = useState<string>("1");
   const settings = data?.settings;
 
   const load = useCallback(() => {
@@ -404,19 +404,15 @@ const WorkflowsTab = () => {
   }, [settings]);
   useEffect(() => load(), [load]);
 
-  const download = async () => {
+  const install = () => {
     if (!settings) return;
-    let s = settings;
-    if (!/^[0-9a-f-]{36}$/i.test(s.engine.workflowId)) {
-      s = nextRev({ ...s, engine: { ...s.engine, workflowId: newUuid() } });
-      try {
-        await mutate((st) => st.saveSettings(s), "Workflow id assigned");
-      } catch {
-        return;
-      }
-    }
+    openEngineInstallIntent(settings, Number(interval));
+  };
+
+  const download = () => {
+    if (!settings) return;
     try {
-      const { json, fileName } = exportWorkflowDefinition(s);
+      const { json, fileName } = exportWorkflowDefinition(settings);
       const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
       const a = document.createElement("a");
       a.href = url;
@@ -432,8 +428,16 @@ const WorkflowsTab = () => {
     if (!settings) return;
     setRunning(true);
     runEngineNow(settings, "manual")
-      .then(() => notify({ category: "action", type: "success", title: "Engine run started", lifespan: 4000 }))
-      .catch((e) => notify({ category: "error", type: "critical", title: "Couldn't start the engine", message: errorMessage(e), lifespan: "infinite" }))
+      .then((r) =>
+        notify({
+          category: "action",
+          type: r && !r.ok ? "warning" : "success",
+          title: r?.skipped === "locked" ? "Engine is already running" : "Engine cycle finished",
+          message: r ? `${r.sent} sent · ${r.failed} failed${r.deferred ? ` · ${r.deferred} deferred` : ""}${r.errors.length ? ` · ${r.errors[0]}` : ""}` : undefined,
+          lifespan: 6000,
+        }),
+      )
+      .catch((e) => notify({ category: "error", type: "critical", title: "Couldn't run the engine", message: errorMessage(e), lifespan: "infinite" }))
       .finally(() => {
         setRunning(false);
         load();
@@ -442,14 +446,14 @@ const WorkflowsTab = () => {
 
   const hb = data?.heartbeat;
   const foundId = status?.workflowId;
-  const link = (foundId ?? settings?.engine.workflowId) ? workflowUrl(foundId ?? settings?.engine.workflowId ?? "") : workflowsAppUrl();
+  const link = foundId ? workflowUrl(foundId) : workflowsAppUrl();
   const adoptId = () => {
     if (!settings || !foundId) return;
     void mutate((st) => st.saveSettings(nextRev({ ...settings, engine: { ...settings.engine, workflowId: foundId } })), "Workflow ID saved")
       .then(load)
       .catch(() => undefined);
   };
-  const execs = status?.recentExecutions ?? [];
+  const stale = !hb || now - hb.lastTickAt > 3 * 60_000;
 
   return (
     <Flex flexDirection="column" gap={16}>
@@ -468,39 +472,56 @@ const WorkflowsTab = () => {
               (!status.installed ? (
                 <Health status="neutral">Not installed</Health>
               ) : status.outdated ? (
-                <Health status="warning">Update available</Health>
+                <Health status="warning">{status.usesAction ? "Update available" : "Old engine (standard workflow): reinstall to stop workflow-hour cost"}</Health>
               ) : (
-                <Health status="ideal">Installed{status.definitionVersion ? ` (definition v${status.definitionVersion})` : ""}</Health>
+                <Health status="ideal">Installed · {status.type === "SIMPLE" ? "simple workflow (no workflow hours)" : status.type ?? "workflow"}</Health>
               ))}
-            <Text textStyle="small">
-              Last run:{" "}
-              {status?.lastExecution
-                ? `${status.lastExecution.state} · ${status.lastExecution.startedAt ? formatRelative(status.lastExecution.startedAt, now) : ""}`
-                : "none"}
-            </Text>
-            <Text textStyle="small">Engine heartbeat: {hb ? `${formatRelative(hb.lastTickAt, now)} (${hb.durationMs} ms)` : "none yet"}</Text>
+            <Health status={stale ? "warning" : "ideal"}>
+              {hb ? `Last engine run ${formatRelative(hb.lastTickAt, now)} (${hb.durationMs} ms)` : "The engine has not run yet"}
+            </Health>
+            {hb && (
+              <Text textStyle="small">
+                Last run: {hb.counts.alertsFetched} alerts read · {hb.counts.incidentsCreated} incidents created · {hb.counts.notificationsPlanned} notifications planned
+              </Text>
+            )}
             {hb?.lastError && <Text textStyle="small">Last error: {hb.lastError}</Text>}
             {foundId && <Text textStyle="small">Workflow ID: {foundId}</Text>}
             {status?.foundByTitle && foundId && foundId !== settings?.engine.workflowId && (
-              <MessageContainer variant="warning">
-                <MessageContainer.Title>Found the engine workflow under a different ID</MessageContainer.Title>
-                <MessageContainer.Description>
-                  The uploaded workflow got a new ID. Save it in Settings so "Escalate now" and test notifications run the right workflow.
-                </MessageContainer.Description>
+              <MessageContainer variant="primary">
+                <MessageContainer.Title>Engine workflow found</MessageContainer.Title>
+                <MessageContainer.Description>Save its ID so this page always links to it.</MessageContainer.Description>
                 <MessageContainer.Actions>
                   <Button onClick={adoptId}>Save this ID</Button>
                 </MessageContainer.Actions>
               </MessageContainer>
             )}
-            <Flex gap={8} flexWrap="wrap">
-              <Button color="primary" variant="accent" onClick={() => void download()}>
+            <Flex gap={8} flexWrap="wrap" alignItems="flex-end">
+              <FormField>
+                <Label>Run every</Label>
+                <Select value={interval} onChange={(v) => setIntervalMin(v ?? "1")}>
+                  <Select.Content>
+                    <Select.Option value="1">1 minute</Select.Option>
+                    <Select.Option value="2">2 minutes</Select.Option>
+                    <Select.Option value="5">5 minutes</Select.Option>
+                  </Select.Content>
+                </Select>
+              </FormField>
+              <Tooltip text={demo ? "Not available in demo mode" : "Opens the Workflows app with the engine workflow filled in"}>
+                <Button color="primary" variant="accent" disabled={demo} onClick={install}>
+                  <Button.Prefix>
+                    <FlowIcon />
+                  </Button.Prefix>
+                  {status?.installed ? "Reinstall in Workflows" : "Install in Workflows"}
+                </Button>
+              </Tooltip>
+              <Button onClick={download}>
                 <Button.Prefix>
                   <DownloadIcon />
                 </Button.Prefix>
-                Download workflow JSON
+                Download JSON
               </Button>
-              <Tooltip text={demo ? "Not available in demo mode" : !status?.installed ? "Upload the workflow first" : "Run one engine tick now"}>
-                <Button disabled={demo || !status?.installed} loading={running} onClick={runNow}>
+              <Tooltip text={demo ? "Not available in demo mode" : "Runs one full engine cycle now (alerts, escalations, notifications)"}>
+                <Button disabled={demo} loading={running} onClick={runNow}>
                   <Button.Prefix>
                     <PlayIcon />
                   </Button.Prefix>
@@ -511,74 +532,38 @@ const WorkflowsTab = () => {
                 <Button.Prefix>
                   <RefreshIcon />
                 </Button.Prefix>
-                Refresh status
+                Refresh
               </Button>
             </Flex>
-            {link && <ExternalLink href={link}>Open Workflows</ExternalLink>}
+            {link && <ExternalLink href={link}>Open in Workflows</ExternalLink>}
           </Flex>
         </Surface>
         <Surface padding={16}>
           <Flex flexDirection="column" gap={8}>
-            <Heading level={3}>Set up the engine workflow</Heading>
+            <Heading level={3}>Set up the engine</Heading>
             <List ordered>
-              <Text>Download the workflow JSON.</Text>
-              <Text>In the Workflows app, select Upload and choose the file.</Text>
-              <Text>Set the actor to a service user, so edits by other people don't change who runs it.</Text>
-              <Text>In Workflows → Settings → Authorization settings, grant the actor the app-engine and app-state permissions the workflow needs.</Text>
-              <Text>Add the provider hosts below to Settings → External requests. Vault entries: scope AppEngine, owned by the actor, owner access only, access without app context.</Text>
-              <Text>Come back here and select Refresh status.</Text>
+              <Text>Choose how often the engine runs and select Install in Workflows. The Workflows app opens with the workflow filled in: review it and deploy it.</Text>
+              <Text>In Workflows → Settings → Authorization settings, enable the permissions for the workflow actor (the person who deploys it, or a service user).</Text>
+              <Text>Add the provider hosts below to Settings → General → External requests.</Text>
+              <Text>Store each provider secret in the Credential Vault (scope AppEngine, owned by the workflow actor) and enter its ID under Providers.</Text>
+              <Text>Select Refresh: the status turns green and the engine heartbeat updates within one interval.</Text>
             </List>
             <Text textStyle="small">
-              The app can read and run the workflow but can't create or change it: third-party apps don't get the workflow write permission.
+              The engine is a simple workflow with one task, this app's “Run Command Center engine” action, so it consumes no workflow hours. Each run is one
+              function invocation (about 43,200 a month at 1 minute, 21,600 at 2 minutes, 8,640 at 5 minutes) plus its Grail queries. Escalation steps fire on
+              the first run after they are due, so the interval is the timing precision.
             </Text>
+            <SimpleTable
+              data={HOSTS}
+              columns={[
+                { id: "host", header: "Allow host", accessor: "host" },
+                { id: "use", header: "Used by", accessor: "use" },
+              ]}
+            />
+            <Text textStyle="small">The app cannot create workflows on its own (Dynatrace reserves that permission for its own apps), so you confirm the workflow in the Workflows app once.</Text>
           </Flex>
         </Surface>
       </Grid>
-      <Flex flexDirection="column" gap={8}>
-        <Heading level={3}>Recent executions</Heading>
-        <DataTable
-          data={execs}
-          rowId={(e) => e.id}
-          fullWidth
-          variant={LIST_TABLE_VARIANT}
-          columns={[
-            { id: "id", header: "Execution", accessor: "id", width: 280 },
-            {
-              id: "state",
-              header: "State",
-              accessor: "state",
-              width: 140,
-              cell: ({ rowData }) => (
-                <Health status={rowData.state === "SUCCESS" ? "ideal" : rowData.state === "RUNNING" ? "good" : rowData.state === "ERROR" ? "critical" : "neutral"}>
-                  {rowData.state}
-                </Health>
-              ),
-            },
-            { id: "trigger", header: "Trigger", accessor: (e) => e.triggerType ?? "–", width: 140 },
-            {
-              id: "started",
-              header: "Started",
-              accessor: (e) => e.startedAt ?? 0,
-              width: "1fr",
-              cell: ({ rowData }) => <Text>{rowData.startedAt ? formatDateTime(rowData.startedAt) : "–"}</Text>,
-            },
-          ]}
-        >
-          <DataTable.EmptyState>
-            <Text>No executions yet. Upload the workflow to start paging.</Text>
-          </DataTable.EmptyState>
-        </DataTable>
-      </Flex>
-      <Flex flexDirection="column" gap={8}>
-        <Heading level={3}>External requests allowlist</Heading>
-        <SimpleTable
-          data={HOSTS}
-          columns={[
-            { id: "host", header: "Host", accessor: "host", width: 320 },
-            { id: "use", header: "Needed for", accessor: "use", width: 560 },
-          ]}
-        />
-      </Flex>
     </Flex>
   );
 };

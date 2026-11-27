@@ -34,11 +34,7 @@
       },
       {
         "name": "automation:workflows:read",
-        "comment": "Show escalation workflow status"
-      },
-      {
-        "name": "automation:workflows:run",
-        "comment": "Escalate now and send test notifications through the workflow"
+        "comment": "Show the engine workflow status (Integrations \u2192 Workflow)"
       },
       {
         "name": "document:documents:read",
@@ -47,6 +43,17 @@
       {
         "name": "document:documents:write",
         "comment": "Create post-mortem notebooks from war rooms"
+      },
+      {
+        "name": "credential-vault:entries:read",
+        "comment": "Read provider secrets (Credential Vault) when sending notifications"
+      }
+    ],
+    "actions": [
+      {
+        "name": "run-engine",
+        "title": "Run Command Center engine",
+        "description": "Runs one Command Center engine cycle: alerts, escalations, notifications."
       }
     ]
   }

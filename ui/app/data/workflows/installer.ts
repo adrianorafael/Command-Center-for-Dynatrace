@@ -1,25 +1,23 @@
 /**
- * Engine workflow: status, on-demand runs and an importable definition.
+ * Engine workflow: status, installation and on-demand runs.
  *
- * VERIFIED on a trial tenant deploy (2026-11-26): "Only apps that are provided by Dynatrace can use
- * the 'automation:workflows:write' scope." → this app can READ and RUN workflows but cannot create
- * or update them. Installation is therefore:
- *   - UI: download the generated JSON (exportDefinition) and import it in the Workflows app (Upload);
- *   - CLI for admins: scripts/install-workflow.mjs (platform token, REST create/update).
- *
- * client-automation 8.10 (node_modules/@dynatrace-sdk/client-automation/types/index.d.ts):
- *  - workflowsClient.getWorkflow({ id }) → Workflow { id, title, version, isDeployed?, lastExecution: Execution|null,
- *    description?, actor? … }                                     l.3992 / l.3627   (automation:workflows:read)
- *  - workflowsClient.getWorkflows({ search?, limit? … }) → { count, results }        (automation:workflows:read)
- *  - workflowsClient.runWorkflow({ id, body: { input?, params?, uniqueQualifier? } }) → Execution
- *    ("No execution created - execution with uniqueQualifier provided already exists")   l.4379 (automation:workflows:run)
- *  - executionsClient.getExecutions({ workflow?: string[], limit? }) → { count, results: Execution[] }  l.1052
- *  - errors: ErrorEnvelopeError extends ClientRequestError (response.status)             l.777
+ * - The app cannot create workflows itself: VERIFIED on deploy (2026-11-26) "Only apps that are provided by
+ *   Dynatrace can use the 'automation:workflows:write' scope."
+ * - Installation = the Workflows "create workflow" intent (developer.dynatrace.com/develop/workflows/use-intents):
+ *   sendIntent({ title, tasks, trigger }) opens the Workflows app pre-filled; the person reviews and saves it.
+ *   Per @dynatrace-sdk/navigation, undeclared payload properties are removed before delivery. Fallbacks: the
+ *   JSON download (Workflows → Upload) and scripts/install-workflow.mjs for admins with a platform token.
+ * - Status: workflowsClient.getWorkflow / getWorkflows (automation:workflows:read). Simple workflows keep only
+ *   execution metadata, so engine health comes from the app's own heartbeat (hb.engine), not execution lists.
+ * - On-demand runs ("Run engine now", tests) call the app function `engine-run` (same code as the action), so the
+ *   app no longer needs automation:workflows:run.
  */
 
-import { executionsClient, workflowsClient } from "@dynatrace-sdk/client-automation";
+import { workflowsClient } from "@dynatrace-sdk/client-automation";
+import { functions } from "@dynatrace-sdk/app-utils";
+import { sendIntent } from "@dynatrace-sdk/navigation";
 import type { EngineTickRequest, Settings } from "../../domain/contracts";
-import { ENGINE_DEFINITION_VERSION, ENGINE_WORKFLOW_TITLE, buildEngineWorkflowCreate } from "./definition";
+import { ENGINE_DEFINITION_VERSION, ENGINE_WORKFLOW_TITLE, actionId, buildEngineWorkflow, buildEngineWorkflowCreate } from "./definition";
 
 export interface ExecutionSummary {
   id: string;
@@ -41,6 +39,10 @@ export interface EngineWorkflowStatus {
   outdated: boolean;
   workflowVersion?: number;
   isDeployed?: boolean;
+  /** "SIMPLE" (no workflow hours) or "STANDARD". */
+  type?: string;
+  /** True when the workflow's task is this app's run-engine action. */
+  usesAction?: boolean;
   actor?: string;
   lastExecution?: ExecutionSummary;
   recentExecutions: ExecutionSummary[];
@@ -67,8 +69,19 @@ export interface EngineInstaller {
   /** Path of the Workflows app to import the JSON (relative to the environment). */
   workflowsAppPath(): string;
   getStatus(settings: Settings): Promise<EngineWorkflowStatus>;
-  /** Runs the engine now via the workflow (escalate now, test notification). Returns the execution id. */
-  runEngineNow(settings: Settings, params: EngineTickRequest, uniqueQualifier?: string): Promise<string | undefined>;
+  /** Opens the Workflows app with the engine workflow pre-filled (create workflow intent). */
+  openInstallIntent(settings: Settings, intervalMinutes?: number): void;
+  /** Runs one full engine cycle now through the app function engine-run (manual run, test notification). */
+  runEngineNow(settings: Settings, params: EngineTickRequest): Promise<EngineRunSummary | undefined>;
+}
+
+export interface EngineRunSummary {
+  ok: boolean;
+  sent: number;
+  failed: number;
+  deferred: number;
+  errors: string[];
+  skipped?: string;
 }
 
 export class InstallNotPermittedError extends Error {
@@ -96,25 +109,28 @@ interface WorkflowLike {
   isDeployed?: boolean;
   description?: string;
   actor?: string | null;
+  type?: string;
+  tasks?: Record<string, { action?: string }>;
   lastExecution?: ExecutionLike | null;
 }
 
-/** Subset of WorkflowsClient + ExecutionsClient (injectable for tests). Read + run only. */
+/** Subset of WorkflowsClient (injectable for tests). Read only. */
 export interface AutomationClientLike {
   getWorkflow(c: { id: string }): Promise<WorkflowLike>;
   getWorkflows(c: { search?: string; limit?: number }): Promise<{ results: WorkflowLike[] }>;
-  runWorkflow(c: {
-    id: string;
-    body: { params?: Record<string, unknown>; uniqueQualifier?: string | null };
-  }): Promise<{ id?: string } | undefined>;
-  getExecutions(c: { workflow?: string[]; limit?: number }): Promise<{ results: ExecutionLike[] }>;
 }
 
 const defaultClient: AutomationClientLike = {
-  getWorkflow: (c) => workflowsClient.getWorkflow(c),
-  getWorkflows: (c) => workflowsClient.getWorkflows(c),
-  runWorkflow: (c) => workflowsClient.runWorkflow(c),
-  getExecutions: (c) => executionsClient.getExecutions(c),
+  getWorkflow: (c) => workflowsClient.getWorkflow(c) as Promise<WorkflowLike>,
+  getWorkflows: (c) => workflowsClient.getWorkflows(c) as Promise<{ results: WorkflowLike[] }>,
+};
+
+/** Runs one engine cycle through the app function (injectable for tests). */
+export type EngineRunner = (params: EngineTickRequest) => Promise<EngineRunSummary | undefined>;
+
+const defaultRunner: EngineRunner = async (params) => {
+  const res = await functions.call("engine-run", { data: params });
+  return (await res.json()) as EngineRunSummary;
 };
 
 /** Workflows app (UNVERIFIED path; the app id `dynatrace.automations` matches the action id prefix). */
@@ -155,7 +171,7 @@ export function exportEngineDefinition(appId: string, settings: Settings): Workf
   };
 }
 
-export function createWorkflowInstaller(appId: string, client: AutomationClientLike = defaultClient): EngineInstaller {
+export function createWorkflowInstaller(appId: string, client: AutomationClientLike = defaultClient, runner: EngineRunner = defaultRunner): EngineInstaller {
   async function find(settings: Settings): Promise<{ wf: WorkflowLike; byTitle: boolean } | undefined> {
     try {
       return { wf: await client.getWorkflow({ id: settings.engine.workflowId }), byTitle: false };
@@ -189,39 +205,30 @@ export function createWorkflowInstaller(appId: string, client: AutomationClientL
       if (!found) return { installed: false, outdated: false, recentExecutions: [] };
       const { wf, byTitle } = found;
       const definitionVersion = parseDefinitionVersion(wf.description);
-      let recent: ExecutionSummary[] = [];
-      try {
-        recent = (await client.getExecutions({ workflow: [wf.id], limit: 10 })).results.map(summarize);
-      } catch {
-        recent = []; // status is still useful without the execution list
-      }
+      const recent: ExecutionSummary[] = [];
+      const usesAction = Object.values(wf.tasks ?? {}).some((t) => t.action === actionId(appId));
       return {
         installed: true,
         workflowId: wf.id,
         ...(byTitle ? { foundByTitle: true } : {}),
         definitionVersion,
-        outdated: definitionVersion === undefined || definitionVersion < ENGINE_DEFINITION_VERSION,
+        outdated: definitionVersion === undefined || definitionVersion < ENGINE_DEFINITION_VERSION || !usesAction,
         workflowVersion: wf.version,
         isDeployed: wf.isDeployed,
+        type: wf.type,
+        usesAction,
         actor: wf.actor ?? undefined,
         lastExecution: wf.lastExecution ? summarize(wf.lastExecution) : recent[0],
         recentExecutions: recent,
       };
     },
 
-    async runEngineNow(settings, params, uniqueQualifier) {
-      const body = {
-        params: { ...params },
-        ...(uniqueQualifier ? { uniqueQualifier: uniqueQualifier.slice(0, 100) } : {}),
-      };
-      try {
-        return (await client.runWorkflow({ id: settings.engine.workflowId, body }))?.id;
-      } catch (e) {
-        if (!isNotFoundError(e)) throw e;
-        const found = await find(settings); // imported under another id
-        if (!found || found.wf.id === settings.engine.workflowId) throw e;
-        return (await client.runWorkflow({ id: found.wf.id, body }))?.id;
-      }
+    openInstallIntent(settings, intervalMinutes) {
+      sendIntent(buildEngineWorkflow({ appId, settings, intervalMinutes }));
+    },
+
+    runEngineNow(_settings, params) {
+      return runner(params);
     },
   };
 }
@@ -236,6 +243,9 @@ export function createDemoInstaller(appId = "my.command.center"): EngineInstalle
       return exportEngineDefinition(appId, settings);
     },
     workflowsAppPath: () => WORKFLOWS_APP_PATH,
+    openInstallIntent() {
+      // demo: nothing leaves the browser
+    },
     getStatus(settings) {
       const now = Date.now();
       const last = { id: "demo-execution", state: "SUCCESS", startedAt: now - 30_000, endedAt: now - 27_000, triggerType: "Schedule" };
@@ -245,6 +255,8 @@ export function createDemoInstaller(appId = "my.command.center"): EngineInstalle
         definitionVersion: ENGINE_DEFINITION_VERSION,
         outdated: false,
         isDeployed: true,
+        type: "SIMPLE",
+        usesAction: true,
         recentExecutions: [last],
         lastExecution: last,
         demo: true,
