@@ -1,9 +1,10 @@
 /**
  * Per-viewer UI preferences that the frozen Settings contract has no field for
- * (keyboard shortcuts, table density, acknowledge target, on-call week view). Browser storage only;
+ * (keyboard shortcuts, table density, acknowledge target, on-call week view, Console inline row actions). Browser storage only;
  * every access is guarded because storage can be unavailable.
  */
 import { useCallback, useState } from "react";
+import { DEFAULT_INLINE_ACTIONS, normalizeInlineActions, type RowActionId } from "../pages/console/rowActions";
 
 /** The stored per-viewer preferences. */
 export interface UiPrefs {
@@ -14,9 +15,17 @@ export interface UiPrefs {
   ackTargetMin: number;
   /** On-call "Upcoming shifts" week view: show Monday → Friday instead of Sunday → Saturday. */
   shiftsWorkdaysOnly: boolean;
+  /** Console row actions shown as buttons on every row, in order (max 4); the rest stay in the row's "⋯" menu. */
+  consoleInlineActions: RowActionId[];
 }
 
-export const DEFAULT_PREFS: UiPrefs = { keyboardShortcuts: true, tableDensity: "condensed", ackTargetMin: 5, shiftsWorkdaysOnly: false };
+export const DEFAULT_PREFS: UiPrefs = {
+  keyboardShortcuts: true,
+  tableDensity: "condensed",
+  ackTargetMin: 5,
+  shiftsWorkdaysOnly: false,
+  consoleInlineActions: [...DEFAULT_INLINE_ACTIONS],
+};
 
 const STORAGE_KEY = "command-center.ui-prefs.v1";
 
@@ -26,7 +35,8 @@ export function readPrefs(): UiPrefs {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PREFS;
     const parsed = JSON.parse(raw) as Partial<UiPrefs>;
-    return { ...DEFAULT_PREFS, ...parsed };
+    // Prefs saved before a field existed lack it; ids of actions a later version removed are dropped.
+    return { ...DEFAULT_PREFS, ...parsed, consoleInlineActions: normalizeInlineActions(parsed.consoleInlineActions) };
   } catch {
     return DEFAULT_PREFS;
   }

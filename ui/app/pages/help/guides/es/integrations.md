@@ -47,14 +47,12 @@ proveedores desactivados no cuestan nada y no se ejecuta nada de ellos.
 De forma predeterminada, el propio motor envía todas las integraciones integradas, sin costo adicional. Una
 integración **puede** tener un workflow propio en su lugar; lo eliges por integración:
 
-| Paso | Qué ocurre |
-| --- | --- |
-| Elegirlo | **Configure → Delivery → Through its own workflow** y luego **Create its workflow**. La app Workflows se abre con *Command Center · &lt;provider&gt;* ya completado: un simple workflow, sin trigger (bajo demanda), una tarea — la acción de la app **Send Command Center notification** con las entradas `providerId` y `notification` = `{{ execution().params.notification }}`. Tú lo guardas ahí (la app no puede crear workflows por sí misma). **Download JSON** entrega la misma definición para cargarla. Luego guarda la integración. |
-| De vuelta en Command Center | Integrations → Outbound encuentra el workflow por su título y lo vincula (su ID se guarda en el proveedor); **Find its workflow** hace lo mismo a mano. La tarjeta entonces dice *Sent by its workflow*. |
-| Vence una notificación | El motor ejecuta ese workflow con la notificación como parámetros de ejecución. La acción lee los ajustes del proveedor desde Command Center y el secreto desde el Credential Vault, envía, y escribe *Sent* o *Failed* en el registro de notificaciones. Un envío fallido hace fallar la ejecución del workflow, así que se ve en la app Workflows. |
-| El workflow no se puede ejecutar | Eliminado, o sin permiso: el motor envía esa notificación directamente, para que nadie se pierda un aviso. Hasta que haya un workflow vinculado, el motor también envía directamente. |
-| Volver al motor | **Configure → Delivery → By the engine** quita la elección y el vínculo. El workflow en sí queda en la app Workflows: elimínalo ahí si no lo necesitas. |
-| Desactivar (**off**) | El proveedor y su workflow dejan de usarse; el vínculo se conserva para cuando lo vuelvas a activar. La app no puede pausar ni eliminar workflows. |
+- **Elegirlo**: **Configure → Delivery → Through its own workflow** y luego **Create its workflow**. La app Workflows se abre con *Command Center · &lt;provider&gt;* ya completado: un simple workflow, sin trigger (bajo demanda), una tarea — la acción de la app **Send Command Center notification** con las entradas `providerId` y `notification` = `{{ execution().params.notification }}`. Tú lo guardas ahí (la app no puede crear workflows por sí misma). **Download JSON** entrega la misma definición para cargarla. Luego guarda la integración.
+- **De vuelta en Command Center**: Integrations → Outbound encuentra el workflow por su título y lo vincula (su ID se guarda en el proveedor); **Find its workflow** hace lo mismo a mano. La tarjeta entonces dice *Sent by its workflow*.
+- **Vence una notificación**: El motor ejecuta ese workflow con la notificación como parámetros de ejecución. La acción lee los ajustes del proveedor desde Command Center y el secreto desde el Credential Vault, envía, y escribe *Sent* o *Failed* en el registro de notificaciones. Un envío fallido hace fallar la ejecución del workflow, así que se ve en la app Workflows.
+- **El workflow no se puede ejecutar**: Eliminado, o sin permiso: el motor envía esa notificación directamente, para que nadie se pierda un aviso. Hasta que haya un workflow vinculado, el motor también envía directamente.
+- **Volver al motor**: **Configure → Delivery → By the engine** quita la elección y el vínculo. El workflow en sí queda en la app Workflows: elimínalo ahí si no lo necesitas.
+- Desactivar (**off**): El proveedor y su workflow dejan de usarse; el vínculo se conserva para cuando lo vuelvas a activar. La app no puede pausar ni eliminar workflows.
 
 Cada notificación de una integración con workflow propio es una ejecución de workflow con una invocación de acción,
 además de la ejecución del motor que la planificó; enviada por el motor, no cuesta ninguna invocación adicional. Como
@@ -172,12 +170,10 @@ el error del proveedor) se muestra de inmediato. Prueba de punta a punta cada ca
 
 ## Qué se ha verificado
 
-| Proveedor | Estado |
-| --- | --- |
-| Webhook genérico | ✅ Verificado en vivo en un entorno trial: escalamientos y pruebas entregados, resultados escritos en el registro de notificaciones |
-| Custom workflow | ✅ Verificado en vivo en un entorno trial: una prueba y un escalamiento programado ejecutaron el workflow, que entregó el JSON completo de la notificación al receptor |
-| Integration workflows | ✅ Verificado en vivo en un entorno trial con el webhook genérico: el motor ejecutó *Command Center · Generic webhook*, su acción leyó el proveedor y el secreto del vault y entregó; un error del proveedor (HTTP 429) hizo fallar la ejecución del workflow con el mensaje del proveedor |
-| Twilio SMS, voz, WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implementados a partir de la documentación de la API de cada proveedor, **no ejercitados en vivo** (no hay cuentas en el entorno de pruebas). Las pruebas unitarias cubren las solicitudes de Twilio SMS y voz, Slack y Telegram. Prueba cada proveedor con *Send test*. |
+- **Webhook genérico**: Verificado en vivo en un entorno trial: escalamientos y pruebas entregados, resultados escritos en el registro de notificaciones
+- **Custom workflow**: Verificado en vivo en un entorno trial: una prueba y un escalamiento programado ejecutaron el workflow, que entregó el JSON completo de la notificación al receptor
+- **Integration workflows**: Verificado en vivo en un entorno trial con el webhook genérico: el motor ejecutó *Command Center · Generic webhook*, su acción leyó el proveedor y el secreto del vault y entregó; un error del proveedor (HTTP 429) hizo fallar la ejecución del workflow con el mensaje del proveedor
+- **Twilio SMS, voz, WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram**: Implementados a partir de la documentación de la API de cada proveedor, **no ejercitados en vivo** (no hay cuentas en el entorno de pruebas). Las pruebas unitarias cubren las solicitudes de Twilio SMS y voz, Slack y Telegram. Prueba cada proveedor con *Send test*.
 
 Las respuestas bidireccionales (reconocer respondiendo un SMS o un mensaje de chat) no están implementadas. Reconoce en
 la Console.

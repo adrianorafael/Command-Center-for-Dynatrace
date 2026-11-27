@@ -1,7 +1,7 @@
 /**
  * In-app documentation: the model and the markdown → app transform.
  *
- * Why this exists: the six user guides are written as markdown (English in docs/guides/en, the source on GitHub;
+ * Why this exists: the seven user guides are written as markdown (English in docs/guides/en, the source on GitHub;
  * Portuguese (BR) and Spanish next to this file, the app is their only home). The Help page shows them with Strato's
  * `Markdown` component, which cannot show repository images, cannot draw mermaid and would send `x.md` links to
  * nowhere. `transformGuide` turns a guide into what the app can render, and `renderLanguageModule` writes the
@@ -15,7 +15,7 @@ export const LANGUAGES = ["en", "pt-BR", "es"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 /** Guide ids are the markdown file names without `.md`; the order is the table of contents. */
-export const GUIDE_IDS = ["getting-started", "user-guide", "alerts-reference", "integrations", "configuration", "operations"] as const;
+export const GUIDE_IDS = ["getting-started", "install-with-vibe-coding", "user-guide", "alerts-reference", "integrations", "configuration", "operations"] as const;
 export type GuideId = (typeof GUIDE_IDS)[number];
 
 export interface GuideHeading {

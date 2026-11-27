@@ -1,4 +1,4 @@
-/** The Console's incident table: columns, row and bulk actions, preview and the per-browser column choice. */
+/** The Console's incident table: columns, row and bulk actions (inline ones chosen per viewer), preview and the per-browser column choice. */
 import React, { useMemo, useState } from "react";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -41,6 +41,7 @@ import { PRIORITY_RANK, SOURCE_LABEL } from "./filters";
 import { SNOOZE_PRESETS, useIncidentCommands } from "./useIncidentCommands";
 import type { ModalRequest } from "./ActionModals";
 import { incidentLink, problemUrl } from "./links";
+import { menuActions, ROW_ACTION_LABEL, type RowActionId } from "./rowActions";
 
 /** An incident plus the display fields the table sorts and filters on. */
 export interface IncidentRow extends Incident {
@@ -54,137 +55,172 @@ export interface IncidentRow extends Incident {
   lastNotification?: NotificationRecord;
 }
 
-const MoreActions = ({
-  incident,
-  onModal,
-  size,
-}: {
-  incident: Incident;
-  onModal: (r: ModalRequest) => void;
-  size: "default" | "condensed";
-}) => {
+/** One row action as this row shows it: a hidden action is left out, a disabled one says why on hover. */
+interface RowActionView {
+  label: string;
+  icon: React.ReactElement;
+  hidden?: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
+  /** Snooze is a submenu (presets + Custom…), the others run on select. */
+  run?: () => void;
+}
+
+/**
+ * Every row action with its per-row state, keyed by id, so the inline buttons and the "⋯" menu share one definition
+ * and an action behaves the same wherever the person put it.
+ */
+function useRowActionViews(incident: Incident, onModal: (r: ModalRequest) => void, onWarRoom: () => void): Record<RowActionId, RowActionView> {
   const cmd = useIncidentCommands();
+  const { data } = useAppData();
   const ids = [incident.id];
   const davis = problemUrl(incident);
-  const { data } = useAppData();
-  const [warRoom, setWarRoom] = useState(false);
   const room = openRoomsForIncident(data?.warRooms ?? [], incident.id).find((r) => isSafeHttpsUrl(r.url));
+  const resolved = incident.status === "resolved";
+  return {
+    ack: {
+      label: ROW_ACTION_LABEL.ack,
+      icon: <CheckmarkIcon />,
+      disabled: incident.status !== "triggered",
+      disabledReason: resolved ? "Already resolved" : "Already acknowledged",
+      run: () => void cmd.ack(ids),
+    },
+    resolve: {
+      label: ROW_ACTION_LABEL.resolve,
+      icon: <SuccessIcon />,
+      disabled: resolved,
+      disabledReason: "Already resolved",
+      run: () => void cmd.resolve(ids),
+    },
+    reassign: { label: "Reassign…", icon: <AccountIcon />, run: () => onModal({ kind: "reassign", ids }) },
+    escalate: {
+      label: ROW_ACTION_LABEL.escalate,
+      icon: <ArrowUpIcon />,
+      disabled: resolved,
+      disabledReason: "Already resolved",
+      run: () => void cmd.escalate(ids),
+    },
+    snooze: { label: ROW_ACTION_LABEL.snooze, icon: <PauseIcon /> },
+    priority: { label: "Change priority…", icon: <EditIcon />, run: () => onModal({ kind: "priority", ids }) },
+    note: { label: ROW_ACTION_LABEL.note, icon: <DescriptionIcon />, run: () => onModal({ kind: "note", ids }) },
+    warroom: room
+      ? { label: "Join war room", icon: <GroupIcon />, run: () => window.open(room.url, "_blank", "noopener,noreferrer") }
+      : { label: "Open war room…", icon: <GroupIcon />, run: onWarRoom },
+    davis: {
+      label: ROW_ACTION_LABEL.davis,
+      icon: <AiIcon />,
+      // Hidden in the menu as before; inline it stays as a disabled button so the buttons line up across rows.
+      hidden: !davis,
+      disabledReason: "Not from a Davis problem",
+      run: davis ? () => window.open(davis, "_blank", "noopener,noreferrer") : undefined,
+    },
+    copylink: {
+      label: ROW_ACTION_LABEL.copylink,
+      icon: <CopyIcon />,
+      run: () => void navigator.clipboard?.writeText(incidentLink(incident.id)),
+    },
+  };
+}
+
+const SnoozeItems = ({ ids, onModal }: { ids: string[]; onModal: (r: ModalRequest) => void }) => {
+  const cmd = useIncidentCommands();
   return (
     <>
-    <Menu>
-      <Menu.Trigger>
-        <Button aria-label="More actions" size={size}>
-          <Button.Prefix>
-            <DotMenuIcon />
-          </Button.Prefix>
-        </Button>
-      </Menu.Trigger>
-      <Menu.Content>
-        <Menu.Item onSelect={() => onModal({ kind: "reassign", ids })}>
-          <Menu.Prefix>
-            <AccountIcon />
-          </Menu.Prefix>
-          Reassign…
+      {SNOOZE_PRESETS.map((p) => (
+        <Menu.Item key={p.label} onSelect={() => void cmd.snoozeFor(ids, p.ms)}>
+          {p.label}
         </Menu.Item>
-        <Menu.Item disabled={incident.status === "resolved"} onSelect={() => void cmd.escalate(ids)}>
-          <Menu.Prefix>
-            <ArrowUpIcon />
-          </Menu.Prefix>
-          Escalate now
-        </Menu.Item>
-        <Menu.Sub>
-          <Menu.SubTrigger>
-            <Menu.Prefix>
-              <PauseIcon />
-            </Menu.Prefix>
-            Snooze
-          </Menu.SubTrigger>
-          <Menu.SubContent>
-            {SNOOZE_PRESETS.map((p) => (
-              <Menu.Item key={p.label} onSelect={() => void cmd.snoozeFor(ids, p.ms)}>
-                {p.label}
-              </Menu.Item>
-            ))}
-            <Menu.Item onSelect={() => onModal({ kind: "snooze", ids })}>Custom…</Menu.Item>
-          </Menu.SubContent>
-        </Menu.Sub>
-        <Menu.Item onSelect={() => onModal({ kind: "priority", ids })}>
-          <Menu.Prefix>
-            <EditIcon />
-          </Menu.Prefix>
-          Change priority…
-        </Menu.Item>
-        <Menu.Item onSelect={() => onModal({ kind: "note", ids })}>
-          <Menu.Prefix>
-            <DescriptionIcon />
-          </Menu.Prefix>
-          Add note
-        </Menu.Item>
-        {room ? (
-          <Menu.Item onSelect={() => window.open(room.url, "_blank", "noopener,noreferrer")}>
-            <Menu.Prefix>
-              <GroupIcon />
-            </Menu.Prefix>
-            Join war room
-          </Menu.Item>
-        ) : (
-          <Menu.Item onSelect={() => setWarRoom(true)}>
-            <Menu.Prefix>
-              <GroupIcon />
-            </Menu.Prefix>
-            Open war room…
-          </Menu.Item>
-        )}
-        {davis && (
-          <Menu.Item onSelect={() => window.open(davis, "_blank", "noopener,noreferrer")}>
-            <Menu.Prefix>
-              <AiIcon />
-            </Menu.Prefix>
-            Open Davis problem
-          </Menu.Item>
-        )}
-        <Menu.Item onSelect={() => void navigator.clipboard?.writeText(incidentLink(incident.id))}>
-          <Menu.Prefix>
-            <CopyIcon />
-          </Menu.Prefix>
-          Copy link
-        </Menu.Item>
-      </Menu.Content>
-    </Menu>
-    {warRoom && <WarRoomModal request={{ mode: "create", incidentId: incident.id }} onClose={() => setWarRoom(false)} />}
+      ))}
+      <Menu.Item onSelect={() => onModal({ kind: "snooze", ids })}>Custom…</Menu.Item>
     </>
   );
 };
 
+/** The buttons the person chose to show inline (in their order), then "⋯" with every other action. */
 const RowQuickActions = ({
   incident,
   size,
   onModal,
+  inline,
 }: {
   incident: Incident;
   size: "default" | "condensed";
   onModal: (r: ModalRequest) => void;
+  inline: readonly RowActionId[];
 }) => {
-  const cmd = useIncidentCommands();
+  // Lives here, not in the menu, so an inline war-room button can open the dialog too.
+  const [warRoom, setWarRoom] = useState(false);
+  const views = useRowActionViews(incident, onModal, () => setWarRoom(true));
+  const ids = [incident.id];
+  const menu = menuActions(inline).filter((id) => !views[id].hidden);
   return (
     <Flex gap={4}>
-      <IconButton
-        label="Acknowledge"
-        icon={<CheckmarkIcon />}
-        size={size}
-        disabled={incident.status !== "triggered"}
-        disabledReason={incident.status === "resolved" ? "Already resolved" : "Already acknowledged"}
-        onClick={() => void cmd.ack([incident.id])}
-      />
-      <IconButton
-        label="Resolve"
-        icon={<SuccessIcon />}
-        size={size}
-        disabled={incident.status === "resolved"}
-        disabledReason="Already resolved"
-        onClick={() => void cmd.resolve([incident.id])}
-      />
-      <MoreActions incident={incident} onModal={onModal} size={size} />
+      {inline.map((id) => {
+        const v = views[id];
+        if (id === "snooze") {
+          return (
+            <Menu key={id}>
+              <Menu.Trigger>
+                <Tooltip text={v.label}>
+                  <Button aria-label={v.label} size={size}>
+                    <Button.Prefix>{v.icon}</Button.Prefix>
+                  </Button>
+                </Tooltip>
+              </Menu.Trigger>
+              <Menu.Content>
+                <SnoozeItems ids={ids} onModal={onModal} />
+              </Menu.Content>
+            </Menu>
+          );
+        }
+        return (
+          <IconButton
+            key={id}
+            label={v.label}
+            icon={v.icon}
+            size={size}
+            disabled={v.disabled || v.hidden}
+            disabledReason={v.disabledReason}
+            onClick={v.run}
+          />
+        );
+      })}
+      {menu.length > 0 && (
+        <Menu>
+          <Menu.Trigger>
+            <Button aria-label="More actions" size={size}>
+              <Button.Prefix>
+                <DotMenuIcon />
+              </Button.Prefix>
+            </Button>
+          </Menu.Trigger>
+          <Menu.Content>
+            {menu.map((id) => {
+              const v = views[id];
+              if (id === "snooze") {
+                return (
+                  <Menu.Sub key={id}>
+                    <Menu.SubTrigger>
+                      <Menu.Prefix>{v.icon}</Menu.Prefix>
+                      {v.label}
+                    </Menu.SubTrigger>
+                    <Menu.SubContent>
+                      <SnoozeItems ids={ids} onModal={onModal} />
+                    </Menu.SubContent>
+                  </Menu.Sub>
+                );
+              }
+              return (
+                <Menu.Item key={id} disabled={v.disabled} onSelect={() => v.run?.()}>
+                  <Menu.Prefix>{v.icon}</Menu.Prefix>
+                  {v.label}
+                </Menu.Item>
+              );
+            })}
+          </Menu.Content>
+        </Menu>
+      )}
+      {warRoom && <WarRoomModal request={{ mode: "create", incidentId: incident.id }} onClose={() => setWarRoom(false)} />}
     </Flex>
   );
 };
@@ -300,6 +336,9 @@ const IncidentPreview = ({
   );
 };
 
+/** Room kept at the right of the table toolbar for the "Row actions" gear ConsolePage lays over it (button 36 + gap 4). */
+export const TOOLBAR_GEAR_SPACE = 40;
+
 const VISIBILITY_KEY = "command-center.console-columns.v1";
 /**
  * Columns hidden until the person shows them. A column missing here and in the stored choice is visible, so new
@@ -352,6 +391,7 @@ export const IncidentTable = ({
   empty,
   density,
   ackTargetMs,
+  inlineActions,
 }: {
   incidents: Incident[];
   loading: boolean;
@@ -363,6 +403,8 @@ export const IncidentTable = ({
   empty: React.ReactNode;
   density: "default" | "condensed";
   ackTargetMs: number;
+  /** Row actions shown as buttons (the person's choice, see rowActions.ts); the rest go in "⋯". */
+  inlineActions: readonly RowActionId[];
 }) => {
   const [columnVisibility, setColumnVisibility] = useColumnVisibility();
   const { data, now, userName } = useAppData();
@@ -577,7 +619,7 @@ export const IncidentTable = ({
       columnVisibility={columnVisibility}
       onColumnVisibilityChange={setColumnVisibility}
     >
-      <DataTable.Toolbar>
+      <DataTable.Toolbar style={{ marginRight: TOOLBAR_GEAR_SPACE }}>
         <DataTable.LineWrap />
         <DataTable.VisibilitySettings />
         <DataTable.ColumnOrderSettings />
@@ -588,7 +630,12 @@ export const IncidentTable = ({
       </DataTable.SelectedRowsActions>
       <DataTable.RowActions>
         {(row, { rowDensity }) => (
-          <RowQuickActions incident={row as IncidentRow} size={rowDensity === "comfortable" ? "default" : rowDensity} onModal={onModal} />
+          <RowQuickActions
+            incident={row as IncidentRow}
+            size={rowDensity === "comfortable" ? "default" : rowDensity}
+            onModal={onModal}
+            inline={inlineActions}
+          />
         )}
       </DataTable.RowActions>
       <DataTable.ExpandableRow>

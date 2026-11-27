@@ -98,13 +98,26 @@ Each function is called with `POST https://YOUR-ENVIRONMENT.apps.dynatrace.com/p
 and runs with the **caller's** permissions. The caller needs `app-engine:apps:run` plus the permissions of the data it
 touches.
 
-| Function | Body | Returns | Verified |
-| --- | --- | --- | --- |
-| `config` | `{"op":"export"}` or `{"op":"import","bundle":{…},"dryRun":true}` | Export: `{ok, bundle}`. Import: counts, or `errors[]` with entity, path and message. | Yes (export, import, dry run) |
-| `engine-run` | `{"reason":"manual"}` or `{"reason":"test","testRequest":{"providerId","channel","address"}}` | `{ok, sent, failed, deferred, counts, errors, skipped?}`. If a scheduled run holds the lease, it waits up to about 20 seconds. | Yes |
-| `status` | `{}` | `{heartbeat, lease, openIncidents, triggered}` — for external health checks | Yes |
-| `incidents` | `{}` or `{"status":"triggered"}` | The newest 200 incident summaries, without contact data or timeline | Yes |
-| `directory` | `{"query":"ana"}` or `{"uids":[…]}` | Users from IAM | With a platform token the IAM API answered *User not authorized* (also when called directly, even for the account owner). It answers for a signed-in user's session. |
+- **`config`**
+  - *Body*: `{"op":"export"}` or `{"op":"import","bundle":{…},"dryRun":true}`
+  - *Returns*: Export: `{ok, bundle}`. Import: counts, or `errors[]` with entity, path and message.
+  - *Verified*: Yes (export, import, dry run)
+- **`engine-run`**
+  - *Body*: `{"reason":"manual"}` or `{"reason":"test","testRequest":{"providerId","channel","address"}}`
+  - *Returns*: `{ok, sent, failed, deferred, counts, errors, skipped?}`. If a scheduled run holds the lease, it waits up to about 20 seconds.
+  - *Verified*: Yes
+- **`status`**
+  - *Body*: `{}`
+  - *Returns*: `{heartbeat, lease, openIncidents, triggered}` — for external health checks
+  - *Verified*: Yes
+- **`incidents`**
+  - *Body*: `{}` or `{"status":"triggered"}`
+  - *Returns*: The newest 200 incident summaries, without contact data or timeline
+  - *Verified*: Yes
+- **`directory`**
+  - *Body*: `{"query":"ana"}` or `{"uids":[…]}`
+  - *Returns*: Users from IAM
+  - *Verified*: With a platform token the IAM API answered *User not authorized* (also when called directly, even for the account owner). It answers for a signed-in user's session.
 
 ```bash
 curl -X POST "https://YOUR-ENVIRONMENT.apps.dynatrace.com/platform/app-engine/app-functions/v1/apps/my.command.center/api/config" \

@@ -7,11 +7,17 @@ placeholders para o roteamento.
 
 ## Os três caminhos de entrada
 
-| Caminho | Configuração (Settings → Event sources) | Padrão | Tabela do Grail | Como um incidente é resolvido |
-| --- | --- | --- | --- | --- |
-| **1. Davis problems** | *Davis problems* | **ativado** | `dt.davis.problems` | Quando o Davis fecha o problem, ou um operador o resolve |
-| **2. Davis events que não abrem um problem** | *Davis events that don't open a problem (Events API v2)* | desativado | `dt.davis.events` | Quando o evento fecha (timeout) ou chega um novo evento com `cc.action: "resolve"` e o mesmo `cc.dedup_key` |
-| **3. Eventos genéricos** | *Generic events (OpenPipeline)* | desativado | `events` | Um evento com `cc.action: "resolve"` e o mesmo `cc.dedup_key` |
+| Caminho | Configuração (Settings → Event sources) | Padrão | Tabela do Grail |
+| --- | --- | --- | --- |
+| **1. Davis problems** | *Davis problems* | **ativado** | `dt.davis.problems` |
+| **2. Davis events que não abrem um problem** | *Davis events that don't open a problem (Events API v2)* | desativado | `dt.davis.events` |
+| **3. Eventos genéricos** | *Generic events (OpenPipeline)* | desativado | `events` |
+
+| Caminho | Como um incidente é resolvido |
+| --- | --- |
+| **1. Davis problems** | Quando o Davis fecha o problem, ou um operador o resolve |
+| **2. Davis events que não abrem um problem** | Quando o evento fecha (timeout) ou chega um novo evento com `cc.action: "resolve"` e o mesmo `cc.dedup_key` |
+| **3. Eventos genéricos** | Um evento com `cc.action: "resolve"` e o mesmo `cc.dedup_key` |
 
 Qualquer ferramenta de monitoramento, script ou job de CI usa o **caminho 1** por padrão: ela publica um Davis event,
 o Davis abre um problem e o problem vira o incidente. Os caminhos 2 e 3 são para ferramentas que querem controlar a

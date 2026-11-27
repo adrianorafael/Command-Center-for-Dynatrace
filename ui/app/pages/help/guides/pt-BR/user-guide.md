@@ -11,10 +11,9 @@ As capturas de tela foram feitas em **modo demo**, com dados de exemplo.
 | Elemento | O que faz |
 | --- | --- |
 | **Console · On-call · Teams · Escalations · Services · Integrations · War rooms · Reports** | Navegação principal. **War rooms** mostra um contador vermelho enquanto há salas em andamento. |
-| 🔔 **Sino** | As últimas notificações desta sessão, com um contador de não lidas (até `99+`). Estados do ícone: sino = nada novo, sino ativo = itens não lidos, sino riscado = pop-ups silenciados. Selecionar um item abre aquilo a que ele se refere. Fechar o menu marca tudo como lido. |
-| 📞 **Indicador de plantão** | `You're on call` em um círculo verde quando você está de plantão; caso contrário, `On call: <name>` (+N para mais pessoas), `On call` quando ninguém está cobrindo neste momento, ou `No one on call` quando ainda não existe
-escala. O menu lista quem está de plantão em cada equipe e até quando, e oferece **Leave on-call now…** ou **Take on-call now…** (abaixo). |
-| ⚙️ **Settings** | Abre as [configurações](configuration.md). |
+| :icon[NotificationIcon]: **Sino** | As últimas notificações desta sessão, com um contador de não lidas (até `99+`). Estados do ícone: :icon[NotificationIcon]: nada novo, :icon[NotificationActiveIcon]: itens não lidos, :icon[NotificationOffIcon]: pop-ups silenciados. Selecionar um item abre aquilo a que ele se refere. Fechar o menu marca tudo como lido. |
+| :icon[CallIcon]: **Indicador de plantão** | `You're on call` em um círculo verde quando você está de plantão; caso contrário, `On call: <name>` (+N para mais pessoas), `On call` quando ninguém está cobrindo neste momento, ou `No one on call` quando ainda não existe escala. O menu lista quem está de plantão em cada equipe e até quando, e oferece **Leave on-call now…** ou **Take on-call now…** (abaixo). |
+| :icon[SettingIcon]: **Settings** | Abre as [configurações](configuration.md). |
 | Menu de ajuda **?** | Primeiros passos, guia dentro do app, envio de eventos, atalhos de teclado, sobre. |
 
 ### Notificações (sino e pop-ups)
@@ -49,10 +48,10 @@ confirmações também não é exibido.
 
 | Indicador | Status | Significado |
 | --- | --- | --- |
-| 🔴 Triggered | `triggered` | Novo ou disparado novamente. A política de escalonamento está em andamento. |
-| 🟠 Acknowledged | `acknowledged` | Alguém está cuidando dele. O escalonamento para. |
-| ⚪ Snoozed | `snoozed` | Oculto até um horário. Depois, dispara novamente e o escalonamento recomeça. |
-| 🟢 Resolved | `resolved` | Fechado pela origem ou por um operador. Continua visível por 24 horas (configurável), depois é arquivado. |
+| :icon[HealthCritical]: Triggered | `triggered` | Novo ou disparado novamente. A política de escalonamento está em andamento. |
+| :icon[HealthWarning]: Acknowledged | `acknowledged` | Alguém está cuidando dele. O escalonamento para. |
+| :icon[HealthNeutral]: Snoozed | `snoozed` | Oculto até um horário. Depois, dispara novamente e o escalonamento recomeça. |
+| :icon[HealthIdeal]: Resolved | `resolved` | Fechado pela origem ou por um operador. Continua visível por 24 horas (configurável), depois é arquivado. |
 
 **Chips de prioridade**: somente texto, sem ícone. **P1** é o único chip vermelho sólido, **P2** é avermelhado, **P3**
 âmbar, **P4** azul e **P5** cinza. Significados: P1 crítico (grande indisponibilidade ou impacto em clientes), P2 alto
@@ -70,16 +69,31 @@ comportamento das quiet hours.
 | Failed | O provedor a recusou, ou todas as tentativas falharam. O erro do provedor é exibido. |
 | No result | Nenhum resultado chegou a tempo. O motor tenta novamente com uma nova tentativa. |
 
-**Canais**: 📱 SMS · 📞 voz · 💬 chat (WhatsApp, Telegram, Slack, Microsoft Teams) · 🌐 HTTP (IFTTT, webhook). Um ✖
-vermelho em *Last notified* significa que a última notificação falhou ou ficou sem resultado.
+**Canais**: :icon[MobileIcon]: SMS · :icon[CallIcon]: voz · :icon[ChatIcon]: chat (WhatsApp, Telegram, Slack, Microsoft Teams) · :icon[HttpIcon]: HTTP (IFTTT, webhook). Um
+:icon[CriticalFailedIcon]: vermelho em *Last notified* significa que a última notificação falhou ou ficou sem resultado.
 
-**Origens**: o ícone do Davis (IA) marca um Davis problem; o ícone de evento marca um Davis event ou um evento da
-Events API.
+**Origens**: :icon[AiIcon]: Davis (IA) marca um Davis problem; :icon[EventIcon]: marca um Davis event ou um evento da Events API.
 
-**Outros ícones**: ⬆ escalar · ⏸ snooze · 👤 responsável / reatribuir · ✎ alteração de prioridade ou de tag · 📝 nota ·
-👥 war room ou equipe inteira · 🕒 MTTA ou *acima da meta de reconhecimento* · 🔇 suprimido · 🔁 a política se repete ·
-✔ (verde) passo concluído · spinner = passo atual · ○ passo pendente · 🔒 rota padrão · ▶ executar ou enviar teste · 🔑
-Credential Vault · ícone de workflow = workflow do motor.
+**Outros ícones**
+
+| Ícone | Significado |
+| --- | --- |
+| :icon[ArrowUpIcon]: | Escalar |
+| :icon[PauseIcon]: | Snooze (adiar) |
+| :icon[AccountIcon]: | Responsável, reatribuir |
+| :icon[EditIcon]: | Alteração de prioridade ou de tag |
+| :icon[DescriptionIcon]: | Nota |
+| :icon[GroupIcon]: | War room, ou a equipe inteira |
+| :icon[ClockIcon]: | MTTA, ou *acima da meta de reconhecimento* |
+| :icon[MuteIcon]: | Suprimido |
+| :icon[RepeatIcon]: | A política se repete |
+| :icon[SuccessIcon]: | Passo concluído |
+| Spinner | Passo atual |
+| :icon[CircleIcon]: | Passo pendente |
+| :icon[LockIcon]: | Rota padrão |
+| :icon[PlayIcon]: | Executar, ou enviar um teste |
+| :icon[KeyIcon]: | Credential Vault |
+| :icon[FlowIcon]: | Workflow do motor |
 
 **Destaque de item criado**: tudo o que você cria com um botão em uma lista (uma war room, uma equipe, um membro, uma
 escala, uma camada, uma substituição, um passo de política, um serviço, uma regra, uma nota…) pulsa uma vez por um
@@ -123,7 +137,7 @@ Created ficam ocultas por padrão. Use o menu de colunas para mostrar, ocultar o
 lembrada neste navegador. As linhas podem ser expandidas para mostrar a descrição, a atividade mais recente e o
 escalonamento.
 
-**Ações da linha**: **Acknowledge** (somente quando triggered), **Resolve** e **⋮**: *Reassign…*, *Escalate now*,
+**Ações da linha**: **Acknowledge** (somente quando triggered), **Resolve** e **:icon[DotMenuIcon]:**: *Reassign…*, *Escalate now*,
 *Snooze* (15 min, 30 min, 1 h, 4 h, Custom…), *Change priority…*, *Add note*, *Open war room…* / *Join war room*, *Open
 Davis problem*, *Copy link*.
 
@@ -160,7 +174,7 @@ Cada ação é registrada na linha do tempo do incidente, com quem a fez e quand
 Abre ao lado da tabela. O cabeçalho mostra prioridade, status, `#ID`, um botão de copiar link, título, *Opened … ·
 Service · Team · Source*, *Under maintenance: paging suppressed* quando se aplica, a quem está atribuído e, depois do
 reconhecimento, *Acknowledged by* com a pessoa e o horário. Botões: Acknowledge, Resolve,
-Reopen, Reassign, Open/Join war room, Escalate now, Snooze e ⋮ (Change priority, Add note, Undo acknowledgement, Copy
+Reopen, Reassign, Open/Join war room, Escalate now, Snooze e :icon[DotMenuIcon]: (Change priority, Add note, Undo acknowledgement, Copy
 link). Davis problems têm o link **Open in Problems app**.
 
 | Aba | Conteúdo |
@@ -177,7 +191,7 @@ link). Davis problems têm o link **Open in Problems app**.
 
 Uma war room é um link de reunião mais os incidentes que ela trata e os seus notebooks.
 
-- **Abrir**: a partir de um incidente (**Open war room**, ou **⋮ → Open war room…** no Console) ou com o botão **Open
+- **Abrir**: a partir de um incidente (**Open war room**, ou **:icon[DotMenuIcon]: → Open war room…** no Console) ou com o botão **Open
   war room**. Cole o link da reunião que você criou no Teams, Zoom, Meet ou em um huddle do Slack (somente https).
   Incidentes abertos relacionados são adicionados automaticamente: os que têm a mesma causa raiz, ou o mesmo serviço e
   começaram em até 30 minutos. Remova os que não pertencem à sala.
@@ -196,11 +210,9 @@ Uma war room é um link de reunião mais os incidentes que ela trata e os seus n
 
 ![On-call](../../screenshots/oncall.png)
 
-| Aba | Conteúdo |
-| --- | --- |
-| Now | Um card por equipe: quem está de plantão e até quando, os seus métodos de contato (em cinza quando não configurados), quem é o próximo e cada camada. *No one is on call* vem com **Add override**. Enquanto ainda não existe nenhuma equipe, a página diz *Start with a team* (comece por uma equipe). Abaixo: *Shifts* (turnos), uma semana do calendário (domingo → sábado, uma coluna por dia) no *Tenant time zone* definido em Settings (mostrado ao lado das datas), com uma linha *Now* e a coluna de hoje destacada. Uma linha por equipe mostra a escala final com o nome de quem está de plantão em cada barra; substituições (overrides) têm contorno tracejado e *· override*, lacunas *No one on call* aparecem listradas em âmbar. Expanda uma equipe (ou use **Show people**) para ver uma linha por pessoa com os horários dos seus turnos e as horas de plantão na semana; passe o mouse sobre uma barra para ver os horários exatos. Navegue com as setas de semana anterior / seguinte, **This week** ou *Week of* (um seletor de data que vai para a semana que contém essa data). A semana fica no link (`?week=2026-11-22`), então pode ser compartilhada; **Workdays only** mostra segunda → sexta e fica lembrado neste navegador. Filtro: Team. |
-| Schedules | Nome, equipe, fuso horário, camadas, de plantão agora, próxima passagem de plantão, cobertura para os próximos 7 dias (em %). Edit, Duplicate, Delete. |
-| Overrides | Quem cobre, para quem, escala, de, até, motivo. Futuras ou passadas. Remove. |
+- **Now**: Um card por equipe: quem está de plantão e até quando, os seus métodos de contato (em cinza quando não configurados), quem é o próximo e cada camada. *No one is on call* vem com **Add override**. Enquanto ainda não existe nenhuma equipe, a página diz *Start with a team* (comece por uma equipe). Abaixo: *Shifts* (turnos), uma semana do calendário (domingo → sábado, uma coluna por dia) no *Tenant time zone* definido em Settings (mostrado ao lado das datas), com uma linha *Now* e a coluna de hoje destacada. Uma linha por equipe mostra a escala final com o nome de quem está de plantão em cada barra; substituições (overrides) têm contorno tracejado e *· override*, lacunas *No one on call* aparecem listradas em âmbar. Expanda uma equipe (ou use **Show people**) para ver uma linha por pessoa com os horários dos seus turnos e as horas de plantão na semana; passe o mouse sobre uma barra para ver os horários exatos. Navegue com as setas de semana anterior / seguinte, **This week** ou *Week of* (um seletor de data que vai para a semana que contém essa data). A semana fica no link (`?week=2026-11-22`), então pode ser compartilhada; **Workdays only** mostra segunda → sexta e fica lembrado neste navegador. Filtro: Team.
+- **Schedules**: Nome, equipe, fuso horário, camadas, de plantão agora, próxima passagem de plantão, cobertura para os próximos 7 dias (em %). Edit, Duplicate, Delete.
+- **Overrides**: Quem cobre, para quem, escala, de, até, motivo. Futuras ou passadas. Remove.
 
 **Editor de escala** ![Schedule editor](../../screenshots/schedule-editor.png)
 
@@ -307,12 +319,10 @@ um minuto após o vencimento.
 
 ![Services](../../screenshots/services.png) ![Routing](../../screenshots/routing.png)
 
-| Aba | Conteúdo |
-| --- | --- |
-| Services | Serviço, equipe, política de escalonamento (ou *Team default*), regras, incidentes abertos, ruído nos últimos 7 dias |
-| Routing rules (N) | Regras ordenadas (arraste para reordenar). **A primeira regra habilitada que corresponder vence.** Uma regra nova é colocada acima da primeira regra genérica (catch-all, uma regra sem condições). Colunas: #, nome, condições, ações, correspondências em 24 h e uma chave que liga ou desliga a regra. A última linha, fixa, é a rota padrão; ela avisa quando não há equipe padrão. Nesta aba, o botão da página é **New rule**. |
-| Test a rule | Carregue um alerta recente ou um exemplo, edite o JSON, **Run test**: mostra a regra correspondente (ou a mais próxima), cada condição ✔/✖ e o serviço, a equipe, a política e a prioridade resultantes, com a sua origem |
-| Priority mapping | Prioridade por categoria do Davis e por severidade, mais o fallback |
+- **Services**: Serviço, equipe, política de escalonamento (ou *Team default*), regras, incidentes abertos, ruído nos últimos 7 dias
+- **Routing rules (N)**: Regras ordenadas (arraste para reordenar). **A primeira regra habilitada que corresponder vence.** Uma regra nova é colocada acima da primeira regra genérica (catch-all, uma regra sem condições). Colunas: #, nome, condições, ações, correspondências em 24 h e uma chave que liga ou desliga a regra. A última linha, fixa, é a rota padrão; ela avisa quando não há equipe padrão. Nesta aba, o botão da página é **New rule**.
+- **Test a rule**: Carregue um alerta recente ou um exemplo, edite o JSON, **Run test**: mostra a regra correspondente (ou a mais próxima), cada condição :icon[SuccessIcon]:/:icon[XmarkIcon]: e o serviço, a equipe, a política e a prioridade resultantes, com a sua origem
+- **Priority mapping**: Prioridade por categoria do Davis e por severidade, mais o fallback
 
 **Editor de regra**: nome, habilitada, *Match all / any*, condições (campo, operador, valor, *Not*) e **Then**:
 serviço, equipe, política de escalonamento, prioridade (ou *Use priority mapping*), adicionar tags e *Suppress (create the incident, page nobody)* (criar o incidente, não acionar ninguém). Aberta a partir da checklist de uma equipe (*Add routing rule*), a regra já
@@ -326,11 +336,15 @@ Davis detecta sozinho, precisam de uma regra de roteamento), descrição, equipe
 
 ## Integrations (integrações)
 
-| Aba | Conteúdo |
-| --- | --- |
-| Inbound ![Inbound](../../screenshots/integrations.png) | Cada origem com o seu status (*Receiving*, *Quiet > 1 h*, *Turned off*, *Never seen*), último evento, incidentes em 24 h e **Show events** (abre a Console na aba *All* com *Created* nas últimas 24 horas, para a lista bater com essa contagem). Snippets prontos para copiar (curl, PowerShell, Python, Dynatrace Workflow) e os campos que o app lê. |
-| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | Os nove provedores (oito integrados mais **Custom workflow**), cada um com uma chave **On/Off**: *Not configured*, *Off*, *Configured*, *Last delivery failed* ou *Host not allowed: add it to External requests*, contagens de enviados/falhos, *Sent by the engine* (o padrão) ou *Sent by its workflow*, **Configure** (ID da entrada do vault ou ID do workflow, parâmetros, **Delivery** e, para um provedor integrado, o host a liberar em *External requests*) e **Send test**. Em **Delivery** você escolhe quem envia um provedor integrado: *By the engine* (sem custo extra) ou *Through its own workflow* (uma chamada de função a mais por notificação). Só pode haver um provedor ativado por canal. |
-| Workflows ![Workflows](../../screenshots/integrations-workflow.png) | Status do motor (*Not installed*, *Installed · simple workflow*, *Update available*, *Installed as a standard workflow…*), a última execução do motor, **Run every**, **Install in Workflows**, **Download JSON**, **Run engine now**, **Refresh**, os passos de configuração e os hosts a liberar. Um segundo card, **Command Center · Engine on problem**, instala o workflow opcional que roda o motor quando o Davis abre ou fecha um problema (*Optional · not installed*, *Installed · simple workflow*, *Installed, but its trigger is switched off*). |
+- **Inbound**: Cada origem com o seu status (*Receiving*, *Quiet > 1 h*, *Turned off*, *Never seen*), último evento, incidentes em 24 h e **Show events** (abre a Console na aba *All* com *Created* nas últimas 24 horas, para a lista bater com essa contagem). Snippets prontos para copiar (curl, PowerShell, Python, Dynatrace Workflow) e os campos que o app lê.
+
+  ![Inbound](../../screenshots/integrations.png)
+- **Outbound**: Os nove provedores (oito integrados mais **Custom workflow**), cada um com uma chave **On/Off**: *Not configured*, *Off*, *Configured*, *Last delivery failed* ou *Host not allowed: add it to External requests*, contagens de enviados/falhos, *Sent by the engine* (o padrão) ou *Sent by its workflow*, **Configure** (ID da entrada do vault ou ID do workflow, parâmetros, **Delivery** e, para um provedor integrado, o host a liberar em *External requests*) e **Send test**. Em **Delivery** você escolhe quem envia um provedor integrado: *By the engine* (sem custo extra) ou *Through its own workflow* (uma chamada de função a mais por notificação). Só pode haver um provedor ativado por canal.
+
+  ![Outbound](../../screenshots/integrations-outbound.png)
+- **Workflows**: Status do motor (*Not installed*, *Installed · simple workflow*, *Update available*, *Installed as a standard workflow…*), a última execução do motor, **Run every**, **Install in Workflows**, **Download JSON**, **Run engine now**, **Refresh**, os passos de configuração e os hosts a liberar. Um segundo card, **Command Center · Engine on problem**, instala o workflow opcional que roda o motor quando o Davis abre ou fecha um problema (*Optional · not installed*, *Installed · simple workflow*, *Installed, but its trigger is switched off*).
+
+  ![Workflows](../../screenshots/integrations-workflow.png)
 
 Detalhes: [integrações](integrations.md) e [primeiros passos](getting-started.md).
 

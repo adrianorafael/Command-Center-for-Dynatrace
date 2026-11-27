@@ -110,11 +110,15 @@ La [guía de operaciones](operations.md) explica el costo.
 Abre **Command Center → Integrations → Workflows**, elige **Run every** 1, 2 o 5 minutos y luego usa una de estas
 tres opciones:
 
-| Opción | Cómo | Estado |
-| --- | --- | --- |
-| **A. Install in Workflows** | Abre la app Workflows con el workflow ya completado (intent "create workflow" de Workflows). Revísalo, guárdalo y despliégalo. | El payload del intent documentado por Dynatrace tiene título, tareas y trigger, pero **ningún tipo de workflow**. Si el nuevo workflow queda como un *standard* workflow, la pestaña Workflows muestra una advertencia. En ese caso elimínalo y usa B o C. |
-| **B. Download JSON** | App Workflows → **Upload** → el archivo descargado. El archivo contiene `"type": "SIMPLE"` y el intervalo que elegiste. | Es la misma definición que se creó mediante la Automation API y se ejecutó en el entorno trial. El botón de carga en sí no fue ejercitado. |
-| **C. Script de administración** | `DT_ENVIRONMENT=https://YOUR-ENVIRONMENT.apps.dynatrace.com DT_PLATFORM_TOKEN=… node scripts/install-workflow.mjs --interval 1` (token con `automation:workflows:read` y `automation:workflows:write`). Idempotente; `--dry-run` imprime el JSON. | Verificado en el entorno trial: un simple workflow, ejecutándose cada minuto, todas las ejecuciones exitosas. |
+- **A. Install in Workflows**
+  - *Cómo*: Abre la app Workflows con el workflow ya completado (intent "create workflow" de Workflows). Revísalo, guárdalo y despliégalo.
+  - *Estado*: El payload del intent documentado por Dynatrace tiene título, tareas y trigger, pero **ningún tipo de workflow**. Si el nuevo workflow queda como un *standard* workflow, la pestaña Workflows muestra una advertencia. En ese caso elimínalo y usa B o C.
+- **B. Download JSON**
+  - *Cómo*: App Workflows → **Upload** → el archivo descargado. El archivo contiene `"type": "SIMPLE"` y el intervalo que elegiste.
+  - *Estado*: Es la misma definición que se creó mediante la Automation API y se ejecutó en el entorno trial. El botón de carga en sí no fue ejercitado.
+- **C. Script de administración**
+  - *Cómo*: `DT_ENVIRONMENT=https://YOUR-ENVIRONMENT.apps.dynatrace.com DT_PLATFORM_TOKEN=… node scripts/install-workflow.mjs --interval 1` (token con `automation:workflows:read` y `automation:workflows:write`). Idempotente; `--dry-run` imprime el JSON.
+  - *Estado*: Verificado en el entorno trial: un simple workflow, ejecutándose cada minuto, todas las ejecuciones exitosas.
 
 Luego:
 

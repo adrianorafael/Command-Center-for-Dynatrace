@@ -18,7 +18,11 @@ import {
   type GuideSet,
   type Language,
 } from "../guides/content";
-import { helpHref, matchLanguage, resolveLanguage } from "../guides/language";
+import { GUIDE_ICONS, ICON_TOKEN, PICTOGRAPH, splitIconTokens } from "../guides/icons";
+import { helpHref, languageSwitchHref, resolveLanguage } from "../guides/language";
+import { columnRules } from "../guides/tableLayout";
+import { EVENT_FIELD_KEYS, OVERVIEW, SHORTCUT_KEYS } from "../overview";
+import { EVENT_FIELDS } from "../../../components/snippets";
 
 const root = new URL("../../../../../", import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, root), "utf8");
@@ -115,20 +119,122 @@ describe("guide transform", () => {
 });
 
 describe("help language", () => {
-  it("prefers ?lang=, then the stored choice, then the browser, then English", () => {
-    expect(resolveLanguage({ query: "es", stored: "pt-BR", browser: ["en-US"] })).toBe("es");
-    expect(resolveLanguage({ query: "xx", stored: "pt-BR", browser: ["es-ES"] })).toBe("pt-BR");
-    expect(resolveLanguage({ stored: null, browser: ["de-DE", "pt-PT"] })).toBe("pt-BR");
-    expect(resolveLanguage({ browser: ["es-419"] })).toBe("es");
-    expect(resolveLanguage({ browser: ["fr-FR"] })).toBe("en");
+  it("prefers ?lang=, then the stored choice, then English; never the browser language", () => {
+    expect(resolveLanguage({ query: "es", stored: "pt-BR" })).toBe("es");
+    expect(resolveLanguage({ query: "xx", stored: "pt-BR" })).toBe("pt-BR");
+    expect(resolveLanguage({ query: null, stored: "xx" })).toBe("en");
+    expect(resolveLanguage({ stored: null })).toBe("en");
     expect(resolveLanguage({})).toBe("en");
-    expect(matchLanguage("PT_br")).toBe("pt-BR");
-    expect(matchLanguage(undefined)).toBeUndefined();
+  });
+
+  it("switching the language goes to the same page in the new language, with ?lang= set", () => {
+    expect(languageSwitchHref("en", "pt-BR", "user-guide", "#console")).toBe("/help?doc=user-guide&lang=pt-BR");
+    expect(languageSwitchHref("pt-BR", "es", undefined, "#shortcuts")).toBe("/help?lang=es#shortcuts");
+    expect(languageSwitchHref("es", "en", undefined, "")).toBe("/help?lang=en");
+    expect(languageSwitchHref("es", "es", "operations")).toBeUndefined();
+    expect(languageSwitchHref("es", null, "operations")).toBeUndefined();
+    // Whatever the remembered choice, the new URL decides the language shown.
+    const href = languageSwitchHref("en", "es", "integrations") ?? "";
+    expect(resolveLanguage({ query: new URL(href, "https://help.invalid").searchParams.get("lang"), stored: "pt-BR" })).toBe("es");
   });
 
   it("builds shareable addresses with the guide, the language and the anchor", () => {
     expect(helpHref("pt-BR", "integrations", "custom-workflow")).toBe("/help?doc=integrations&lang=pt-BR#custom-workflow");
     expect(helpHref("en")).toBe("/help?lang=en");
     expect(helpHref("es", undefined, "#shortcuts")).toBe("/help?lang=es#shortcuts");
+  });
+});
+
+describe("guide icons", () => {
+  const files = LANGUAGES.flatMap((lang) => GUIDE_IDS.map((id) => ({ path: `${SOURCE_DIRS[lang]}/${id}.md`, text: read(`${SOURCE_DIRS[lang]}/${id}.md`) })));
+
+  it("the pictograph check catches the stand-ins that were used, and lets text symbols through", () => {
+    for (const c of ["⚙️", "🔔", "📞", "🔴", "🟠", "⚪", "🟢", "✅", "✔", "✖", "⋮", "⋯", "○", "▶", "⏸", "⬆", "✎", "\u{FE0F}"]) expect(PICTOGRAPH.test(c), c).toBe(true);
+    for (const c of ["→", "…", "–", "—", "≈", "·", "×", "é", "ç", "ñ", "“", "”"]) expect(PICTOGRAPH.test(c), c).toBe(false);
+  });
+
+  it("no guide source uses emoji or pictographs in place of the app's icons", () => {
+    for (const { path, text } of files) {
+      text.split("\n").forEach((line, i) => expect(PICTOGRAPH.exec(line)?.[0], `${path}:${i + 1}: ${line.trim().slice(0, 80)}`).toBeUndefined());
+    }
+  });
+
+  it("every icon token in the guides is in the allowlist, and none sits in a heading or code", () => {
+    let used = 0;
+    for (const { path, text } of files) {
+      for (const m of text.matchAll(ICON_TOKEN)) {
+        used++;
+        expect(Object.keys(GUIDE_ICONS), `${path}: ${m[0]}`).toContain(m[1]);
+      }
+      // A token in a heading would end up in its anchor; in inline code it would show as text.
+      for (const line of text.split("\n")) {
+        if (/^#{1,6} /.test(line)) expect(line, path).not.toMatch(/:icon\[/);
+        for (const code of line.match(/`[^`]*`/g) ?? []) expect(code, path).not.toMatch(ICON_TOKEN);
+      }
+      // A misspelled token (":icon[X]" without the closing colon, ":icon(X):") would show up as text.
+      expect(text.replace(ICON_TOKEN, ""), path).not.toMatch(/:icon\b/);
+    }
+    expect(used).toBeGreaterThan(0);
+  });
+
+  it("the translations use the same icons as the English guide", () => {
+    const icons = (lang: Language, id: GuideId) => [...read(`${SOURCE_DIRS[lang]}/${id}.md`).matchAll(ICON_TOKEN)].map((m) => m[1]).sort();
+    for (const id of GUIDE_IDS) {
+      expect(icons("pt-BR", id), id).toEqual(icons("en", id));
+      expect(icons("es", id), id).toEqual(icons("en", id));
+    }
+  });
+
+  it("splits known tokens out of text and leaves unknown ones as written", () => {
+    expect(splitIconTokens("Open :icon[SettingIcon]: Settings")).toEqual(["Open ", { icon: "SettingIcon" }, " Settings"]);
+    expect(splitIconTokens(":icon[DotMenuIcon]::icon[NotAnIcon]: x")).toEqual([{ icon: "DotMenuIcon" }, ":icon[NotAnIcon]: x"]);
+    expect(splitIconTokens(":icon[constructor]: :icon[toString]:")).toEqual([":icon[constructor]: :icon[toString]:"]);
+    expect(splitIconTokens("plain")).toEqual(["plain"]);
+    expect(splitIconTokens("")).toEqual([]);
+  });
+
+  it("every allowed icon has a label in every language", () => {
+    for (const [name, info] of Object.entries(GUIDE_ICONS)) for (const lang of LANGUAGES) expect(info.label[lang].trim(), `${name} ${lang}`).not.toBe("");
+  });
+});
+
+describe("help overview", () => {
+  it("is translated into every language, with every section, step, shortcut and event field", () => {
+    for (const lang of LANGUAGES) {
+      const t = OVERVIEW[lang];
+      for (const v of [t.title, t.subtitle, t.getStartedIntro, t.concepts, t.console, t.outbound, t.troubleshooting, t.privacy, ...Object.values(t.sections), ...t.steps, ...t.inbound])
+        expect(v.trim(), lang).not.toBe("");
+      expect(Object.keys(t.shortcuts).sort(), lang).toEqual([...SHORTCUT_KEYS].sort());
+    }
+    // The overview's event fields follow the shared list on Integrations.
+    expect(EVENT_FIELDS.map((f) => f.field)).toEqual([...EVENT_FIELD_KEYS]);
+    expect(OVERVIEW.en.eventFields).toEqual(Object.fromEntries(EVENT_FIELDS.map((f) => [f.field, f.usedFor])));
+  });
+
+  it("translations differ from English (the selected language is the language shown)", () => {
+    for (const lang of ["pt-BR", "es"] as const) {
+      expect(OVERVIEW[lang].concepts).not.toBe(OVERVIEW.en.concepts);
+      expect(OVERVIEW[lang].sections.concepts).not.toBe(OVERVIEW.en.sections.concepts);
+    }
+  });
+});
+
+describe("guide table layout", () => {
+  it("keeps short columns on one line and gives name columns room before prose", () => {
+    const prose = "A long explanation that is allowed to wrap over several lines because it is prose, not a key or a value.";
+    expect(
+      columnRules([
+        ["Setting", "Default", "Effect"],
+        ["---", "---", "---"],
+        ["Davis events that don't open a problem (Events API v2)", "`CUSTOM_ALERT, ERROR_EVENT`", prose],
+        ["Look back (hours)", "72", "Short"],
+      ]),
+    ).toEqual([
+      { col: 0, minWidthEm: 13 },
+      { col: 1, nowrap: true },
+      { col: 2, minWidthEm: 15 },
+    ]);
+    // An icon token counts as one character.
+    expect(columnRules([[":icon[NotificationActiveIcon]: :icon[NotificationOffIcon]: :icon[SettingIcon]:"]])).toEqual([{ col: 0, nowrap: true }]);
   });
 });

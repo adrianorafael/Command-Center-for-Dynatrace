@@ -4,8 +4,10 @@
  *
  * Why this exists: the guides come in English, Portuguese (BR) and Spanish, and a shared /help link must open in the
  * language it was shared in, while a reader's own choice should survive the next visit. Precedence:
- * `?lang=` in the URL > the choice remembered in this browser > the browser language > English.
- * Only an explicit choice in the selector is remembered; opening someone's link never overwrites it.
+ * `?lang=` in the URL > the choice remembered in this browser > English.
+ * The browser language is deliberately not used: the app itself is English, and picking Portuguese or Spanish on
+ * its own surprised readers. Only an explicit choice in the selector is remembered; opening someone's link never
+ * overwrites it.
  */
 import { GUIDE_IDS, isLanguage, type GuideId, type GuideSet, type Language } from "./content";
 
@@ -13,23 +15,21 @@ export const LANGUAGE_NAMES: Record<Language, string> = { en: "English", "pt-BR"
 
 const STORAGE_KEY = "command-center.help-language.v1";
 
-/** Maps a BCP 47 tag ("pt-PT", "es-419", "en-GB") to a documentation language; Portuguese of any region gets pt-BR. */
-export function matchLanguage(tag: string | null | undefined): Language | undefined {
-  const base = (tag ?? "").trim().toLowerCase().split(/[-_]/)[0];
-  if (base === "pt") return "pt-BR";
-  if (base === "es") return "es";
-  if (base === "en") return "en";
-  return undefined;
-}
-
-export function resolveLanguage(input: { query?: string | null; stored?: string | null; browser?: readonly string[] }): Language {
+export function resolveLanguage(input: { query?: string | null; stored?: string | null }): Language {
   if (isLanguage(input.query)) return input.query;
   if (isLanguage(input.stored)) return input.stored;
-  for (const tag of input.browser ?? []) {
-    const lang = matchLanguage(tag);
-    if (lang) return lang;
-  }
   return "en";
+}
+
+/**
+ * Where the selector goes when the reader picks `next` while `current` is shown: the same guide (or the overview) in
+ * the new language, with `?lang=` set so the URL, the selector and the content always name the same language.
+ * A guide's anchors differ per language (they are translated headings), so a guide starts at the top; the overview's
+ * section ids are the same in every language and the anchor is kept. `undefined` when nothing changes.
+ */
+export function languageSwitchHref(current: Language, next: Language | null | undefined, doc: GuideId | undefined, hash = ""): string | undefined {
+  if (!next || !isLanguage(next) || next === current) return undefined;
+  return helpHref(next, doc, doc ? undefined : hash.replace(/^#/, "") || undefined);
 }
 
 export function readStoredLanguage(): string | null {
@@ -46,11 +46,6 @@ export function storeLanguage(lang: Language): void {
   } catch {
     // storage unavailable: the choice lasts while the URL carries ?lang=
   }
-}
-
-export function browserLanguages(): readonly string[] {
-  if (typeof navigator === "undefined") return [];
-  return navigator.languages?.length ? navigator.languages : [navigator.language];
 }
 
 /**
@@ -89,6 +84,7 @@ export const LABELS: Record<Language, HelpLabels> = {
     loadFailed: "The guide could not be loaded. Reload the page to try again.",
     guideNames: {
       "getting-started": "Getting started",
+      "install-with-vibe-coding": "Install with vibe coding",
       "user-guide": "User guide",
       "alerts-reference": "Alerts reference",
       integrations: "Integrations",
@@ -105,6 +101,7 @@ export const LABELS: Record<Language, HelpLabels> = {
     loadFailed: "Não foi possível carregar o guia. Recarregue a página para tentar de novo.",
     guideNames: {
       "getting-started": "Primeiros passos",
+      "install-with-vibe-coding": "Instalar com vibe coding",
       "user-guide": "Guia do usuário",
       "alerts-reference": "Referência de alertas",
       integrations: "Integrações",
@@ -121,6 +118,7 @@ export const LABELS: Record<Language, HelpLabels> = {
     loadFailed: "No se pudo cargar la guía. Vuelve a cargar la página para intentarlo de nuevo.",
     guideNames: {
       "getting-started": "Primeros pasos",
+      "install-with-vibe-coding": "Instalar con vibe coding",
       "user-guide": "Guía del usuario",
       "alerts-reference": "Referencia de alertas",
       integrations: "Integraciones",

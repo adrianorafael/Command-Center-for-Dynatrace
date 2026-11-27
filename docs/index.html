@@ -254,7 +254,7 @@
 
 <nav class="top" aria-label="Main">
   <div class="wrap">
-    <a class="brand" href="#top"><img src="icon.svg" alt="" /> Command Center <small>v2.5.1</small></a>
+    <a class="brand" href="#top"><img src="icon.svg" alt="" /> Command Center <small>v2.6.0</small></a>
     <div class="links">
       <a href="#tour">Tour</a>
       <a href="#features">Features</a>
@@ -270,7 +270,7 @@
 
 <header class="hero" id="top">
   <div class="wrap hero-inner">
-    <span class="eyebrow">Demo Dynatrace App · Built with vibecoding · v2.5.1</span>
+    <span class="eyebrow">Demo Dynatrace App · Built with vibecoding · v2.6.0</span>
     <h1>Command Center<br /><span class="grad">for Dynatrace</span></h1>
     <p class="lead">
       A <strong>NOC event console with on-call teams, schedules and escalation policies</strong>, inside Dynatrace.
@@ -557,8 +557,7 @@ npm install
 <span class="c"># 2. Point app.config.json at your environment</span>
 <span class="c">#    "environmentUrl": "https://YOUR-ENVIRONMENT.apps.dynatrace.com/"</span>
 
-<span class="c"># 3. Authenticate, then deploy (app.version must increase per environment)</span>
-npx dt-app auth
+<span class="c"># 3. Deploy: it signs you in through the browser (app.version must increase per environment)</span>
 npx dt-app deploy
 
 <span class="c"># Offline preview in demo mode, no environment needed (?demo=empty starts with no data)</span>
@@ -667,6 +666,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
         Portuguese and Spanish.</p></div>
     <div class="docs">
       <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/getting-started.md"><h3>Getting started</h3><span>Deploy, every permission with its Dynatrace documentation, Credential Vault, allowlist, engine install, first test</span></a>
+      <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/install-with-vibe-coding.md"><h3>Install with vibe coding</h3><span>A platform token, the Dynatrace MCP server and a ready prompt: your AI assistant clones, deploys and verifies</span></a>
       <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/user-guide.md"><h3>User guide</h3><span>Every screen and menu, icons, statuses, KPIs, notifications, war rooms, on-call switch</span></a>
       <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/alerts-reference.md"><h3>Alerts reference</h3><span>The three inbound paths, JSON formats, fields, <code>cc.*</code> properties, routing order</span></a>
       <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/integrations.md"><h3>Integrations</h3><span>The eight channels, what each provider receives, webhook payload, message texts, tests</span></a>
@@ -709,7 +709,7 @@ docs/                           <span class="c"># this page, guides/en, screensh
         Built by <a href="https://github.com/adrianorafael" target="_blank" rel="noopener">@adrianorafael</a> ·
         <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace" target="_blank" rel="noopener">Source on GitHub</a> ·
         <a href="https://developer.dynatrace.com/" target="_blank" rel="noopener">Dynatrace Developer</a> ·
-        Version 2.5.1
+        Version 2.6.0
       </div>
     </div>
     <p>Not affiliated with, endorsed by, or supported by Dynatrace. Provided "as is" for study and demonstration

@@ -2,7 +2,7 @@
  * In-app notification center.
  *
  * Every toast in the app goes through `notify()`: it is recorded in a small in-memory list (shown by the
- * header bell with an unread count) and shown as a pop-up in the bottom-right corner unless the viewer
+ * header bell with an unread count) and shown as a pop-up in the top-right corner, below the header (components/ToastPlacement.tsx), unless the viewer
  * silenced pop-ups or turned that category off. Preferences are per browser (localStorage, guarded).
  */
 import type React from "react";
@@ -114,6 +114,7 @@ export function notify(o: NotifyOptions): void {
       message: o.message,
       lifespan: o.lifespan ?? 4_000,
       actions: o.actions,
+      // Strato only knows bottom positions; ToastPlacement moves the container to the top right.
       position: "bottom-right",
     });
   }

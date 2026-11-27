@@ -7,11 +7,17 @@ de Davis y eventos genéricos almacenados en Grail. El motor los lee con DQL en 
 
 ## Las tres vías de entrada
 
-| Vía | Ajuste (Settings → Event sources) | Predeterminado | Tabla de Grail | Cómo se resuelve un incidente |
-| --- | --- | --- | --- | --- |
-| **1. Problemas de Davis** | *Davis problems* | **activado** | `dt.davis.problems` | Cuando Davis cierra el problema, o un operador lo resuelve |
-| **2. Eventos de Davis que no abren un problema** | *Davis events that don't open a problem (Events API v2)* | desactivado | `dt.davis.events` | Cuando el evento se cierra (timeout) o llega un nuevo evento con `cc.action: "resolve"` y el mismo `cc.dedup_key` |
-| **3. Eventos genéricos** | *Generic events (OpenPipeline)* | desactivado | `events` | Un evento con `cc.action: "resolve"` y el mismo `cc.dedup_key` |
+| Vía | Ajuste (Settings → Event sources) | Predeterminado | Tabla de Grail |
+| --- | --- | --- | --- |
+| **1. Problemas de Davis** | *Davis problems* | **activado** | `dt.davis.problems` |
+| **2. Eventos de Davis que no abren un problema** | *Davis events that don't open a problem (Events API v2)* | desactivado | `dt.davis.events` |
+| **3. Eventos genéricos** | *Generic events (OpenPipeline)* | desactivado | `events` |
+
+| Vía | Cómo se resuelve un incidente |
+| --- | --- |
+| **1. Problemas de Davis** | Cuando Davis cierra el problema, o un operador lo resuelve |
+| **2. Eventos de Davis que no abren un problema** | Cuando el evento se cierra (timeout) o llega un nuevo evento con `cc.action: "resolve"` y el mismo `cc.dedup_key` |
+| **3. Eventos genéricos** | Un evento con `cc.action: "resolve"` y el mismo `cc.dedup_key` |
 
 Cualquier herramienta de monitoreo, script o job de CI usa la **vía 1** de forma predeterminada: envía un evento de
 Davis, Davis abre un problema y el problema se convierte en el incidente. Las vías 2 y 3 son para herramientas que

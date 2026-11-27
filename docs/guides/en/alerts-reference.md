@@ -7,11 +7,17 @@ properties that act as placeholders for routing.
 
 ## The three inbound paths
 
-| Path | Setting (Settings → Event sources) | Default | Grail table | How an incident resolves |
-| --- | --- | --- | --- | --- |
-| **1. Davis problems** | *Davis problems* | **on** | `dt.davis.problems` | When Davis closes the problem, or an operator resolves it |
-| **2. Davis events that don't open a problem** | *Davis events that don't open a problem (Events API v2)* | off | `dt.davis.events` | When the event closes (timeout) or a new event with `cc.action: "resolve"` and the same `cc.dedup_key` |
-| **3. Generic events** | *Generic events (OpenPipeline)* | off | `events` | An event with `cc.action: "resolve"` and the same `cc.dedup_key` |
+| Path | Setting (Settings → Event sources) | Default | Grail table |
+| --- | --- | --- | --- |
+| **1. Davis problems** | *Davis problems* | **on** | `dt.davis.problems` |
+| **2. Davis events that don't open a problem** | *Davis events that don't open a problem (Events API v2)* | off | `dt.davis.events` |
+| **3. Generic events** | *Generic events (OpenPipeline)* | off | `events` |
+
+| Path | How an incident resolves |
+| --- | --- |
+| **1. Davis problems** | When Davis closes the problem, or an operator resolves it |
+| **2. Davis events that don't open a problem** | When the event closes (timeout) or a new event with `cc.action: "resolve"` and the same `cc.dedup_key` |
+| **3. Generic events** | An event with `cc.action: "resolve"` and the same `cc.dedup_key` |
 
 Any monitoring tool, script or CI job uses **path 1** by default: it posts a Davis event, Davis opens a problem, and
 the problem becomes the incident. Paths 2 and 3 are for tools that want to control deduplication and resolution

@@ -99,13 +99,26 @@ Cada função é chamada com `POST https://YOUR-ENVIRONMENT.apps.dynatrace.com/p
 e roda com as permissões de **quem chama**. Quem chama precisa de `app-engine:apps:run` mais as permissões dos dados
 que a função acessa.
 
-| Função | Corpo | Retorno | Verificado |
-| --- | --- | --- | --- |
-| `config` | `{"op":"export"}` ou `{"op":"import","bundle":{…},"dryRun":true}` | Export: `{ok, bundle}`. Import: contagens, ou `errors[]` com entidade, caminho e mensagem. | Sim (export, import, dry run) |
-| `engine-run` | `{"reason":"manual"}` ou `{"reason":"test","testRequest":{"providerId","channel","address"}}` | `{ok, sent, failed, deferred, counts, errors, skipped?}`. Se uma execução agendada estiver com o lease, a função espera até cerca de 20 segundos. | Sim |
-| `status` | `{}` | `{heartbeat, lease, openIncidents, triggered}` — para verificações de saúde externas | Sim |
-| `incidents` | `{}` ou `{"status":"triggered"}` | Os 200 resumos de incidentes mais recentes, sem dados de contato nem linha do tempo | Sim |
-| `directory` | `{"query":"ana"}` ou `{"uids":[…]}` | Usuários do IAM | Com um platform token, a API do IAM respondeu *User not authorized* (também quando chamada diretamente, mesmo para o dono da conta). Ela responde na sessão de um usuário conectado. |
+- **`config`**
+  - *Corpo*: `{"op":"export"}` ou `{"op":"import","bundle":{…},"dryRun":true}`
+  - *Retorno*: Export: `{ok, bundle}`. Import: contagens, ou `errors[]` com entidade, caminho e mensagem.
+  - *Verificado*: Sim (export, import, dry run)
+- **`engine-run`**
+  - *Corpo*: `{"reason":"manual"}` ou `{"reason":"test","testRequest":{"providerId","channel","address"}}`
+  - *Retorno*: `{ok, sent, failed, deferred, counts, errors, skipped?}`. Se uma execução agendada estiver com o lease, a função espera até cerca de 20 segundos.
+  - *Verificado*: Sim
+- **`status`**
+  - *Corpo*: `{}`
+  - *Retorno*: `{heartbeat, lease, openIncidents, triggered}` — para verificações de saúde externas
+  - *Verificado*: Sim
+- **`incidents`**
+  - *Corpo*: `{}` ou `{"status":"triggered"}`
+  - *Retorno*: Os 200 resumos de incidentes mais recentes, sem dados de contato nem linha do tempo
+  - *Verificado*: Sim
+- **`directory`**
+  - *Corpo*: `{"query":"ana"}` ou `{"uids":[…]}`
+  - *Retorno*: Usuários do IAM
+  - *Verificado*: Com um platform token, a API do IAM respondeu *User not authorized* (também quando chamada diretamente, mesmo para o dono da conta). Ela responde na sessão de um usuário conectado.
 
 ```bash
 curl -X POST "https://YOUR-ENVIRONMENT.apps.dynatrace.com/platform/app-engine/app-functions/v1/apps/my.command.center/api/config" \

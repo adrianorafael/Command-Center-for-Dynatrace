@@ -11,6 +11,25 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-11-27
+
+### Added
+- **Console → Row actions** (gear above the top-right corner of the table): each viewer picks up to four actions shown
+  as buttons on every row, in their order; the rest stay in the row menu. Default: Acknowledge and Resolve. Saved per
+  browser with the other view preferences.
+- **Install with vibe coding** guide (Help in English, Portuguese and Spanish; English on GitHub): a platform token,
+  the Dynatrace MCP server and a ready prompt for an AI assistant to clone, deploy, install the engine and verify.
+
+### Changed
+- Pop-ups open in the top-right corner, just below the header bar with the bell, and slide in from the right.
+- Help: guides show the app's real icons instead of emoji (`:icon[Name]:` tokens from an allowlist); tables keep
+  their columns aligned, short cells never wrap, wide tables scroll sideways, and the widest tables became lists.
+- Help: English is the default language (a `?lang=` link or your own choice still wins); the overview page is
+  translated too, so switching the language changes the content at once.
+
+### Fixed
+- Docs no longer mention `npx dt-app auth`; `dt-app deploy` signs in by itself.
+
 ## [2.5.1] - 2026-11-27
 
 ### Changed

@@ -109,11 +109,15 @@ O [guia de operações](operations.md) explica o custo.
 Abra **Command Center → Integrations → Workflows**, escolha **Run every** 1, 2 ou 5 minutos e use uma destas três
 opções:
 
-| Opção | Como | Status |
-| --- | --- | --- |
-| **A. Install in Workflows** | Abre o app Workflows com o workflow já preenchido (intent "create workflow" do Workflows). Revise, salve e implante. | O payload do intent documentado pela Dynatrace tem título, tarefas e gatilho, mas **nenhum tipo de workflow**. Se o novo workflow sair como um workflow *standard*, a aba Workflows mostra um aviso. Nesse caso, exclua-o e use B ou C. |
-| **B. Download JSON** | App Workflows → **Upload** → o arquivo baixado. O arquivo contém `"type": "SIMPLE"` e o intervalo que você escolheu. | É a mesma definição que foi criada pela Automation API e rodou no ambiente trial. O botão de upload em si não foi exercitado. |
-| **C. Script de administrador** | `DT_ENVIRONMENT=https://YOUR-ENVIRONMENT.apps.dynatrace.com DT_PLATFORM_TOKEN=… node scripts/install-workflow.mjs --interval 1` (token com `automation:workflows:read` e `automation:workflows:write`). Idempotente; `--dry-run` imprime o JSON. | Verificado no ambiente trial: um simple workflow, rodando a cada minuto, todas as execuções com sucesso. |
+- **A. Install in Workflows**
+  - *Como*: Abre o app Workflows com o workflow já preenchido (intent "create workflow" do Workflows). Revise, salve e implante.
+  - *Status*: O payload do intent documentado pela Dynatrace tem título, tarefas e gatilho, mas **nenhum tipo de workflow**. Se o novo workflow sair como um workflow *standard*, a aba Workflows mostra um aviso. Nesse caso, exclua-o e use B ou C.
+- **B. Download JSON**
+  - *Como*: App Workflows → **Upload** → o arquivo baixado. O arquivo contém `"type": "SIMPLE"` e o intervalo que você escolheu.
+  - *Status*: É a mesma definição que foi criada pela Automation API e rodou no ambiente trial. O botão de upload em si não foi exercitado.
+- **C. Script de administrador**
+  - *Como*: `DT_ENVIRONMENT=https://YOUR-ENVIRONMENT.apps.dynatrace.com DT_PLATFORM_TOKEN=… node scripts/install-workflow.mjs --interval 1` (token com `automation:workflows:read` e `automation:workflows:write`). Idempotente; `--dry-run` imprime o JSON.
+  - *Status*: Verificado no ambiente trial: um simple workflow, rodando a cada minuto, todas as execuções com sucesso.
 
 Depois:
 
