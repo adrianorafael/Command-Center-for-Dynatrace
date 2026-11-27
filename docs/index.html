@@ -9,7 +9,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Command Center for Dynatrace</title>
-  <meta name="description" content="A demo Dynatrace App: NOC event console with on-call teams, schedules and escalation policies. Inbound from Davis problems and the Events API, outbound through a Dynatrace Workflow to Twilio, IFTTT, Slack, Teams, Telegram or any webhook." />
+  <meta name="description" content="A demo Dynatrace App: NOC event console with on-call teams, schedules and escalation policies. Inbound from Davis problems and the Events API, outbound through one simple Dynatrace workflow to Twilio, IFTTT, Slack, Teams, Telegram or any webhook." />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <style>
     :root {
@@ -181,6 +181,7 @@
       <a href="#start">Quick Start</a>
       <a href="#setup">Paging setup</a>
       <a href="#trouble">Troubleshooting</a>
+      <a href="#docs">Docs</a>
       <a class="nav-gh" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </div>
@@ -193,7 +194,7 @@
     <h1>Command Center<br /><span class="grad">for Dynatrace</span></h1>
     <p class="subtitle">
       A <strong>NOC event console with on-call teams, schedules and escalation policies</strong> — inside Dynatrace.
-      Davis problems and API events become incidents; a Dynatrace Workflow pages the right person by SMS, voice call,
+      Davis problems and API events become incidents; one simple Dynatrace workflow pages the right person by SMS, voice call,
       WhatsApp, IFTTT, Slack, Teams, Telegram or any webhook. An exploration of replacing Splunk On-Call (VictorOps),
       Opsgenie or a Moogsoft-style console.
     </p>
@@ -204,8 +205,8 @@
     <div class="stats">
       <div class="stat"><div class="num">React 18 + TS</div><div class="lbl">Strato Design System 3.x</div></div>
       <div class="stat"><div class="num">Grail · DQL</div><div class="lbl">dt.davis.problems &amp; events</div></div>
-      <div class="stat"><div class="num">8 channels</div><div class="lbl">via one Dynatrace Workflow</div></div>
-      <div class="stat"><div class="num">10 screens</div><div class="lbl">console to reports</div></div>
+      <div class="stat"><div class="num">8 channels</div><div class="lbl">one simple workflow, 0 workflow hours</div></div>
+      <div class="stat"><div class="num">EN · PT-BR · ES</div><div class="lbl">documentation</div></div>
     </div>
   </div>
   <div class="wrap">
@@ -230,15 +231,15 @@
     <div class="grid">
       <div class="card"><span class="ico">🖥️</span><h3>Console</h3>
         <p>Live incident table with KPI strip, URL-based filters, search, bulk actions and keyboard shortcuts. Acknowledge with undo, reassign, snooze, escalate now, change priority, add notes, resolve.</p>
-        <div class="meta">Engine-health banner when the heartbeat is older than 3 minutes</div></div>
+        <div class="meta">Engine-health banner when the engine is late (two intervals plus one minute)</div></div>
       <div class="card"><span class="ico">🧾</span><h3>Incident detail</h3>
         <p>Timeline and audit trail, escalation progress, notification ledger with provider errors, affected entities and root cause, notes, link to the Davis problem.</p>
         <div class="meta">Timeline capped at 200 entries per incident</div></div>
       <div class="card"><span class="ico">📅</span><h3>On-call schedules</h3>
-        <p>Layers with daily, weekly or every-N-hours rotations, handoff time, time zones and restrictions; overrides; "on call now" and a coverage preview.</p>
+        <p>Layers with daily, weekly or every-N-hours rotations, handoff time, time zones and restrictions; overrides; "on call now", a coverage preview, and leave/take on-call from the header.</p>
         <div class="meta">Later layers win; overrides win over everything</div></div>
       <div class="card"><span class="ico">👥</span><h3>Teams of real users</h3>
-        <p>Members are users of your Dynatrace environment, picked from IAM. Roles, contact methods and personal notification rules per person.</p>
+        <p>Members are users of your Dynatrace environment, picked from IAM. Roles, contact methods, personal notification rules and team quiet hours.</p>
         <div class="meta">Only user IDs are stored; names and emails are read live</div></div>
       <div class="card"><span class="ico">🪜</span><h3>Escalation policies</h3>
         <p>Delayed steps targeting a schedule's on-call, a user or a whole team; forced channels; repeats; a simulation of who is paged when.</p>
@@ -246,14 +247,14 @@
       <div class="card"><span class="ico">🔀</span><h3>Services &amp; routing</h3>
         <p>Ordered routing rules (first match wins) on title, category, severity, entity, tags or any field; set service, team, policy, priority or suppress. Rule tester.</p>
         <div class="meta">Events route with <code>cc.service</code>, <code>cc.priority</code>, <code>cc.tags</code></div></div>
-      <div class="card"><span class="ico">📣</span><h3>Outbound via Workflows</h3>
-        <p>Twilio SMS, voice and WhatsApp and IFTTT by default; Slack, Microsoft Teams, Telegram and a generic JSON webhook for any other tool.</p>
+      <div class="card"><span class="ico">📣</span><h3>Outbound via one simple workflow</h3>
+        <p>Twilio SMS, voice and WhatsApp and IFTTT by default; Slack, Microsoft Teams, Telegram and a generic JSON webhook for any other tool. War rooms with meeting links and post-mortem notebooks.</p>
         <div class="meta">Secrets stay in the Credential Vault; the app stores entry IDs only</div></div>
       <div class="card"><span class="ico">📊</span><h3>Reports</h3>
         <p>MTTA and MTTR, incidents per day, load by priority and team, noisiest services, time-to-acknowledge distribution, delivery success, on-call load.</p>
         <div class="meta">Built from daily rollups (~2 KB per day)</div></div>
       <div class="card"><span class="ico">⚙️</span><h3>Settings &amp; demo mode</h3>
-        <p>Sources, defaults, engine limits, retention, configuration export/import, legacy-data cleanup. Demo mode with synthetic data for training and offline preview.</p>
+        <p>Sources, defaults, engine limits, retention, configuration export/import, legacy-data cleanup. Demo mode per browser: sample data everywhere, nothing read, written or sent; off means only real data.</p>
         <div class="meta">Config as code: the <code>config</code> app function exports and imports (with dry run) the whole configuration</div></div>
     </div>
   </div>
@@ -289,27 +290,26 @@
     <div class="sec-head"><span class="kicker">Under the hood</span><h2>How it works</h2>
       <p>The important behaviours to understand before running it in a real environment.</p></div>
 <pre><span class="c"># inbound</span>
-External tool ──POST /api/v2/events/ingest──▶ <span class="b">Davis</span> opens a problem ──▶ <span class="b">Grail</span> dt.davis.problems / dt.davis.events
+Your tool ──POST /api/v2/events/ingest──▶ <span class="b">Davis</span> opens a problem ──▶ <span class="b">Grail</span> dt.davis.problems / dt.davis.events
+Your tool ──POST /platform/ingest/v1/events (optional)──▶ <span class="b">Grail</span> events
 
-<span class="c"># every minute: workflow "Command Center · Engine"</span>
-<span class="k">tick</span> ──POST /apps/&lt;appId&gt;/api/engine-tick──▶ app function: DQL ▸ dedup ▸ route ▸ fold actions ▸ escalate ▸ plan
-  │                                                  └── App State (incidents, ledger, heartbeat)
-  ├─▶ <span class="k">send_twilio_sms</span> · <span class="k">send_twilio_voice</span> · <span class="k">send_twilio_whatsapp</span> · <span class="k">send_ifttt</span>
-  ├─▶ <span class="k">send_slack</span> · <span class="k">send_teams</span> · <span class="k">send_telegram</span> · <span class="k">send_webhook</span>   <span class="c"># Credential Vault ▸ provider HTTPS</span>
-  └─▶ <span class="k">report</span> ──POST delivery-report──▶ ledger + incident timeline
+<span class="c"># every 1, 2 or 5 minutes: simple workflow "Command Center · Engine" (one task, no workflow hours)</span>
+<span class="k">run-engine</span> action ── lease ▸ DQL Q1–Q4 ▸ dedup ▸ route ▸ apply operator actions ▸ escalate ▸ plan
+                  ├── Credential Vault ▸ provider HTTPS (Twilio · IFTTT · Slack · Teams · Telegram · webhook)
+                  └── App State: incidents, notification ledger, heartbeat
 
 <span class="c"># UI</span>
-Strato UI ── reads App State, writes configuration + append-only operator actions ── runs the workflow on demand</pre>
+Strato UI ── reads App State, writes configuration + append-only operator actions ── app function engine-run for "Run engine now", tests, "Escalate now"</pre>
     <div class="behaviors" style="margin-top:22px">
-      <div class="beh"><h3>🔵 The engine is the heart</h3><p>Nothing is paged unless the engine workflow runs. The console warns when its heartbeat is older than 3 minutes, reports an error, or has never run.</p></div>
-      <div class="beh b-green"><h3>🟢 Never resolved by absence</h3><p>A failed or empty query is not "all clear". Incidents resolve only on an explicit CLOSED record from the source or by an operator.</p></div>
-      <div class="beh b-purple"><h3>🟣 Workflow import, not app install</h3><p>Third-party apps cannot hold <code>automation:workflows:write</code>. You import the engine workflow in the Workflows app (or an admin runs <code>scripts/install-workflow.mjs</code>).</p></div>
-      <div class="beh"><h3>🔵 Actor permissions</h3><p>Tasks — and the app functions they call — run as the workflow actor. Use a service user, and enable Workflows → Settings → Authorization settings.</p></div>
-      <div class="beh b-green"><h3>🟢 At-least-once paging</h3><p>A notification ledger plans one entry per person, step, channel and attempt. Senders never retry; the engine re-plans up to 3 attempts. Rare races can notify twice.</p></div>
+      <div class="beh"><h3>🔵 The engine is the heart</h3><p>Nothing is paged unless the engine workflow runs. The console warns when it is late (two intervals plus one minute), reports an error, or has never run.</p></div>
+      <div class="beh b-green"><h3>🟢 Never resolved by absence</h3><p>A failed or empty query is not "all clear". Incidents resolve only on an explicit CLOSED record, <code>cc.action: resolve</code>, or an operator.</p></div>
+      <div class="beh b-purple"><h3>🟣 One confirmation to install</h3><p>Apps not provided by Dynatrace cannot hold <code>automation:workflows:write</code>. The app opens the Workflows app with the workflow filled in; you confirm it once (or upload the JSON, or run the admin script).</p></div>
+      <div class="beh"><h3>🔵 Simple workflow, custom action</h3><p>A simple workflow allows one task that is not Run JavaScript, so the engine is the app's own action. Measured: one function invocation per run, no workflow hours.</p></div>
+      <div class="beh b-green"><h3>🟢 At-least-once paging</h3><p>A notification ledger plans one entry per person, step, channel and attempt. A notification without a result is retried, up to 3 attempts. Rare races can notify twice.</p></div>
       <div class="beh b-purple"><h3>🟣 cc.* properties</h3><p>Event properties land on the Davis event, not the problem. The engine copies <code>cc.*</code> from a problem's events onto the problem so routing can use them.</p></div>
       <div class="beh b-warn"><h3>🟡 Shared, last-write-wins state</h3><p>All data is in App State: readable by every app user, no optimistic locking, 50 MB per app. Roles are guidance, not server-side permissions.</p></div>
-      <div class="beh b-warn"><h3>🟡 Private workflow, owner-only manual runs</h3><p>Task results contain phone numbers and texts, so the workflow is private. Immediate runs (run now, tests, the instant run after escalate now) work only for users who can see it; escalations by others go out on the next scheduled run.</p></div>
-      <div class="beh b-warn"><h3>🟡 Minute granularity</h3><p>Escalation delays and snooze ends are accurate to about one minute.</p></div>
+      <div class="beh b-warn"><h3>🟡 Timing precision = interval</h3><p>An escalation step or snooze end takes effect on the first engine run after it is due: within 1, 2 or 5 minutes.</p></div>
+      <div class="beh b-warn"><h3>🟡 Demo mode per browser</h3><p>Sample data only in the browser that turned it on, so a demo never replaces the real console of the people on call.</p></div>
     </div>
   </div>
 </section>
@@ -317,16 +317,18 @@ Strato UI ── reads App State, writes configuration + append-only operator ac
 <section id="stack">
   <div class="wrap">
     <div class="sec-head"><span class="kicker">Built with</span><h2>Tech stack</h2>
-      <p>A Dynatrace App Toolkit project with a pure TypeScript domain core shared by UI and app functions.</p></div>
+      <p>A Dynatrace App Toolkit project with a pure TypeScript domain core shared by the UI, the app functions and the workflow action.</p></div>
     <div class="chips">
       <span class="chip"><b>React</b> 18.3</span>
       <span class="chip"><b>TypeScript</b> 5.x</span>
       <span class="chip"><b>Strato</b> Design System 3.x</span>
       <span class="chip"><b>DQL</b> / Grail</span>
       <span class="chip"><b>App State</b> service</span>
-      <span class="chip"><b>App functions</b> (JS runtime)</span>
-      <span class="chip"><b>Workflows</b> Run JavaScript</span>
+      <span class="chip"><b>App functions</b></span>
+      <span class="chip"><b>Custom workflow action</b></span>
+      <span class="chip"><b>Simple workflow</b></span>
       <span class="chip"><b>Credential Vault</b></span>
+      <span class="chip"><b>Document API</b> notebooks</span>
       <span class="chip"><b>IAM</b> users</span>
       <span class="chip"><b>dt-app</b> CLI</span>
       <span class="chip"><b>vitest</b></span>
@@ -338,93 +340,70 @@ Strato UI ── reads App State, writes configuration + append-only operator ac
 <section id="cost">
   <div class="wrap">
     <div class="sec-head"><span class="kicker">Cost awareness</span><h2>Query cost &amp; consumption (DPS)</h2>
-      <p>The app runs live DQL queries against Grail, which consumes DPS budget. Understand and measure it to avoid
-         surprises on your bill. Unlike 1.x, the UI runs <b>no</b> Grail queries — the engine does, every minute.</p></div>
+      <p>The engine runs all day, independently of users. The UI runs <b>no</b> Grail queries. Understand and measure the
+         consumption to avoid surprises on your bill.</p></div>
     <div class="table-wrap">
+      <table>
+        <thead><tr><th>Item</th><th>1-minute interval</th><th>2 minutes</th><th>5 minutes</th></tr></thead>
+        <tbody>
+          <tr><td>Engine runs = function invocations / month</td><td>≈ 43,200</td><td>≈ 21,600</td><td>≈ 8,640</td></tr>
+          <tr><td>Workflow hours</td><td><span class="tag green">0</span></td><td><span class="tag green">0</span></td><td><span class="tag green">0</span></td></tr>
+          <tr><td>Grail queries per run</td><td>1–8</td><td>1–8</td><td>1–8</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout"><b>Measured on a trial environment</b> (billing events in <code>dt.system.events</code>): the previous
+      standard-workflow engine used about <b>690 function invocations per hour plus one workflow hour per hour</b>. The
+      simple-workflow engine uses <b>one invocation per run</b> — 10 per 10 minutes at a 1-minute interval — and no workflow hours.</div>
+    <div class="table-wrap" style="margin-top:18px">
       <table>
         <thead><tr><th>Cost driver</th><th>Impact</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td><b>Engine schedule (1 min)</b></td><td><span class="tag red">Dominant</span></td>
-              <td>1,440 runs/day, independent of users. Required for paging; turning the engine off stops paging too.</td></tr>
-          <tr><td>Enabled sources</td><td><span class="tag dim">+1 per source</span></td>
+          <tr><td><b>Run interval</b></td><td><span class="tag red">Dominant</span></td>
+              <td>Runs are linear in the interval. A longer interval also means coarser escalation timing.</td></tr>
+          <tr><td>Enabled sources</td><td><span class="tag dim">+1 query per source</span></td>
               <td>Davis problems (Q1) always; Davis events (Q2) and generic events (Q3) off by default.</td></tr>
           <tr><td>Problems with events</td><td><span class="tag dim">+1 per 100 IDs</span></td>
               <td>Q4 reads <code>cc.*</code> of linked events; at most 5 per run.</td></tr>
-          <tr><td>Lookback</td><td><span class="tag dim">Medium</span></td>
-              <td>Q1 default 72 h; Q2/Q3 fixed 24 h; Q4 uses the problem lookback.</td></tr>
-          <tr><td>Data volume</td><td><span class="tag dim">Env-dependent</span></td>
-              <td>More problems/events = more GB scanned.</td></tr>
+          <tr><td>Look-back</td><td><span class="tag dim">Medium</span></td>
+              <td>Q1 default 72 h; Q2/Q3 fixed 24 h; Q4 uses the problem look-back.</td></tr>
           <tr><td>Open tabs / users</td><td><span class="tag green">No Grail cost</span></td>
-              <td>Each open tab polls App State every 30 s by default.</td></tr>
+              <td>Each open tab reads App State every 30 s by default.</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="note"><b>Queries per run:</b> 1 (Q1 only) · 2 (default: Q1 + one Q4) · up to 8 (all sources, five Q4 chunks).</p>
-    <p class="note"><b>Illustrative monthly scenarios</b> — <code>queries/month ≈ 1,440 × queries_per_run × 30</code></p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Scenario</th><th>Queries / month</th><th>GB at 0.5 MB/query*</th><th>GB at 5 MB/query*</th><th>Est. cost**</th></tr></thead>
-        <tbody>
-          <tr><td>Defaults: Q1 + Q4 (2 per run)</td><td>~86,000</td><td>~43 GB</td><td>~430 GB</td><td>Low–moderate</td></tr>
-          <tr><td>All sources: Q1 + Q2 + Q3 + Q4 (4 per run)</td><td>~173,000</td><td>~86 GB</td><td>~860 GB</td><td><span class="tag red">Watch this</span></td></tr>
-          <tr><td>Worst case: all sources, five Q4 chunks (8 per run)</td><td>~346,000</td><td>~173 GB</td><td>~1.7 TB</td><td><span class="tag red">Watch this</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="note">* Small environments scan well under 1 MB per query on these tables; busy ones more. These are
-      assumptions, not measurements. ** Multiply GB scanned by your DPS <b>"Grail Query – data analyzed"</b> rate — the
-      dollar amount depends entirely on your rate card, so measure before relying on estimates.</p>
-    <div class="callout warn"><b>Also check on your rate card</b> (not measured, billing model not researched here):
-      ~1,440 workflow executions per day (~43,000 per month), each with 10 tasks; up to 2 app function invocations per
-      run; App State operations from the engine and from every open tab.</div>
     <div class="two-col" style="margin-top:22px">
-      <div class="card"><h3>Measure it precisely</h3>
+      <div class="card"><h3>Measure it</h3>
         <ul class="tick">
-          <li>Run the queries in a <b>Notebook</b> and read <code>metadata.grail.scannedBytes</code>
-              from <code>queryExecute</code>.</li>
-          <li>Confirm aggregates in <b>Account Management → Cost &amp; usage → Grail Query</b> after a day; check the workflow and AppEngine lines too.</li>
+          <li><code>fetch dt.system.events | filter event.kind == "BILLING_USAGE_EVENT"</code>, grouped by <code>event.type</code> and <code>function.type</code>.</li>
+          <li><b>Account Management → Cost &amp; usage</b> for Grail queries, AppEngine functions and workflows after a day.</li>
         </ul></div>
       <div class="card"><h3>Reduce it</h3>
         <ul class="tick">
           <li>Keep Davis events (Q2) and generic events (Q3) off unless you need them.</li>
-          <li>Lower the problem lookback if problems rarely stay open for days.</li>
-          <li>Close unused tabs; raise auto-refresh for wall screens (App State only).</li>
-          <li>A slower workflow interval reduces runs but makes escalation coarser.</li>
+          <li>Lower the problem look-back if problems rarely stay open for days.</li>
+          <li>Choose a 2- or 5-minute interval if your escalation delays are long.</li>
         </ul></div>
     </div>
-    <p class="note"><b>Q1 — Davis problems</b> (always on, ✅ executed on a tenant). Q2–Q4 are in the README and in <code>ui/app/data/dql.ts</code>; Q3 is ⚠️ not validated with data.</p>
-<pre>fetch dt.davis.problems, from: now() - 72h
-| filter not(dt.davis.is_duplicate)
-| dedup event.id, sort: { timestamp desc }
-| filter event.status == "ACTIVE" or event.end >= now() - 2h
-| fields timestamp, event.id, display_id, event.name, event.description, event.category, event.severity,
-         event.status, event.start, event.end, dt.davis.last_reopen_timestamp,
-         dt.davis.event_ids, dt.davis.affected_users_count, dt.davis.mute.status,
-         maintenance.is_under_maintenance, smartscape.affected_entities, root_cause.smartscape_entity,
-         affected_entity_ids, affected_entity_names, root_cause_entity_name, entity_tags
-| sort event.start desc
-| limit 1000</pre>
+    <p class="note">All four queries are in the <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/operations.md#cost-and-consumption">operations guide</a> and in <code>ui/app/data/dql.ts</code>; each was executed on a trial environment.</p>
   </div>
 </section>
 
 <section id="structure">
   <div class="wrap">
     <div class="sec-head"><span class="kicker">Codebase</span><h2>Project structure</h2></div>
-<pre>app.config.json                 <span class="c"># app id, version 2.0.0, scopes, YOUR-ENVIRONMENT placeholder</span>
-api/
-├── engine-tick.function.ts     <span class="c"># called by the workflow's tick task</span>
-├── delivery-report.function.ts <span class="c"># called by the workflow's report task</span>
-├── config.function.ts          <span class="c"># configuration as code: export / import (dry run)</span>
-└── lib/                        <span class="c"># engine run, sources Q1–Q4, lease, delivery</span>
+<pre>app.config.json                 <span class="c"># app id, version, scopes, the run-engine action</span>
+actions/run-engine.action.ts    <span class="c"># the workflow action: one engine cycle</span>
+api/                            <span class="c"># app functions engine-run, config, status, incidents, directory</span>
+└── lib/                        <span class="c"># engine cycle, sources Q1–Q4, lease, senders, config as code</span>
 ui/app/
-├── domain/                     <span class="c"># pure TS core: routing, schedules, escalation, actions, engine, reports</span>
-│   └── contracts.ts            <span class="c"># shared types (schemaVersion 1)</span>
-├── data/                       <span class="c"># App State + memory repositories, DQL, workflow definition &amp; scripts</span>
-├── pages/                      <span class="c"># console, oncall, teams, escalations, services, integrations, reports, settings, help</span>
-└── components/ hooks/          <span class="c"># shared UI and the app data context</span>
-workflow-templates/             <span class="c"># engine workflow + trial-only alert simulator</span>
+├── domain/                     <span class="c"># pure TS core: routing, schedules, escalation, planning, reports</span>
+├── data/                       <span class="c"># App State, DQL, IAM directory, notebooks, workflow definition</span>
+├── pages/                      <span class="c"># console, war rooms, on-call, teams, escalations, services, integrations, reports, settings, help</span>
+└── components/ hooks/          <span class="c"># shared UI, notifications, app data context</span>
+workflow-templates/             <span class="c"># generated engine workflow + trial-only alert simulator</span>
 scripts/                        <span class="c"># install-workflow, gen-workflow-templates, preview-server, screenshot</span>
-docs/                           <span class="c"># this page, guides/, screenshots/</span></pre>
+docs/                           <span class="c"># this page, guides/en · pt-BR · es, screenshots/</span></pre>
   </div>
 </section>
 
@@ -435,8 +414,8 @@ docs/                           <span class="c"># this page, guides/, screenshot
     <div class="two-col">
       <div class="card"><h3>Prerequisites</h3>
         <ul class="tick"><li>Node.js ≥ 22 and npm</li>
-          <li>Dynatrace SaaS with <b>Grail</b>, AppEngine and Workflows</li>
-          <li>Rights to deploy apps and create workflows; an admin for Credential Vault and External requests</li>
+          <li>Dynatrace SaaS (latest Dynatrace) with <b>Grail</b>, AppEngine and Workflows</li>
+          <li>Rights to deploy apps; an admin for Credential Vault, External requests and Workflows authorization settings</li>
           <li>A Twilio and/or IFTTT account (or Slack, Teams, Telegram, your webhook)</li></ul></div>
       <div class="card"><h3>npm scripts</h3>
         <ul class="tick"><li><code>npm run start</code> — dev server</li>
@@ -458,61 +437,46 @@ npx dt-app deploy
 
 <span class="c"># Offline preview in demo mode, no environment needed</span>
 npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># http://127.0.0.1:4173/ui/</span></pre>
-    <div class="callout">For development, open the <b>link printed by <code>npx dt-app dev</code></b> (not
-      <code>localhost:3000</code> directly). The engine workflow always calls the <b>deployed</b> app functions.</div>
 
-    <p class="note" style="margin-top:28px"><b>Required OAuth scopes</b></p>
+    <p class="note" style="margin-top:28px"><b>Required OAuth scopes</b> — each was accepted at deploy and exercised on a trial environment; the Dynatrace documentation link for each is in the getting-started guide.</p>
     <div class="table-wrap">
       <table><thead><tr><th>Scope</th><th>Purpose</th></tr></thead>
         <tbody>
-          <tr><td><code>storage:buckets:read</code></td><td>Required for any Grail read</td></tr>
-          <tr><td><code>storage:events:read</code></td><td>Read <code>dt.davis.problems</code>, <code>dt.davis.events</code> and <code>events</code> (engine queries Q1–Q4)</td></tr>
-          <tr><td><code>state:app-states:read</code></td><td>Read configuration, incidents and the notification ledger</td></tr>
-          <tr><td><code>state:app-states:write</code></td><td>Persist configuration, incidents and operator actions</td></tr>
-          <tr><td><code>state:app-states:delete</code></td><td>Remove folded actions and deleted configuration</td></tr>
-          <tr><td><code>iam:users:read</code></td><td>Pick on-call team members from the environment's users and show their names</td></tr>
-          <tr><td><code>automation:workflows:read</code></td><td>Show the engine workflow's install status and recent executions</td></tr>
-          <tr><td><code>automation:workflows:run</code></td><td><b>Run engine now</b>, <b>Send test notification</b> and the immediate run after <b>Escalate now</b></td></tr>
+          <tr><td><code>storage:buckets:read</code></td><td>Any Grail read</td></tr>
+          <tr><td><code>storage:events:read</code></td><td>Read <code>dt.davis.problems</code>, <code>dt.davis.events</code> and <code>events</code></td></tr>
+          <tr><td><code>state:app-states:read</code> / <code>:write</code> / <code>:delete</code></td><td>Configuration, incidents, operator actions, notification ledger</td></tr>
+          <tr><td><code>iam:users:read</code></td><td>Team member search and names</td></tr>
+          <tr><td><code>automation:workflows:read</code></td><td>Engine workflow install status</td></tr>
+          <tr><td><code>document:documents:read</code> / <code>:write</code></td><td>War rooms: attach notebooks, create the post-mortem notebook</td></tr>
+          <tr><td><code>credential-vault:entries:read</code></td><td>The engine reads provider secrets when it sends</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="note">Not requested on purpose: <code>automation:workflows:write</code> (only Dynatrace-provided apps may hold it),
-      no Credential Vault scope (only the workflow reads secrets), no ingest scope.</p>
-    <p class="note">Team member search calls the IAM API with the signed-in user's session (scope <code>iam:users:read</code> declared by the app).
-      Observed on a trial tenant: the same API returned 403 "User not authorized" when called with a platform token, even for the
-      account owner, while service-user listing worked — so scripts should not rely on platform tokens for user lookup. If the picker
-      shows a 403 inside the app, check that the user belongs to the Dynatrace account that owns the environment and has account
-      permissions to view users.</p>
+    <p class="note">Not requested: <code>automation:workflows:write</code> — the platform rejected it at deploy (only apps provided by Dynatrace may use it). No ingest scope: your tools send events with their own token.</p>
   </div>
 </section>
 
 <section id="setup">
   <div class="wrap">
     <div class="sec-head"><span class="kicker">Make it page</span><h2>Paging setup</h2>
-      <p>Full detail in the README and the guides. The app's Help page has the same checklist and ticks it off.</p></div>
+      <p>Full detail in the getting-started guide. The app's Help page has the same checklist and ticks it off.</p></div>
     <ol class="steps">
-      <li><b>Workflow actor.</b> Create a service user and give it <code>app-engine:apps:run</code>, <code>app-engine:functions:run</code>,
-        <code>automation:workflows:read</code>, <code>credential-vault:entries:read</code>, Grail read (<code>storage:buckets:read</code>,
-        <code>storage:events:read</code>) and <code>state:app-states:read/write/delete</code>.</li>
-      <li><b>Authorization settings.</b> Workflows app → Settings → Authorization settings: enable those permissions for the user who acts as the workflow actor.</li>
-      <li><b>Credential Vault.</b> One platform vault entry per provider (IDs like <code>CREDENTIAL_VAULT_ENTRY-…</code>; classic
-        <code>CREDENTIALS_VAULT-…</code> also accepted): scope <b>AppEngine</b>, <b>Allow access without app context</b> on, and
-        <b>Owner access only</b> on (the platform rejects public + contextless entries) — so the entry owner must be the workflow actor.
+      <li><b>Credential Vault.</b> One entry per provider (IDs like <code>CREDENTIAL_VAULT_ENTRY-…</code>), scope <b>AppEngine</b>, owned by the workflow actor.
         Twilio: username/password (SID and token). IFTTT, Slack, Teams, Telegram, webhook: token.</li>
-      <li><b>External requests</b> (Settings → General → External requests, schema <code>builtin:dt-javascript-runtime.allowed-outbound-connections</code>). Allow <code>api.twilio.com</code>, <code>maker.ifttt.com</code>, <code>hooks.slack.com</code>,
+      <li><b>External requests</b> (Settings → General → Environment management → External requests): allow <code>api.twilio.com</code>, <code>maker.ifttt.com</code>, <code>hooks.slack.com</code>,
         <code>api.telegram.org</code>, your Teams Workflows webhook host and your webhook host — only the ones you use.</li>
-      <li><b>Import the engine workflow.</b> Integrations → Workflows → <b>Download workflow JSON</b> → upload it in the
-        Workflows app, set the service-user actor, keep it private. Or: <code>node scripts/install-workflow.mjs</code>.</li>
+      <li><b>Install the engine.</b> Integrations → Workflows → choose the interval → <b>Install in Workflows</b> and deploy it.
+        If it comes out as a standard workflow, upload the downloaded JSON instead, or run <code>node scripts/install-workflow.mjs</code>.</li>
+      <li><b>Authorization settings.</b> Workflows app → Settings → Authorization settings: enable Grail read, App State and Credential Vault read for the workflow actor.</li>
       <li><b>Providers.</b> Integrations → Outbound: paste the vault entry IDs, sender numbers or IFTTT event name, enable,
         <b>Send test notification</b>.</li>
       <li><b>Teams, schedules, policies, routing.</b> Add members from IAM with contact methods and rules; build schedules;
         create escalation policies; add services and routing rules; set routing defaults.</li>
-      <li><b>Send an event.</b> <code>POST https://YOUR-ENVIRONMENT.live.dynatrace.com/api/v2/events/ingest</code> with
-        <code>eventType</code>, <code>title</code>, <code>timeout</code> and <code>properties</code> such as
-        <code>cc.service</code>, <code>cc.priority</code>, <code>cc.tags</code>. Trial environments can import the alert simulator.</li>
+      <li><b>Send an event.</b> A platform token with <code>openpipeline:events.davis:ingest</code>, and
+        <code>cc.service</code>, <code>cc.priority</code>, <code>cc.tags</code> as properties.</li>
     </ol>
 <pre style="margin-top:20px">curl -X POST "https://YOUR-ENVIRONMENT.live.dynatrace.com/api/v2/events/ingest" \
-  -H "Authorization: Api-Token YOUR-TOKEN" \
+  -H "Authorization: Bearer YOUR-PLATFORM-TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"eventType":"CUSTOM_ALERT","title":"Checkout latency above 2 s","timeout":30,
        "properties":{"cc.service":"checkout","cc.priority":"P2","cc.tags":"team:payments,env:prod"}}'</pre>
@@ -528,54 +492,55 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
     <div class="table-wrap">
       <table><thead><tr><th>Symptom</th><th>Cause &amp; fix</th></tr></thead>
         <tbody>
-          <tr><td>"The paging engine hasn't run yet" / "is stale" banner</td>
-              <td>The engine workflow is not installed, not deployed, or failing. Open <b>Integrations → Workflows</b> and the workflow's execution log. Most often: Workflows <b>Authorization settings</b> not enabled for the actor, or the actor lacks <code>app-engine:functions:run</code>.</td></tr>
-          <tr><td><code>tick</code> fails with HTTP 403</td>
-              <td>The actor lacks a permission (app functions, Grail read, App State).</td></tr>
-          <tr><td><code>tick</code> fails with HTTP 404</td>
-              <td>The workflow was generated for a different app ID. Download the workflow JSON again from Integrations and re-import it.</td></tr>
+          <tr><td>"The paging engine hasn't run yet" / "is late"</td>
+              <td>The workflow is not installed, not deployed, or failing. Check Integrations → Workflows. Most often the Workflows <b>Authorization settings</b> lack a permission for the actor.</td></tr>
+          <tr><td>"Installed as a standard workflow"</td>
+              <td>The create-workflow intent has no type field. Delete that workflow and upload the downloaded JSON, or run the admin script.</td></tr>
           <tr><td>No incidents appear</td>
-              <td>Check Settings → Event sources, then whether the event reached Grail (<code>fetch dt.davis.events</code> in a Notebook) and whether Davis opened a problem. Events below the problem-opening types do not open problems: enable the Davis-events source.</td></tr>
+              <td>Settings → Event sources; check that the event reached Grail and that its type opens a problem. Otherwise enable the Davis-events source.</td></tr>
           <tr><td>Routing ignores <code>cc.service</code></td>
-              <td>The service name or ID does not match a service in Command Center, or a routing rule with an explicit service matched first. Use <b>Services → Test a rule</b>.</td></tr>
-          <tr><td>A notification shows <b>failed</b></td>
-              <td>Open the incident's <b>Notifications</b> tab for the provider error. Usual causes: host missing in <b>External requests</b>, vault entry without <b>Allow access without app context</b>, vault entry not owned by the workflow actor, wrong vault entry type, phone number not in E.164.</td></tr>
-          <tr><td>A notification shows <b>timeout</b></td>
-              <td>The <code>report</code> task did not run or failed. Check the workflow execution; the engine retries up to 3 attempts.</td></tr>
-          <tr><td>Run engine now / Send test fail, or "Escalation recorded, but the engine didn't start"</td>
-              <td>You cannot see the private engine workflow (owner-only), the workflow ID in Settings is wrong (use <b>Save this ID</b>), or demo mode is on. An escalation is still sent by the next scheduled run.</td></tr>
-          <tr><td>"Update available" on the Workflows tab</td>
-              <td>The app was upgraded. Download the workflow JSON and upload it over the existing workflow (keep the service-user actor).</td></tr>
+              <td>The name or ID does not match a service, or an earlier rule set another service. Use <b>Services → Test a rule</b>.</td></tr>
+          <tr><td>A notification shows <b>Failed</b></td>
+              <td>The incident's <b>Notifications</b> tab shows the provider error. Usual causes: host missing in External requests, a vault entry the actor can't read, wrong credential type, phone not in E.164.</td></tr>
+          <tr><td>The user picker finds nobody</td>
+              <td>Type at least 3 characters. Only <b>active</b> users are returned: invited people must sign in once.</td></tr>
           <tr><td>Deploy rejected because of the version</td>
               <td><code>app.version</code> must be higher than the version installed in that environment.</td></tr>
-          <tr><td>"invalid scopes" on <code>dt-app auth</code></td>
-              <td>The tenant or your user lacks IAM grants for a scope in <code>app.config.json</code>.</td></tr>
-          <tr><td>Deploy fails — app must be signed</td>
-              <td>The app ID must start with <code>my.</code> for unsigned apps.</td></tr>
-          <tr><td>User picker finds nobody, or IAM returns 403 "User not authorized"</td>
-              <td>Type at least 3 characters; only users of this environment are listed. A 403 inside the app: check that the user belongs to the Dynatrace account that owns the environment and has account permissions to view users. Scripts should not rely on platform tokens for user lookup (observed 403 even for the account owner).</td></tr>
-          <tr><td>Vault entry cannot be saved as "without app context"</td>
-              <td>Turn on <b>Owner access only</b>; the platform rejects public entries usable without app context. The owner must be the workflow actor.</td></tr>
           <tr><td>Configuration lost</td>
-              <td>An admin cleared App State, or the app was uninstalled. Import your last export (Settings → Export and import).</td></tr>
+              <td>App State was cleared or the app was uninstalled. Import your last export (Settings → Export and import).</td></tr>
         </tbody>
       </table>
     </div>
-    <h3 class="sub">Limitations and unverified behaviour</h3>
+    <h3 class="sub">Verified and not verified</h3>
     <ul class="tick">
-      <li>Verified in a Dynatrace environment: event ingest through both endpoints, Davis opening problems for <code>CUSTOM_ALERT</code>, <code>ERROR_EVENT</code>, <code>AVAILABILITY_EVENT</code>, <code>PERFORMANCE_EVENT</code> and <code>RESOURCE_CONTENTION_EVENT</code>, <code>cc.*</code> copied onto problems, queries Q1, Q2 and Q4, and the imported engine workflow running tick → 8 senders → report every minute.</li>
-      <li>✅ Verified end to end: Events API → Davis problem → engine → routing by <code>cc.service</code> → schedule on-call → <b>generic webhook</b> via a vault entry → delivered (<code>sent</code>) → report updates the ledger.</li>
-      <li>⚠️ Q3 (generic events) parses and runs but was not validated with data.</li>
-      <li>Twilio (SMS, voice, WhatsApp), IFTTT, Slack, Teams and Telegram senders: implemented per vendor documentation, <b>not exercised live</b> — test every channel you enable. Vault entries owned by a service-user actor were not verified.</li>
-      <li>The minimal actor permission set was not isolated; billing of workflow executions, app functions and App State was not researched.</li>
-      <li>Problems open longer than the lookback (default 72 h) are not re-read; IANA time-zone data in the function runtime is assumed.</li>
-      <li>Not implemented: two-way acknowledgement by SMS/chat, a quiet-hours editor (engine supports them; import only), server-side role enforcement.</li>
+      <li>✅ End to end on a trial environment: Davis event ingest → Davis problem → engine → routing by <code>cc.service</code> → schedule → escalation steps → <b>generic webhook</b> delivered → ledger updated. A four-step policy fired every step within one minute of being due.</li>
+      <li>✅ Generic events (<code>/platform/ingest/v1/events</code>) trigger and resolve by <code>cc.dedup_key</code>; all four queries executed.</li>
+      <li>✅ The engine as a simple workflow with the app's own action: every run successful; one function invocation per run.</li>
+      <li>⚠️ Twilio (SMS, voice, WhatsApp), IFTTT, Slack, Teams and Telegram senders: implemented from vendor documentation, <b>not exercised live</b> — test every channel you enable.</li>
+      <li>⚠️ The Install in Workflows intent and the JSON upload were not clicked through; the API install of the same definition is verified. The minimal actor permission set was not isolated.</li>
+      <li>⚠️ User search returned nobody for just-invited users; IAM lists only active users.</li>
+      <li>Not implemented: two-way acknowledgement by SMS or chat, server-side role enforcement.</li>
     </ul>
-    <p class="note">Guides: <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/inbound-events.md">inbound events</a> ·
-      <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/outbound-notifications.md">outbound notifications</a> ·
-      <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/on-call-setup.md">on-call setup</a> ·
-      <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/operations-runbook.md">operations runbook</a> ·
-      <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/CHANGELOG.md">changelog</a></p>
+  </div>
+</section>
+
+<section id="docs">
+  <div class="wrap">
+    <div class="sec-head"><span class="kicker">Documentation</span><h2>Guides in three languages</h2></div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Guide</th><th>English</th><th>Português (BR)</th><th>Español</th></tr></thead>
+        <tbody>
+          <tr><td>README</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/README.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/README.pt-BR.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/README.es.md">Español</a></td></tr>
+          <tr><td>Getting started</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/getting-started.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/getting-started.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/getting-started.md">Español</a></td></tr>
+          <tr><td>User guide</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/user-guide.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/user-guide.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/user-guide.md">Español</a></td></tr>
+          <tr><td>Alerts reference</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/alerts-reference.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/alerts-reference.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/alerts-reference.md">Español</a></td></tr>
+          <tr><td>Integrations</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/integrations.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/integrations.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/integrations.md">Español</a></td></tr>
+          <tr><td>Configuration</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/configuration.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/configuration.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/configuration.md">Español</a></td></tr>
+          <tr><td>Operations</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/operations.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/operations.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/operations.md">Español</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note"><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/CHANGELOG.md">Changelog</a></p>
   </div>
 </section>
 

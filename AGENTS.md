@@ -32,16 +32,21 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 - **App id:** `my.command.center` (keep the `my.` prefix — unsigned app). **Name:** `Command Center`.
 - **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.0.0); every release is
   recorded in `CHANGELOG.md`. Versions must increase monotonically per environment or `dt-app deploy` is rejected.
-- **Scopes (8):** `storage:buckets:read`, `storage:events:read`, `state:app-states:read|write|delete`,
-  `iam:users:read`, `automation:workflows:read`, `automation:workflows:run`. Each carries a comment in
-  `app.config.json`. Adding one forces every user to re-consent (MAJOR).
-- **Cannot be requested:** `automation:workflows:write` (only Dynatrace-provided apps may hold it). The engine workflow
-  is imported by a person or installed with `scripts/install-workflow.mjs`.
+- **Scopes (10):** `storage:buckets:read`, `storage:events:read`, `state:app-states:read|write|delete`,
+  `iam:users:read`, `automation:workflows:read`, `document:documents:read|write`, `credential-vault:entries:read`.
+  Each carries a comment in `app.config.json`, and the documentation source of each is in
+  `docs/guides/en/getting-started.md`. Adding one forces every user to re-consent (MAJOR).
+- **Cannot be requested:** `automation:workflows:write` (rejected at deploy: only Dynatrace-provided apps may hold it).
+  The engine workflow is installed through the Workflows create-workflow intent (one confirmation; the documented
+  payload has no type, so the app warns when the result is a standard workflow), the JSON upload, or
+  `scripts/install-workflow.mjs`.
 - **Grail tables:** `dt.davis.problems`, `dt.davis.events`, `events`. Queries live only in `ui/app/data/dql.ts`.
 - **Persistence:** App State only, per-entity keys (`ui/app/data/repository.ts` → `KEY` / `PREFIX`). Limits: 10 MB per
   value, 50 MB per app, keys ≤ 200 chars `[a-z0-9._-]`, TTL 1 min … 90 days. No optimistic locking: last write wins.
-- **Cost driver:** the engine workflow — 1,440 runs/day, 1–8 Grail queries per run. The UI runs no DQL; it polls App
-  State (default every 30 s).
+- **Cost driver:** the engine — a SIMPLE workflow (no workflow hours) whose single task is this app's custom action
+  `run-engine` (`actions/run-engine.action.ts`), every 1, 2 or 5 minutes: one function invocation and 1–8 Grail queries
+  per run. Measured on a trial tenant: one `ACTION` billing event per run. The UI runs no DQL; it polls App State
+  (default every 30 s). Never reintroduce a standard workflow or Run JavaScript tasks for the engine.
 
 ## Architecture and layer boundaries
 
@@ -51,24 +56,25 @@ ui/app/domain/        pure TypeScript core — routing, schedules, escalation, a
                       time is passed in as `now: number`. contracts.ts is FROZEN (schemaVersion 1): change only with
                       a schemaVersion bump and a migration.
 ui/app/data/          platform adapters behind the Repository port: App State adapter, in-memory adapter (demo/tests),
-                      DQL builders, Grail runner, IAM directory, workflow definition + task scripts + status.
-api/                  app functions engine-tick and delivery-report; api/lib/ holds the engine run, sources, lease.
-                      They import the domain and data layers from ui/app (shared code, one build).
+                      DQL builders, Grail runner, IAM directory, notebooks, workflow definition + installer status.
+actions/              the custom workflow action run-engine (one full cycle via api/lib/cycle.ts).
+api/                  app functions engine-run, config, status, incidents, directory; api/lib/ holds the engine cycle,
+                      sources, lease, senders. They import the domain and data layers from ui/app (shared code).
 ui/app/pages|components|hooks/   Strato UI. Consumes contracts.ts, the Repository/store and pure domain functions.
 workflow-templates/   GENERATED engine workflow JSON (node scripts/gen-workflow-templates.mjs) + trial-only simulator.
 scripts/              install-workflow, gen-workflow-templates, preview-server, screenshot.
-docs/                 project page (index.html, icon.svg, screenshots/) and guides/.
+docs/                 project page (index.html, icon.svg, screenshots/) and guides/{en,pt-BR,es}/ — English is the
+                      source; update the three languages together, and never document anything not verified.
 specs/, design/       specification and screen design. Update the spec when behaviour changes.
 ```
 
 Rules that keep the layers honest:
 
 - Domain code stays pure and deterministic; every behaviour change there gets a unit test.
-- The workflow task scripts are template strings in `ui/app/data/workflows/scripts/`. After changing them, run
-  `node scripts/gen-workflow-templates.mjs` and bump `ENGINE_DEFINITION_VERSION` in `definition.ts` so installed
+- The engine workflow definition is `ui/app/data/workflows/definition.ts` (SIMPLE, one task, no input). After
+  changing it, run `node scripts/gen-workflow-templates.mjs` and bump `ENGINE_DEFINITION_VERSION` so installed
   workflows show "Update available". A unit test fails if the checked-in template drifts.
-- Only verified workflow fields are used (no `withItems`, no http-function inputs, no custom condition expressions).
-  Senders never retry — the ledger retries with a new attempt number.
+- Senders (`api/lib/senders.ts`) never retry inside a run — the ledger retries with a new attempt number.
 - Secrets never enter App State, the bundle, task results or logs: only Credential Vault entry IDs.
 - Any value interpolated into DQL is allow-listed or clamped in `dql.ts`.
 
@@ -122,7 +128,7 @@ semantics. Fetch the file you need when you need it; never commit a copy into th
 
 ```bash
 npm install
-npm test                 # vitest (domain, data adapters, workflow definition/scripts, engine tick)
+npm test                 # vitest (domain, data adapters, workflow definition, engine cycle, senders, lease)
 npm run typecheck        # tsc for ui/ and api/
 npm run lint             # ESLint incl. security, no-unsanitized and no-secrets rules
 npm run build            # dt-app build (offline)
@@ -142,10 +148,17 @@ Before every commit: `bash <skill>/assets/scripts/scan-secrets.sh` on the workin
 ## Traps already hit in this repository
 
 - `@dynatrace/strato-components-preview` is deprecated — import from `@dynatrace/strato-components/<subpath>`.
-- Third-party apps cannot hold `automation:workflows:write`; a deploy that declares it fails. The app reads and runs the
-  workflow only.
-- The workflow actor needs Workflows → Settings → **Authorization settings** enabled, or `tick` fails and nobody is paged.
-- Credential Vault entries used by workflow tasks need **Allow access without app context**.
+- Third-party apps cannot hold `automation:workflows:write`; a deploy that declares it fails. The app reads the
+  workflow status only; manual runs go through the app function `engine-run`.
+- The workflow actor needs Workflows → Settings → **Authorization settings** enabled, or the engine action fails and
+  nobody is paged.
+- The engine reads Credential Vault secrets as an app action (`GET /platform/credential-vault/v1/entries/{id}/details`,
+  scope `credential-vault:entries:read`); an entry **without** "Allow access without app context" was readable. The
+  `/details` path is used by Dynatrace's own tooling but is not on the public API reference page — verified on a tenant.
+- App State reads can be stale for a few seconds: the engine lease compares `acquiredAt` instead of trusting one read
+  (`api/lib/lease.ts`). Never "simplify" it back to read-after-write.
+- Simple workflows keep only execution metadata: diagnostics live in the heartbeat (`hb.engine`), not in task results.
+- IAM user search returns only **active** users; with a platform token it answers "User not authorized".
 - Problem records do **not** carry the Events API `properties`; they are on the linked `dt.davis.events` records
   (`dt.davis.event_ids`). The engine copies `cc.*` from the events onto the problem (Q4 + `api/lib/sources.ts`).
   `cc.action` and `cc.dedup_key` are deliberately not copied.

@@ -5,7 +5,31 @@
 | Status | **Approved** — the owner asked for the full rebuild to be carried to the end without stopping at gates ("work until the end and make the best decisions"). This approval covers the spec gate and the publish gate. No deploy is performed (no tenant connected). |
 | Version | 2.0.0 (major: data model, scopes and UI replaced) |
 | Binding contracts | `ui/app/domain/contracts.ts`, `ui/app/data/repository.ts` (these files win over the abridged types below) |
-| DQL | Q1, Q2, Q4 executed on a trial tenant; Q3 parsed, no data |
+| DQL | Q1–Q4 executed on a trial tenant (Q3 with data since the generic-events test) |
+
+## Amendment A1 (2026-11-27) — engine as a simple workflow
+
+This amendment supersedes every part of this spec that describes the engine as a standard workflow with the tasks
+`tick` → 8 senders → `report`, the app functions `engine-tick` / `delivery-report`, the scope
+`automation:workflows:run`, and the private-workflow / owner-only manual-run behaviour.
+
+- **Engine:** one SIMPLE workflow (`ui/app/data/workflows/definition.ts`, definition version 3) with a single task, the
+  app's custom action `run-engine` (`actions/run-engine.action.ts`), on an interval trigger of 1, 2 or 5 minutes. The
+  action runs the whole cycle in one invocation (`api/lib/cycle.ts`: tick → send → delivery report). Reason: simple
+  workflows consume no workflow hours, and a simple workflow's task cannot be Run JavaScript.
+- **Senders** moved from workflow task scripts to `api/lib/senders.ts`; secrets are read with
+  `credential-vault:entries:read` from the action.
+- **On-demand runs** (Run engine now, test notifications, Escalate now) call the app function `engine-run` with the
+  caller's permissions. `automation:workflows:run` is no longer requested.
+- **Install:** the Workflows create-workflow intent (one confirmation), the JSON upload, or
+  `scripts/install-workflow.mjs`. The intent payload has no type property, so the Workflows tab flags a standard result.
+- **Scopes:** add `document:documents:read|write` (war rooms) and `credential-vault:entries:read`; remove
+  `automation:workflows:run`.
+- **Workflow visibility:** not private; simple workflows keep execution metadata only and the action returns counts.
+- **Measured** (trial tenant billing events): ≈ 690 function invocations per hour plus one workflow hour per hour for
+  the standard design; one `ACTION` invocation per run for this design.
+- The user documentation (`docs/guides/{en,pt-BR,es}`) describes the current behaviour and wins over this spec where
+  they differ.
 
 ## Goal
 

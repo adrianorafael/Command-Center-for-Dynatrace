@@ -11,7 +11,7 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
-## [2.0.0] - 2026-11-26
+## [2.0.0] - 2026-11-27
 
 A full rebuild: from a problem list with acknowledgements to a NOC event console with on-call teams and escalation
 through Dynatrace Workflows, aimed at replacing tools such as Splunk On-Call (VictorOps), Opsgenie or a Moogsoft-style
@@ -30,11 +30,24 @@ console.
 - **Escalation policies** with delayed steps, targets (schedule, user, team), forced channels, repeats and a simulation.
 - **Services and routing rules** (first match wins) with a rule tester and a priority mapping by severity and category.
   Events sent to the Events API can route with `cc.service`, `cc.priority` and `cc.tags`.
-- **Outbound notifications** only through the **Command Center · Engine** workflow (every minute): Twilio SMS, voice
-  and WhatsApp and IFTTT by default, plus Slack, Microsoft Teams (Workflows webhooks), Telegram and a generic JSON
-  webhook. Credentials stay in the Credential Vault; the app stores only entry IDs. Notification ledger with retries.
-- **Integrations** page: inbound snippets, provider configuration with test notifications, workflow download, status
-  and recent executions, External requests checklist.
+- **Outbound notifications** only through the **Command Center · Engine** workflow: a **simple workflow** (no workflow
+  hours) whose single task is the app's custom action *Run Command Center engine*, every 1, 2 or 5 minutes. Twilio
+  SMS, voice and WhatsApp and IFTTT by default, plus Slack, Microsoft Teams (Workflows webhooks), Telegram and a
+  generic JSON webhook (token, or username/password for an auth header). Credentials stay in the Credential Vault; the
+  app stores only entry IDs. Notification ledger with retries.
+- **Integrations** page: inbound snippets, provider configuration with test notifications, engine install through the
+  Workflows create-workflow intent (with a warning when the result is a standard workflow), JSON download, *Run engine
+  now*, heartbeat, External requests checklist.
+- **War rooms**: meeting link, related incidents (same root cause, or same service within 30 minutes), notebooks
+  (generated post-mortem notebook named after the first incident, existing notebooks, links), open/close by people,
+  count in the navigation.
+- **Notifications**: bottom-right pop-ups, a header bell with unread count, silence and per-category choice.
+- **On-call switch** in the header: leave or take on-call now through a schedule override.
+- **Team quiet hours** editor (hold, or low-urgency channels only).
+- **Created-item highlight**: a one-second pulse on anything created in a list with a button.
+- App functions `engine-run`, `status`, `incidents` and `directory`, besides `config`.
+- Documentation in English, Portuguese (BR) and Spanish: getting started with a permissions ledger, user guide,
+  alerts reference, integrations, configuration and operations.
 - **Reports**: MTTA/MTTR, volume, noisy services, delivery success, on-call load, from daily rollups.
 - **Settings**: sources, defaults, engine limits, retention, export/import of the configuration, demo mode.
 - **Demo mode** with synthetic data, an offline preview server and a screenshot script.
@@ -47,13 +60,16 @@ console.
 ### Changed
 - **Scopes changed — every user must re-consent on first load.** Now requested: `storage:buckets:read`,
   `storage:events:read`, `state:app-states:read`, `state:app-states:write`, `state:app-states:delete`,
-  `iam:users:read`, `automation:workflows:read`, `automation:workflows:run`.
-- **Cost profile changed.** The UI no longer runs DQL. The engine runs 1–8 Grail queries per minute (default 2),
-  around the clock, independent of how many people have the app open; plus ~1,440 workflow executions per day.
-  See the README's cost section before installing.
+  `iam:users:read`, `automation:workflows:read`, `document:documents:read`, `document:documents:write`,
+  `credential-vault:entries:read`.
+- **Cost profile changed.** The UI no longer runs DQL. The engine runs around the clock, independent of how many
+  people have the app open: one function invocation and 1–8 Grail queries per run (≈ 43,200 runs a month at the
+  1-minute interval), and no workflow hours. Measured on a trial tenant against an earlier standard-workflow design:
+  ≈ 690 function invocations per hour plus one workflow hour per hour, down to 60 invocations per hour. See the cost
+  section before installing.
 - **New persisted data format.** State is split across per-entity App State keys (`cfg.*`, `team.*`, `sched.*`,
-  `pol.*`, `svc.*`, `contact.*`, `inc.*`, `act.*`, `ntf.*`, `arc.*`, `rpt.*`, `hb.engine`, `lock.engine`).
-- The engine workflow must be imported in the Workflows app (third-party apps cannot hold
+  `pol.*`, `svc.*`, `contact.*`, `war.*`, `inc.*`, `act.*`, `ntf.*`, `arc.*`, `rpt.*`, `hb.engine`, `lock.engine`).
+- The engine workflow is confirmed once in the Workflows app (apps not provided by Dynatrace cannot hold
   `automation:workflows:write`), and its actor needs Workflows authorization settings enabled.
 - Strato components updated to 3.x subpath imports; the deprecated preview package is no longer used. New app icon.
 
@@ -63,8 +79,8 @@ console.
   Acknowledgements made in 1.x (`problem-ack-states`) are not migrated; Settings offers to delete them.
 
 ### Security
-- Phone numbers and chat IDs entered as contact methods are readable by every user of the app, and appear in the
-  engine workflow's execution results. Keep the workflow private.
+- Phone numbers and chat IDs entered as contact methods are readable by every user of the app. They do not appear in
+  the engine workflow's executions (simple workflows keep metadata only; the action returns counts).
 
 ## [1.1.3] - 2026-07
 
