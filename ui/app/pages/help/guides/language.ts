@@ -84,6 +84,7 @@ export const LABELS: Record<Language, HelpLabels> = {
     loadFailed: "The guide could not be loaded. Reload the page to try again.",
     guideNames: {
       "getting-started": "Getting started",
+      "install-with-vibe-coding": "Install with vibe coding",
       "user-guide": "User guide",
       "alerts-reference": "Alerts reference",
       integrations: "Integrations",
@@ -100,6 +101,7 @@ export const LABELS: Record<Language, HelpLabels> = {
     loadFailed: "Não foi possível carregar o guia. Recarregue a página para tentar de novo.",
     guideNames: {
       "getting-started": "Primeiros passos",
+      "install-with-vibe-coding": "Instalar com vibe coding",
       "user-guide": "Guia do usuário",
       "alerts-reference": "Referência de alertas",
       integrations: "Integrações",
@@ -116,6 +118,7 @@ export const LABELS: Record<Language, HelpLabels> = {
     loadFailed: "No se pudo cargar la guía. Vuelve a cargar la página para intentarlo de nuevo.",
     guideNames: {
       "getting-started": "Primeros pasos",
+      "install-with-vibe-coding": "Instalar con vibe coding",
       "user-guide": "Guía del usuario",
       "alerts-reference": "Referencia de alertas",
       integrations: "Integraciones",

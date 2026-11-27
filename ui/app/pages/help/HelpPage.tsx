@@ -26,6 +26,15 @@ import { GUIDE_IDS, isGuideId, LANGUAGES, type GuideId, type GuideSet, type Lang
 import { helpHref, LABELS, LANGUAGE_NAMES, languageSwitchHref, loadGuides, readStoredLanguage, resolveLanguage, storeLanguage } from "./guides/language";
 import { OVERVIEW, SHORTCUT_KEYS, TOC_IDS, type OverviewText } from "./overview";
 
+/** Sidebar beside the content; on a narrow window it goes above the content, so a guide keeps the full width. */
+const LAYOUT_CSS = `
+.cc-help-nav { position: sticky; top: 16px; }
+@media (max-width: 900px) {
+  .cc-help-layout { grid-template-columns: minmax(0, 1fr) !important; }
+  .cc-help-nav { position: static; }
+}
+`;
+
 const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => (
   <Flex flexDirection="column" gap={12} id={id}>
     <Heading level={2}>{title}</Heading>
@@ -127,8 +136,9 @@ export const HelpPage = () => {
     <PageLayout.Content>
       <Flex id="help-top" flexDirection="column" gap={16} padding={16} style={{ maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         <PageTitle title={text.title} subtitle={text.subtitle} />
-        <Grid gridTemplateColumns="220px minmax(0, 960px)" gap={32}>
-          <Flex flexDirection="column" gap={8} style={{ position: "sticky", top: 16, alignSelf: "start" }}>
+        <style>{LAYOUT_CSS}</style>
+        <Grid className="cc-help-layout" gridTemplateColumns="220px minmax(0, 960px)" gap={32}>
+          <Flex className="cc-help-nav" flexDirection="column" gap={8} style={{ alignSelf: "start" }}>
             <FormField>
               <Label>{labels.language}</Label>
               <Select<Language> value={lang} onChange={chooseLanguage}>

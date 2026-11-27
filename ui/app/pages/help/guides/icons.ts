@@ -59,7 +59,7 @@ export const GUIDE_ICONS = {
 export type GuideIconName = keyof typeof GUIDE_ICONS;
 
 export function isGuideIconName(v: string): v is GuideIconName {
-  return Object.prototype.hasOwnProperty.call(GUIDE_ICONS, v);
+  return Object.keys(GUIDE_ICONS).includes(v);
 }
 
 /** `:icon[Name]:`; the name is letters only, so a token never spans markdown syntax. */
@@ -91,4 +91,4 @@ export function splitIconTokens(text: string): IconTextPart[] {
  * selector, and the few geometric symbols (⋮ ⋯ ○ ●) that were used as stand-ins for icons. Arrows (→), dashes,
  * the ellipsis (…) and math symbols such as ≈ are text and stay allowed.
  */
-export const PICTOGRAPH = /[\p{Extended_Pictographic}\u{2190}-\u{2191}\u{2193}-\u{21FF}\u{2300}-\u{23FF}\u{2460}-\u{24FF}\u{25A0}-\u{27BF}\u{2900}-\u{297F}\u{2B00}-\u{2BFF}\u{22EE}\u{22EF}\u{FE0F}\u{1F000}-\u{1FAFF}]/u;
+export const PICTOGRAPH = /[\p{Extended_Pictographic}\u{2190}-\u{2191}\u{2193}-\u{21FF}\u{2300}-\u{23FF}\u{2460}-\u{24FF}\u{25A0}-\u{27BF}\u{2900}-\u{297F}\u{2B00}-\u{2BFF}\u{22EE}\u{22EF}\u{1F000}-\u{1FAFF}]|\u{FE0F}/u;

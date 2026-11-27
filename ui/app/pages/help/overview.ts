@@ -6,9 +6,10 @@
  * disagreed. The app's own UI is English, so button and menu names stay English inside the translations, as in the
  * translated guides.
  *
- * Pure data: no React. Section ids (`TOC_IDS`) are the same in every language, so `/help#shortcuts` from the Help menu
+ * Pure data: no React (the English event notes come from components/snippets.ts, shared with Integrations). Section ids (`TOC_IDS`) are the same in every language, so `/help#shortcuts` from the Help menu
  * lands whatever language is selected.
  */
+import { EVENT_SOURCE_NOTE, RESOLVE_NOTE } from "../../components/snippets";
 import type { Language } from "./guides/content";
 
 export const TOC_IDS = ["get-started", "concepts", "console", "inbound", "outbound", "shortcuts", "troubleshooting", "privacy"] as const;
@@ -95,9 +96,9 @@ Select several rows to act on them together. Filters are part of the URL, so you
     "Davis problems arrive automatically. Any other tool posts events to the Dynatrace Events API v2 with a platform token that has the",
     " permission; each event opens a Davis problem that carries its cc.* properties for routing. Use placeholders below and keep tokens in your tool's secret store.",
   ],
-  resolveNote: "The event opens a Davis problem; the incident resolves when Davis closes the problem (after the event timeout, or when you close it). Re-sending the same event refreshes it.",
-  eventSourceNote:
-    'If you turn on the Davis events or generic events source instead, add "cc.dedup_key" (same key, same incident) and send "cc.action": "resolve" with that key to resolve. These two properties have no effect on Davis problems.',
+  // The English notes are the ones Integrations shows, so the two places cannot drift apart.
+  resolveNote: RESOLVE_NOTE,
+  eventSourceNote: EVENT_SOURCE_NOTE,
   fieldHeader: "Event property",
   usedForHeader: "Used for",
   eventFields: {

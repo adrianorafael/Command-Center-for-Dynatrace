@@ -8,8 +8,8 @@
  * - `:icon[Name]:` tokens (guides/icons.ts) become the app's real Strato icons, from an allowlist;
  * - tables are plain, readable HTML tables: Strato maps markdown tables to SimpleTable with equal column widths, and
  *   its wrapper breaks words anywhere, which squeezed short cells (keys, values, code) into broken fragments. Here a
- *   table takes the width its content needs, up to the content area, and scrolls sideways inside its own frame when
- *   it cannot fit.
+ *   table takes the width its content needs, up to the content area, keeps columns of short cells on one line, and
+ *   scrolls sideways inside its own frame when it cannot fit.
  * Everything else keeps Strato's default element mappings.
  */
 import React, { useMemo } from "react";
@@ -50,7 +50,8 @@ import Colors from "@dynatrace/strato-design-tokens/colors";
 import Borders from "@dynatrace/strato-design-tokens/borders";
 import Typography from "@dynatrace/strato-design-tokens/typography";
 import { isGuideId, type Guide, type Language } from "./guides/content";
-import { GUIDE_ICONS, ICON_TOKEN, splitIconTokens, type GuideIconName } from "./guides/icons";
+import { GUIDE_ICONS, splitIconTokens, type GuideIconName } from "./guides/icons";
+import { columnRules, SHORT_CELL } from "./guides/tableLayout";
 import { helpHref } from "./guides/language";
 
 type MarkdownComponents = NonNullable<React.ComponentProps<typeof Markdown>["customComponentMappings"]>;
@@ -67,7 +68,7 @@ interface TableElementProps {
 }
 
 /** Strato's default mapping for a tag: always a function in Strato's componentMappings (Markdown.js). */
-function stratoDefault<K extends HeadingTag | TextTag | "a">(tag: K) {
+function stratoDefault<K extends HeadingTag | TextTag | "a" | "code">(tag: K) {
   return componentMappings[tag] as unknown as React.ComponentType<K extends "a" ? AnchorProps : HeadingProps>;
 }
 
@@ -105,7 +106,7 @@ const ICON_COMPONENTS: Record<Exclude<GuideIconName, keyof typeof STATUS_SHAPE>,
   DotMenuIcon: { Icon: DotMenuIcon },
 };
 
-const ICON_STYLE: React.CSSProperties = { width: "1.25em", height: "1.25em", verticalAlign: "-0.3em" };
+const ICON_STYLE: React.CSSProperties = { display: "block", width: "1.2em", height: "1.2em" };
 
 /** One inline icon, sized to the surrounding text and named for screen readers and on hover. */
 export const GuideIcon = ({ name, lang }: { name: GuideIconName; lang: Language }) => {
@@ -145,7 +146,9 @@ export function withIcons(children: React.ReactNode, lang: Language): React.Reac
 /** Table, header and cell styles; `overflow-wrap` undoes the Markdown wrapper's `anywhere`, which broke short words. */
 const TABLE_CSS = `
 .cc-guide-table-frame {
+  box-sizing: border-box;
   overflow-x: auto;
+  width: fit-content;
   max-width: 100%;
   margin: 16px 0 24px;
   border: ${Borders.Width.Default} solid ${Colors.Border.Neutral.Default};
@@ -153,7 +156,6 @@ const TABLE_CSS = `
 }
 .cc-guide-table {
   border-collapse: collapse;
-  width: 100%;
   font: inherit;
 }
 .cc-guide-table th,
@@ -177,12 +179,12 @@ const TABLE_CSS = `
   font-weight: ${Typography.Text.Base.Emphasized.Weight};
   background: ${Colors.Background.Container.Neutral.Default};
 }
-/* Prose columns get a readable minimum, so a long text next to short columns does not shrink to a few words a line. */
-.cc-guide-table td { min-width: 6em; }
-/* Code, keys and values never break inside a cell; the frame scrolls instead. */
+/* Short code (keys, values, names) never breaks inside a cell; a long one (a URL, a JSON body) wraps wherever it must. */
 .cc-guide-table code { white-space: nowrap; }
-.cc-guide-icon { display: inline-flex; vertical-align: baseline; line-height: 1; }
-.cc-guide-icon--status { vertical-align: -0.05em; margin-right: 0.15em; }
+.cc-guide-table .cc-guide-code-long code { white-space: normal; overflow-wrap: anywhere; }
+/* Inline icons: the size of a capital letter plus a little, sitting on the text's baseline like a glyph. */
+.cc-guide-icon { display: inline-block; vertical-align: -0.25em; line-height: 0; }
+.cc-guide-icon--status { display: inline-flex; vertical-align: -0.05em; line-height: 1; margin-right: 0.15em; }
 `;
 
 /** Minimal shape of the hast nodes react-markdown passes along (`node` prop). */
@@ -209,31 +211,15 @@ function hastRows(table: HastNode): HastNode[][] {
   return rows;
 }
 
-/** A column whose every cell is at most this long (an icon counts as one character) never wraps. */
-export const SHORT_CELL = 32;
-
-/**
- * Columns of a table whose cells are all short (keys, values, names, defaults): those keep each cell on one line, so
- * the browser gives the room to the prose columns instead of breaking "1–240" or "Generic webhook" over two lines.
- */
-export function shortColumns(rows: readonly (readonly string[])[]): number[] {
-  const width = Math.max(0, ...rows.map((r) => r.length));
-  const short: number[] = [];
-  for (let col = 0; col < width; col++) {
-    if (rows.every((r) => (r[col] ?? "").replace(ICON_TOKEN, "I").trim().length <= SHORT_CELL)) short.push(col);
-  }
-  return short;
-}
-
 const GuideTable = ({ children, node }: TableElementProps & { node?: HastNode }) => {
   const rows = node ? hastRows(node).map((r) => r.map(hastText)) : [];
   const id = `cc-guide-table-${node?.position?.start.line ?? 0}`;
-  const nowrap = shortColumns(rows)
-    .map((c) => `.${id} td:nth-child(${c + 1})`)
-    .join(", ");
+  const css = columnRules(rows)
+    .map((r) => `.${id} td:nth-child(${r.col + 1}) { ${r.nowrap ? "white-space: nowrap;" : `min-width: ${r.minWidthEm}em;`} }`)
+    .join("\n");
   return (
     <div className="cc-guide-table-frame">
-      {nowrap && <style>{`${nowrap} { white-space: nowrap; }`}</style>}
+      {css && <style>{css}</style>}
       <table className={`cc-guide-table ${id}`}>{children}</table>
     </div>
   );
@@ -265,6 +251,21 @@ export const GuideView = ({ guide, lang }: { guide: Guide; lang: Language }) => 
       Mapped.displayName = `GuideCell(${Tag})`;
       return Mapped;
     };
+    const BaseCode = stratoDefault("code");
+    const GuideCode = (props: HeadingProps & { inline?: boolean }) => {
+      const text = React.Children.toArray(props.children)
+        .filter((c): c is string => typeof c === "string")
+        .join("");
+      const long = props.inline && text.length > SHORT_CELL;
+      return long ? (
+        <span className="cc-guide-code-long">
+          <BaseCode {...props} />
+        </span>
+      ) : (
+        <BaseCode {...props} />
+      );
+    };
+    GuideCode.displayName = "GuideCode";
     const BaseLink = stratoDefault("a");
     const GuideLink = (props: AnchorProps) => {
       const href = props.href ?? "";
@@ -297,6 +298,7 @@ export const GuideView = ({ guide, lang }: { guide: Guide; lang: Language }) => 
       em: text("em"),
       del: text("del"),
       a: GuideLink,
+      code: GuideCode,
       table: GuideTable,
       thead: ({ children }: TableElementProps) => <thead>{children}</thead>,
       tbody: ({ children }: TableElementProps) => <tbody>{children}</tbody>,

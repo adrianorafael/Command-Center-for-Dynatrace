@@ -20,6 +20,7 @@ import {
 } from "../guides/content";
 import { GUIDE_ICONS, ICON_TOKEN, PICTOGRAPH, splitIconTokens } from "../guides/icons";
 import { helpHref, languageSwitchHref, resolveLanguage } from "../guides/language";
+import { columnRules } from "../guides/tableLayout";
 import { EVENT_FIELD_KEYS, OVERVIEW, SHORTCUT_KEYS } from "../overview";
 import { EVENT_FIELDS } from "../../../components/snippets";
 
@@ -215,5 +216,25 @@ describe("help overview", () => {
       expect(OVERVIEW[lang].concepts).not.toBe(OVERVIEW.en.concepts);
       expect(OVERVIEW[lang].sections.concepts).not.toBe(OVERVIEW.en.sections.concepts);
     }
+  });
+});
+
+describe("guide table layout", () => {
+  it("keeps short columns on one line and gives name columns room before prose", () => {
+    const prose = "A long explanation that is allowed to wrap over several lines because it is prose, not a key or a value.";
+    expect(
+      columnRules([
+        ["Setting", "Default", "Effect"],
+        ["---", "---", "---"],
+        ["Davis events that don't open a problem (Events API v2)", "`CUSTOM_ALERT, ERROR_EVENT`", prose],
+        ["Look back (hours)", "72", "Short"],
+      ]),
+    ).toEqual([
+      { col: 0, minWidthEm: 13 },
+      { col: 1, nowrap: true },
+      { col: 2, minWidthEm: 15 },
+    ]);
+    // An icon token counts as one character.
+    expect(columnRules([[":icon[NotificationActiveIcon]: :icon[NotificationOffIcon]: :icon[SettingIcon]:"]])).toEqual([{ col: 0, nowrap: true }]);
   });
 });
