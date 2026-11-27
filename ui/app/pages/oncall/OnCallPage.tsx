@@ -219,7 +219,8 @@ const ShiftsByWeek = ({ schedules }: { schedules: Schedule[] }) => {
             onChange={(v) => {
               // The picker reports every edited segment, including half-typed years ("0002-01-14"):
               // keep its value as typed, and move the week only once the date is plausible.
-              setPicked(v);
+              // Clearing the field (it emits "") puts the week's Sunday back.
+              setPicked(v ? v : weekKey);
               const d = pickedCivilDate(v, browserTimeZone());
               if (d) goTo(d);
             }}

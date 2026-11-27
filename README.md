@@ -39,7 +39,7 @@ and using **Strato**, the Dynatrace design system.
 | **Storage** | Dynatrace App State. No external database. Provider secrets stay in the Credential Vault. |
 | **Demo mode** | Per browser: sample data everywhere, nothing read or written, nothing sent. Off: only real data. |
 
-Current version: **2.4.0** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **2.5.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentation
 
@@ -136,7 +136,7 @@ plus one workflow hour per hour**. The simple-workflow engine uses **1 invocatio
 interval) and no workflow hours. The engine sends the notifications itself, at no extra invocation; an integration
 that you give a workflow of its own adds one invocation per notification, whatever trigger that workflow has. With
 the optional *Engine on problem* workflow the first page does not wait for the interval, so 5 minutes is enough for
-most teams. The UI runs no DQL. The queries, the drivers and how to measure them in your own
+most teams. Every engine query carries a scan limit (Settings → Event sources, default 1 GB per query; a run scans about 2 MB on the trial environment). The UI runs no DQL. The queries, the drivers and how to measure them in your own
 environment are in the [operations guide](docs/guides/en/operations.md#cost-and-consumption).
 
 ## Development
