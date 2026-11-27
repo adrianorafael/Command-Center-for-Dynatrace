@@ -87,7 +87,9 @@ sin pulsar.
 
 ## Console
 
-La Console es la pantalla del NOC: todos los incidentes abiertos, los más recientes primero.
+La Console es la pantalla del NOC: todos los incidentes abiertos, los más recientes primero. El encabezado muestra cuándo
+se actualizaron los datos, **Auto-refresh** (Off, 15 s, 30 s, 1 min, 5 min; empieza en el valor predeterminado de
+Settings → General, 1 min si no se cambia) y **Refresh now**.
 
 **Mosaicos de KPI** (los sparklines son conteos por hora, últimas 24 horas):
 
@@ -101,16 +103,21 @@ La Console es la pantalla del NOC: todos los incidentes abiertos, los más recie
 | Open incidents | Todos los incidentes abiertos, divididos por prioridad | — |
 
 **Show** (pestañas sobre la tabla): *Open* (Triggered + Acknowledged, lo predeterminado), *Triggered*,
-*Acknowledged*, *Snoozed*, *Resolved* y *All*. Cada pestaña muestra un conteo que sigue a los demás filtros.
+*Acknowledged*, *Snoozed*, *Resolved* y *All*. Cada pestaña muestra un conteo que sigue a los demás filtros. *Resolved*
+y *All* muestran solo incidentes creados hoy (desde la medianoche local en la zona horaria de la app) y aparecen como
+*Resolved today* / *All today*, con la indicación *Today · pick a timeframe in Created to see older incidents*; un rango
+elegido en **Created** reemplaza ese límite. Las demás pestañas no tienen límite.
 
-**Filtros**: búsqueda (título, ID, entidad, tag), Priority, Team, Assignee (*Me*, *Unassigned*, miembros), Service,
-Source, Escalation level (*Not started*, *Step N*, *Exhausted*) y Created (rango de tiempo). Todos los filtros excepto
-el rango de tiempo forman parte de la URL, igual que la pestaña **Show** (`status=…`), así que una vista de NOC se
+**Filtros**: búsqueda (título, ID, entidad, tag), Priority, Team, Assignee (*Me*, *Unassigned*, miembros), Acknowledged
+by (*Me* y cada persona que reconoció un incidente en los datos cargados, ordenadas por nombre), Service, Source,
+Escalation level (*Not started*, *Step N*, *Exhausted*) y Created (rango de tiempo). Todos los filtros excepto el rango
+de tiempo forman parte de la URL (Acknowledged by es `ackby=…`), igual que la pestaña **Show** (`status=…`), así que una vista de NOC se
 puede guardar como marcador.
 
 **Columnas**: Priority, Status (y *until …* cuando está pospuesto), Incident (título, `#display ID · first entity`),
 Age (en rojo con un ícono de reloj cuando un incidente **triggered** es más antiguo que el objetivo de reconocimiento),
-Service, Team, Assignee, Escalation (*Step N of M*, *Not started*, *Exhausted*, *No policy*), Last notified. Source y
+Service, Team, Assignee, Acknowledged by (nombre, con la hora debajo y la fecha completa al pasar el puntero; vacío
+cuando no se reconoció, y se mantiene después de resolver el incidente), Escalation (*Step N of M*, *Not started*, *Exhausted*, *No policy*), Last notified. Source y
 Created están ocultas de forma predeterminada. Usa el menú de columnas para mostrar, ocultar o reordenar columnas. La
 elección se recuerda en este navegador. Las filas se pueden expandir para mostrar la descripción, la actividad más
 reciente y el escalamiento.
@@ -150,7 +157,8 @@ Cada acción queda registrada en la línea de tiempo del incidente con quién la
 ![Incident](../../screenshots/incident.png)
 
 Se abre junto a la tabla. El encabezado muestra prioridad, estado, `#ID`, un botón para copiar el enlace, título,
-*Opened … · Service · Team · Source*, y *Under maintenance: paging suppressed* cuando corresponde. Botones: Acknowledge,
+*Opened … · Service · Team · Source*, *Under maintenance: paging suppressed* cuando corresponde, a quién está asignado
+y, una vez reconocido, *Acknowledged by* con la persona y la hora. Botones: Acknowledge,
 Resolve, Reopen, Reassign, Open/Join war room, Escalate now, Snooze, y ⋮ (Change priority, Add note, Undo
 acknowledgement, Copy link). Los problemas de Davis enlazan a **Open in Problems app**.
 

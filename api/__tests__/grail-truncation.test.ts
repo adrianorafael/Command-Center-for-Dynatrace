@@ -223,3 +223,77 @@ describe("#3 delivery-report window", () => {
     expect(await reportAt(MIN_REPORT_WINDOW_MS)).toMatchObject({ applied: 1, unknown: 0 });
   });
 });
+
+describe("Grail cost guard (scan limit per query)", () => {
+  /** A fake client that records each request body and answers with the given metadata. */
+  function recordingRunner(meta: GrailMeta & { scannedBytes?: number } = {}) {
+    const bodies: Record<string, unknown>[] = [];
+    const client: QueryClientLike = {
+      queryExecute: ({ body }) => {
+        bodies.push(body);
+        return Promise.resolve({ state: "SUCCEEDED" as const, result: { records: [], metadata: { grail: meta } } });
+      },
+      queryPoll: () => Promise.reject(new Error("unused")),
+    };
+    const run: QueryRunner = (q, o) => runGrailQuery(q, { ...o, client });
+    return { run, bodies };
+  }
+
+  it("sends the limit as whole GB in defaultScanLimitGbytes, and nothing when unset", async () => {
+    const { run, bodies } = recordingRunner();
+    await run("fetch x", { scanLimitGBytes: 2.7 });
+    await run("fetch x", {});
+    await run("fetch x", { scanLimitGBytes: 0 });
+    expect(bodies[0]).toMatchObject({ defaultScanLimitGbytes: 2 });
+    expect(bodies[1]).not.toHaveProperty("defaultScanLimitGbytes");
+    expect(bodies[2]).not.toHaveProperty("defaultScanLimitGbytes");
+  });
+
+  it("a query that scanned up to its limit is truncated even without a notice; below it is ok", async () => {
+    const hit = await recordingRunner({ scannedBytes: 0.95e9 }).run("fetch x", { scanLimitGBytes: 1 });
+    expect(hit).toMatchObject({ truncated: true, notices: ["SCAN_LIMIT_1GB"], scannedBytes: 0.95e9 });
+    const fine = await recordingRunner({ scannedBytes: 1_400_000 }).run("fetch x", { scanLimitGBytes: 1 });
+    expect(fine).toMatchObject({ truncated: false, notices: [], scannedBytes: 1_400_000 });
+    // A scan-limit notice is not reported twice.
+    const both = await recordingRunner({ scannedBytes: 1e9, notifications: [SCAN_LIMIT] }).run("fetch x", { scanLimitGBytes: 1 });
+    expect(both).toMatchObject({ truncated: true, notices: ["SCAN_LIMIT_GBYTES"] });
+  });
+
+  it("every engine query carries the setting; a missing or invalid one falls back to 1 GB, never to no limit", async () => {
+    const limits = async (v: number | undefined) => {
+      const s = settings();
+      s.engine.scanLimitGBytes = v;
+      const { run, bodies } = recordingRunner({ scannedBytes: 1000 });
+      const out = await fetchSources(s, run, 1000, NOW);
+      return { sent: [...new Set(bodies.map((b) => b["defaultScanLimitGbytes"]))], out, n: bodies.length };
+    };
+    expect((await limits(5)).sent).toEqual([5]);
+    expect((await limits(undefined)).sent).toEqual([1]);
+    expect((await limits(0)).sent).toEqual([1]);
+    expect((await limits(Number.NaN)).sent).toEqual([1]);
+    expect((await limits(500)).sent).toEqual([100]);
+    const { out, n } = await limits(1);
+    expect(out.grail).toEqual({ queries: n, scannedBytes: n * 1000, scanLimitGBytes: 1 });
+  });
+
+  it("a source cut by the scan limit is truncated and the heartbeat records the run's Grail usage", async () => {
+    const r = repo();
+    const { run } = recordingRunner({ scannedBytes: 1e9 });
+    await runEngineTick({ reason: "schedule" }, { repo: r, runQuery: run, now: () => NOW });
+    const hb = (await r.get<{ lastError?: string; grail?: { queries: number; scannedBytes: number; scanLimitGBytes: number; incomplete?: string[] } }>(KEY.heartbeat))?.value;
+    expect(hb?.lastError).toMatch(/result truncated \(SCAN_LIMIT_1GB\)/);
+    expect(hb?.grail).toMatchObject({ queries: 1, scannedBytes: 1e9, scanLimitGBytes: 1, incomplete: ["davis-problem:truncated"] });
+  });
+
+  it("validates the setting as whole GB within 1–100 (optional for stored settings)", async () => {
+    const { validateSettings } = await import("../../ui/app/domain/validation/validate");
+    const errs = (v: number | undefined) => {
+      const s = defaultSettings();
+      s.engine.scanLimitGBytes = v;
+      return validateSettings(s).filter((e) => e.path === "engine.scanLimitGBytes");
+    };
+    expect(defaultSettings().engine.scanLimitGBytes).toBe(1);
+    for (const ok of [1, 100, undefined]) expect(errs(ok)).toEqual([]);
+    for (const bad of [0, 1.5, 101, -1]) expect(errs(bad)).toHaveLength(1);
+  });
+});

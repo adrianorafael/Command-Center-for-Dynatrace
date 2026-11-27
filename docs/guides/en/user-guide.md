@@ -84,7 +84,9 @@ spot it. With the system setting *reduce motion* it fades once without pulsing.
 
 ## Console
 
-The Console is the NOC screen: every open incident, newest first.
+The Console is the NOC screen: every open incident, newest first. The header shows when the data was last updated,
+**Auto-refresh** (Off, 15 s, 30 s, 1 min, 5 min; it starts at the default from Settings → General, 1 min unless
+changed) and **Refresh now**.
 
 **KPI tiles** (sparklines are counts per hour, last 24 hours):
 
@@ -98,15 +100,20 @@ The Console is the NOC screen: every open incident, newest first.
 | Open incidents | All open incidents, split by priority | — |
 
 **Show** (tabs above the table): *Open* (Triggered + Acknowledged, the default), *Triggered*, *Acknowledged*,
-*Snoozed*, *Resolved* and *All*. Each tab shows a count that follows the other filters.
+*Snoozed*, *Resolved* and *All*. Each tab shows a count that follows the other filters. *Resolved* and *All* show only
+incidents created today (since local midnight in the app's time zone) and read *Resolved today* / *All today*, with the
+hint *Today · pick a timeframe in Created to see older incidents*; a time frame picked in **Created** replaces that
+limit. The other tabs are not limited.
 
-**Filters**: search (title, ID, entity, tag), Priority, Team, Assignee (*Me*, *Unassigned*, members), Service, Source,
-Escalation level (*Not started*, *Step N*, *Exhausted*) and Created (time frame). All filters except the time frame
-are part of the URL, and so is the **Show** tab (`status=…`), so a NOC view can be bookmarked.
+**Filters**: search (title, ID, entity, tag), Priority, Team, Assignee (*Me*, *Unassigned*, members), Acknowledged by
+(*Me* and everyone who acknowledged an incident in the loaded data, sorted by name), Service, Source, Escalation level
+(*Not started*, *Step N*, *Exhausted*) and Created (time frame). All filters except the time frame are part of the URL
+(Acknowledged by is `ackby=…`), and so is the **Show** tab (`status=…`), so a NOC view can be bookmarked.
 
 **Columns**: Priority, Status (and *until …* when snoozed), Incident (title, `#display ID · first entity`), Age (red
 with a clock icon when a **triggered** incident is older than the acknowledge target), Service, Team, Assignee,
-Escalation (*Step N of M*, *Not started*, *Exhausted*, *No policy*), Last notified. Source and Created are hidden by
+Acknowledged by (name, with the time below and the full date on hover; empty when not acknowledged, and kept after the
+incident is resolved), Escalation (*Step N of M*, *Not started*, *Exhausted*, *No policy*), Last notified. Source and Created are hidden by
 default. Use the column menu to show, hide or reorder columns. The choice is remembered in this browser. Rows can be
 expanded to show the description, the latest activity and the escalation.
 
@@ -144,7 +151,8 @@ Every action is recorded in the incident timeline with who did it and when.
 ![Incident](../../screenshots/incident.png)
 
 Opens beside the table. The header shows priority, status, `#ID`, a copy-link button, title, *Opened … · Service ·
-Team · Source*, and *Under maintenance: paging suppressed* when it applies. Buttons: Acknowledge, Resolve, Reopen,
+Team · Source*, *Under maintenance: paging suppressed* when it applies, who it is assigned to and, once acknowledged,
+*Acknowledged by* with the person and the time. Buttons: Acknowledge, Resolve, Reopen,
 Reassign, Open/Join war room, Escalate now, Snooze, and ⋮ (Change priority, Add note, Undo acknowledgement, Copy link).
 Davis problems link to **Open in Problems app**.
 

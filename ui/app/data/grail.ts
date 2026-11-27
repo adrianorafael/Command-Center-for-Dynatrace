@@ -6,7 +6,9 @@
  *    { state, requestToken?, result?: { records, types, metadata } }   (≈ l.1330, l.1482)
  *  - queryExecutionClient.queryPoll({ requestToken, requestTimeoutMilliseconds? }) → QueryPollResponse
  *    { state: NOT_STARTED|RUNNING|SUCCEEDED|RESULT_GONE|CANCELLED|FAILED, result? }   (≈ l.1401, l.1442)
- *  - ExecuteRequest: query, requestTimeoutMilliseconds, maxResultRecords, … (≈ l.357)
+ *  - ExecuteRequest: query, requestTimeoutMilliseconds, maxResultRecords, defaultScanLimitGbytes ("Default scan limit
+ *    in gigabytes. Can be overridden in DQL", minimum -1), … (≈ l.357)
+ *  - GrailMetadata: notifications, sampled, scannedBytes ("Number of scanned bytes during the query execution") (≈ l.562)
  * Scopes: storage:buckets:read + table scope (storage:events:read).
  */
 
@@ -28,7 +30,7 @@ interface ResultLike {
   requestToken?: string;
   result?: {
     records: (Record<string, unknown> | null)[];
-    metadata?: { grail?: { notifications?: NotificationLike[]; sampled?: boolean } };
+    metadata?: { grail?: { notifications?: NotificationLike[]; sampled?: boolean; scannedBytes?: number } };
   };
 }
 
@@ -38,12 +40,14 @@ export interface GrailResult {
   truncated: boolean;
   /** Notification types / messages that caused `truncated` (short, no data). */
   notices: string[];
+  /** Bytes Grail scanned for this query (metadata.grail.scannedBytes), when reported. Drives query cost. */
+  scannedBytes?: number;
 }
 
 /** Subset of QueryExecutionClient (injectable for tests). */
 export interface QueryClientLike {
   queryExecute(config: {
-    body: { query: string; requestTimeoutMilliseconds?: number; maxResultRecords?: number };
+    body: { query: string; requestTimeoutMilliseconds?: number; maxResultRecords?: number; defaultScanLimitGbytes?: number };
   }): Promise<ResultLike>;
   queryPoll(config: { requestToken: string; requestTimeoutMilliseconds?: number }): Promise<ResultLike>;
 }
@@ -52,8 +56,30 @@ export interface RunQueryOptions {
   /** Overall budget for the query, ms (default 30 s; app functions have 120 s in total). */
   timeoutMs?: number;
   maxResultRecords?: number;
+  /**
+   * Cost guard: ExecuteRequest.defaultScanLimitGbytes, the most data one query may scan (Grail query cost is billed
+   * by scanned data). Whole gigabytes ≥ 1: on the trial tenant (2026-11-27) Grail rejected 0.001 with
+   * INVALID_SCAN_LIMIT_GBYTES ("must be -1 (unlimited) or greater than 0", the value read as an integer) and accepted
+   * 1 for every engine query (Q1–Q5). A DQL `scanLimitGBytes:` in the query would override it; dql.ts sets none.
+   * Omitted: Grail's own default applies.
+   */
+  scanLimitGBytes?: number;
   client?: QueryClientLike;
 }
+
+/** Whole gigabytes ≥ 1, or undefined (no limit sent) for anything not a finite positive number. */
+export function clampScanLimitGBytes(v: unknown): number | undefined {
+  if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) return undefined;
+  return Math.max(1, Math.floor(v));
+}
+
+/**
+ * A query that scanned at least this share of its scan limit is treated as cut by it. The SDK names no notification
+ * code for a scan-limit cut and none could be provoked on the trial tenant (its largest query scanned ≈ 2 MB), so the
+ * byte count is the signal that does not depend on a guessed code. A false positive needs a query that scans ≥ 90 %
+ * of the cap, which deserves the warning anyway.
+ */
+export const SCAN_LIMIT_HIT_RATIO = 0.9;
 
 /** Records only (truncation notices are dropped): never hand this to the engine, see runGrailQuery. */
 export type RunQuery = (query: string, options?: RunQueryOptions) => Promise<GrailRecord[]>;
@@ -111,9 +137,10 @@ export async function runGrailQuery(query: string, options: RunQueryOptions = {}
   const deadline = Date.now() + timeoutMs;
   const slice = Math.min(10_000, timeoutMs);
   const maxResultRecords = options.maxResultRecords ?? 1000;
+  const scanLimit = clampScanLimitGBytes(options.scanLimitGBytes);
 
   let r = await client.queryExecute({
-    body: { query, requestTimeoutMilliseconds: slice, maxResultRecords },
+    body: { query, requestTimeoutMilliseconds: slice, maxResultRecords, ...(scanLimit ? { defaultScanLimitGbytes: scanLimit } : {}) },
   });
   // Poll responses carry no token; keep the one from queryExecute.
   const requestToken = r.requestToken;
@@ -129,7 +156,13 @@ export async function runGrailQuery(query: string, options: RunQueryOptions = {}
   const recs = records(r);
   const notices = truncationNotices(r);
   if (recs.length >= maxResultRecords && !notices.length) notices.push(`RECORDS>=${maxResultRecords}`);
-  return { records: recs, truncated: notices.length > 0, notices };
+  const scanned = r.result?.metadata?.grail?.scannedBytes;
+  const scannedBytes = typeof scanned === "number" && Number.isFinite(scanned) ? scanned : undefined;
+  // Decimal gigabytes (1e9): if Grail counts GiB the threshold is only reached earlier, never later.
+  if (scanLimit && scannedBytes !== undefined && scannedBytes >= SCAN_LIMIT_HIT_RATIO * scanLimit * 1e9 && !notices.some((n) => /SCAN/i.test(n))) {
+    notices.push(`SCAN_LIMIT_${scanLimit}GB`);
+  }
+  return { records: recs, truncated: notices.length > 0, notices, ...(scannedBytes !== undefined ? { scannedBytes } : {}) };
 }
 
 /**

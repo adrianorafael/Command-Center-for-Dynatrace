@@ -58,9 +58,12 @@ export function defaultSettings(): Settings {
       reportTimeoutSec: 180,
       maxAttempts: 3,
       lockTtlSec: 130,
+      // Grail scan limit per engine query (cost guard). 1 GB is the smallest value Grail accepts (whole GB) and is
+      // still ~500x what one engine query scanned on the trial tenant (≤ 1.4 MB; all queries of a run ≈ 2 MB).
+      scanLimitGBytes: 1,
     },
     retention: { resolvedVisibleHours: 24, archiveDays: 30 },
-    ui: { autoRefreshSec: 30 },
+    ui: { autoRefreshSec: 60 },
     providers: defaultProviders(),
     demoMode: false,
   };

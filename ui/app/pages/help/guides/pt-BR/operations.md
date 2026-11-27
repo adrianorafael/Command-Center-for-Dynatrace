@@ -178,7 +178,15 @@ executa DQL: as abas abertas leem apenas o App State.
 | Origens habilitadas | Q2 e Q3 adicionam uma consulta cada por execução |
 | Look-back de problems (72 h) | Uma janela mais ampla varre mais dados |
 | Volume de dados | Mais problems e eventos, mais bytes varridos |
-| Abas abertas no navegador | Sem custo de Grail. Cada aba lê o App State a cada 30 s por padrão. |
+| Abas abertas no navegador | Sem custo de Grail. Cada aba lê o App State a cada minuto por padrão. |
+
+**Limite de varredura (proteção de custo).** Toda consulta do motor leva um limite de varredura, *Grail scan limit per
+query* em Settings → Event sources (padrão 1 GB, de 1 a 100 GB inteiros; o Grail não aceita valor menor). No ambiente
+trial, uma consulta do motor varreu no máximo 1,4 MB e uma execução inteira cerca de 2 MB, então 1 GB nunca corta uma
+execução normal; ele limita quanto uma execução pode custar se os dados crescerem inesperadamente. O limite é por
+consulta: o pior caso de uma execução é o número de consultas (1 a 8) vezes o limite. Uma consulta que o atinge conta
+como cortada: sua origem fica incompleta naquela execução (nada dela é arquivado) e o último erro do motor informa
+isso. Settings → Event sources mostra o que a última execução varreu e a estimativa diária no intervalo atual.
 
 Como medir no seu ambiente:
 

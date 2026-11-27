@@ -31,7 +31,7 @@ import { withAttempt } from "../../ui/app/domain/keys";
 import { normalizeRecords } from "../../ui/app/domain/alerts/normalize";
 import { archiveResolvedBound, emptyBatches, tick } from "../../ui/app/domain/engine/tick";
 import { acquireLease, leaseLost, releaseLease } from "./lease";
-import { fetchSources } from "./sources";
+import { fetchSources, type SourceRecords } from "./sources";
 import {
   APP_STATE_LIMIT_BYTES,
   SHED_THRESHOLD_BYTES,
@@ -167,7 +167,21 @@ export type EngineHeartbeatWithStorage = EngineHeartbeat & {
   lastSkippedAt?: number;
   /** A lease release that could not be verified (the next tick overwrites it once expired). */
   releaseFailedAt?: number;
+  /**
+   * Grail cost of the last run (Settings → Event sources shows it): queries run, bytes scanned as Grail reported them
+   * (metadata.grail.scannedBytes), the per-query scan limit in force and the sources whose result was cut short.
+   */
+  grail?: GrailUsage;
 };
+
+/** See EngineHeartbeatWithStorage.grail. */
+export interface GrailUsage {
+  queries: number;
+  scannedBytes: number;
+  scanLimitGBytes: number;
+  /** Sources that were "truncated" (limits, scan limit, sampling) or "failed" in that run. */
+  incomplete?: string[];
+}
 
 /** Writes the heartbeat, carrying the skip counters of the stored one (re-read just before writing). */
 async function writeHeartbeat(repo: Repository, hb: EngineHeartbeatWithStorage): Promise<void> {
@@ -291,6 +305,7 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
   let skipped = false;
   let previous: EngineHeartbeatWithStorage | undefined;
   let storage: StorageEstimate | undefined;
+  let fetched: SourceRecords | undefined;
   try {
     leased = await acquireLease(repo, holder, now, lockTtlSec);
     if (!leased) {
@@ -316,6 +331,7 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
         repo.list<unknown>(PREFIX.archive),
         fetchSources(settings, deps.runQuery, undefined, now),
       ]);
+    fetched = sources;
     errors.push(...sources.errors);
 
     const alerts = normalizeRecords(
@@ -464,9 +480,18 @@ export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps
         ...(errors.length ? { lastError: errors[0]?.slice(0, 500) } : {}),
         ...(storage ? { storage } : previous?.storage ? { storage: previous.storage } : {}),
         ...(released ? {} : { releaseFailedAt: now }),
+        ...(fetched ? { grail: grailUsage(fetched) } : {}),
       });
     }
   }
+}
+
+/** The heartbeat's Grail cost summary of one fetch. */
+export function grailUsage(s: SourceRecords): GrailUsage {
+  const incomplete = Object.entries(s.status)
+    .filter(([, h]) => h !== "ok")
+    .map(([src, h]) => `${src}:${h}`);
+  return { ...s.grail, ...(incomplete.length ? { incomplete } : {}) };
 }
 
 /** Bytes per prefix from what this tick loaded; sheds the oldest archives above the threshold. */

@@ -1,5 +1,11 @@
-/** Console filter model: read/written as URL search params, applied to incidents without React. */
+/**
+ * Console filter model: read/written as URL search params, applied to incidents without React.
+ *
+ * Also owns the "today" bound of the Resolved and All views (`createdBound`), so the table and every tab count
+ * use the same rule.
+ */
 import type { Incident, IncidentStatus, Priority } from "../../domain/contracts";
+import { startOfLocalDay } from "../../domain/time/tz";
 
 /** Every Console filter; an empty list means "no filter" on that field. */
 export interface ConsoleFilters {
@@ -8,6 +14,8 @@ export interface ConsoleFilters {
   team: string[];
   /** "me", "unassigned", or uids / team ids. */
   assignee: string[];
+  /** Who acknowledged the incident: "me" or uids. URL key `ackby`. */
+  ackby: string[];
   service: string[];
   source: string[];
   /** "1".."n" (step number, 1-based) or "exhausted" or "none". */
@@ -40,7 +48,7 @@ export function statusViewOf(status: readonly IncidentStatus[]): string | undefi
   return STATUS_VIEWS.find((v) => norm(v.status) === norm(status))?.id;
 }
 
-const KEYS = ["status", "priority", "team", "assignee", "service", "source", "escalation"] as const;
+const KEYS = ["status", "priority", "team", "assignee", "ackby", "service", "source", "escalation"] as const;
 
 /** Filters from URL search params (missing keys → defaults). */
 export function readFilters(params: URLSearchParams): ConsoleFilters {
@@ -51,6 +59,7 @@ export function readFilters(params: URLSearchParams): ConsoleFilters {
     priority: list("priority") as Priority[],
     team: list("team"),
     assignee: list("assignee"),
+    ackby: list("ackby"),
     service: list("service"),
     source: list("source"),
     escalation: list("escalation"),
@@ -83,10 +92,55 @@ export function isDefaultFilter(f: ConsoleFilters): boolean {
     !f.priority.length &&
     !f.team.length &&
     !f.assignee.length &&
+    !f.ackby.length &&
     !f.service.length &&
     !f.source.length &&
     !f.escalation.length &&
     !f.q
+  );
+}
+
+/** True when the status list can show resolved incidents: the Resolved tab, All (empty or every status). */
+export function includesResolved(status: readonly IncidentStatus[]): boolean {
+  return status.length === 0 || status.includes("resolved");
+}
+
+/**
+ * Lower bound on `createdAt` for a status list.
+ *
+ * A timeframe picked in "Created" (`pickedFrom`) always wins. Without one, lists that can show resolved incidents
+ * (Resolved, All, or an old bookmark that includes resolved) are bounded to the start of today in `timeZone`:
+ * resolved incidents accumulate until archived, while open ones stay few, so only those views need a bound.
+ * `today` tells the page to say so.
+ */
+export function createdBound(
+  status: readonly IncidentStatus[],
+  pickedFrom: number | undefined,
+  now: number,
+  timeZone: string,
+): { createdAfter?: number; today: boolean } {
+  if (pickedFrom !== undefined) return { createdAfter: pickedFrom, today: false };
+  if (includesResolved(status)) return { createdAfter: startOfLocalDay(now, timeZone), today: true };
+  return { today: false };
+}
+
+/**
+ * Row count of every status tab under the other filters, each with its own `createdBound`, so a tab's count is
+ * exactly the number of rows the table shows when that tab is selected.
+ */
+export function statusViewCounts(
+  incidents: Incident[],
+  f: ConsoleFilters,
+  me: string,
+  pickedFrom: number | undefined,
+  now: number,
+  timeZone: string,
+): Record<string, number> {
+  return Object.fromEntries(
+    STATUS_VIEWS.map((v) => {
+      const { createdAfter } = createdBound(v.status, pickedFrom, now, timeZone);
+      return [v.id, applyFilters(incidents, { ...f, status: v.status }, me, createdAfter).length];
+    }),
   );
 }
 
@@ -118,6 +172,11 @@ export function applyFilters(
         x === "me" ? a?.type === "user" && a.id === me : x === "unassigned" ? !a : a?.id === x,
       );
       if (!ok) return false;
+    }
+    // acknowledgedBy stays set after resolve (cleared only by unack/reopen), so resolved incidents keep their acker.
+    if (f.ackby.length) {
+      const by = i.acknowledgedBy;
+      if (!by || !f.ackby.some((x) => (x === "me" ? by === me : by === x))) return false;
     }
     if (createdAfter !== undefined && i.createdAt < createdAfter) return false;
     if (q) {

@@ -172,7 +172,15 @@ licensing documentation). The engine runs measured on the trial environment took
 | Enabled sources | Q2 and Q3 add one query each per run |
 | Problem look-back (72 h) | A wider window scans more data |
 | Data volume | More problems and events, more bytes scanned |
-| Open browser tabs | No Grail cost. Each tab reads App State every 30 s by default. |
+| Open browser tabs | No Grail cost. Each tab reads App State every minute by default. |
+
+**Scan limit (cost guard).** Every engine query carries a scan limit, *Grail scan limit per query* in Settings →
+Event sources (default 1 GB, 1–100 whole GB; Grail accepts no smaller value). On the trial environment one engine
+query scanned at most 1.4 MB and a whole run about 2 MB, so 1 GB never cuts a normal run; it caps what a run can cost
+if the data grows unexpectedly. The limit is per query: a run's worst case is its number of queries (1–8) times the
+limit. A query that reaches it counts as cut short: its source is incomplete for that run (nothing of it is archived)
+and the engine's last error says so. Settings → Event sources shows what the last run scanned and the daily estimate at
+the current interval.
 
 How to measure in your environment:
 

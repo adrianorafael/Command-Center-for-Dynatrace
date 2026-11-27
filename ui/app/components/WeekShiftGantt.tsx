@@ -18,7 +18,7 @@ import { Text } from "@dynatrace/strato-components/typography";
 import { Tooltip } from "@dynatrace/strato-components/overlays";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { Schedule } from "../domain/contracts";
-import { daysRange, isInDays, onCallHoursByUser, placeSpan, positionIn, scheduleTimeline, type ShiftSegment, type WeekDay } from "../hooks/domain";
+import { civilDate, daysRange, isInDays, onCallHoursByUser, placeSpan, positionIn, scheduleTimeline, type ShiftSegment, type WeekDay } from "../hooks/domain";
 import { useAppData } from "../hooks/AppDataContext";
 import { gapsOf } from "./ShiftGantt";
 import { formatDayTime, formatDuration, formatTime, plural, zoneAbbr } from "./format";
@@ -66,6 +66,8 @@ const BAR_STYLE: Record<WeekBar["kind"], React.CSSProperties> = {
 };
 
 const TRACK_HEIGHT = 28;
+/** Look-around for shifts that cross the week's edges (a weekly rotation lasts 7 days). */
+const TIMELINE_MARGIN_MS = 8 * 86_400_000;
 
 /** Header of the week column: one equal-width label per visible day; today is emphasised. */
 const DayHeader = ({ days, today }: { days: WeekDay[]; today?: string }) => (
@@ -106,8 +108,11 @@ const BarTooltip = ({ bar, name, tz }: { bar: WeekBar; name: string; tz: string 
 /** Text inside a bar; overflow is cut with an ellipsis, the tooltip always has the full text. */
 function barLabel(bar: WeekBar, name: string, showNames: boolean, tz: string): string {
   if (bar.kind === "gap") return "No one on call";
-  // A person row already says who it is, so its bars show the hours instead of the name.
-  const text = showNames ? name : `${formatTime(bar.from, tz)}–${formatTime(bar.to, tz)}`;
+  // A person row already says who it is, so its bars show when instead: "08:00–20:00" within a
+  // day, "Sun 08:00 – Tue 08:00" when the shift spans days.
+  const sameDay = civilDate(bar.from, tz).day === civilDate(bar.to - 1, tz).day && bar.to - bar.from < 86_400_000;
+  const when = sameDay ? `${formatTime(bar.from, tz)}–${formatTime(bar.to, tz)}` : `${formatDayTime(bar.from, tz)} – ${formatDayTime(bar.to, tz)}`;
+  const text = showNames ? name : when;
   return bar.kind === "override" ? `${text} · override` : text;
 }
 
@@ -257,12 +262,15 @@ export const WeekShiftGantt = ({
   const rows = useMemo<WeekRow[]>(() => {
     if (!(to > from)) return [];
     return schedules.map((sch) => {
-      let final: ShiftSegment[] = [];
+      // Resolved with a margin so a shift that started last week shows its real start in the
+      // tooltip; the bars are clipped to the visible days when drawn.
+      let padded: ShiftSegment[] = [];
       try {
-        final = scheduleTimeline(sch, from, to);
+        padded = scheduleTimeline(sch, from - TIMELINE_MARGIN_MS, to + TIMELINE_MARGIN_MS);
       } catch {
-        final = [];
+        padded = [];
       }
+      const final = padded.filter((s) => s.to > from && s.from < to);
       const layerName = (id?: string) => sch.layers.find((l) => l.id === id)?.name;
       const toBar = (s: ShiftSegment): WeekBar => ({
         kind: s.source === "override" ? "override" : "shift",
@@ -306,6 +314,7 @@ export const WeekShiftGantt = ({
         accessor: "who",
         width: 240,
         cell: ({ rowData }) => (
+          <DataTable.DefaultCell>
           <Flex flexDirection="column" gap={0} style={{ minWidth: 0 }}>
             <Text textStyle={rowData.subRows ? "base-emphasized" : "base"} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {rowData.who}
@@ -316,6 +325,7 @@ export const WeekShiftGantt = ({
               </Text>
             )}
           </Flex>
+          </DataTable.DefaultCell>
         ),
       },
       {
@@ -326,7 +336,9 @@ export const WeekShiftGantt = ({
         width: "1fr",
         minWidth: 640,
         cell: ({ rowData }) => (
-          <WeekTrack bars={rowData.bars} days={days} today={today} now={now} tz={timeZone} showNames={!!rowData.subRows} />
+          <DataTable.DefaultCell>
+            <WeekTrack bars={rowData.bars} days={days} today={today} now={now} tz={timeZone} showNames={!!rowData.subRows} />
+          </DataTable.DefaultCell>
         ),
       },
     ],

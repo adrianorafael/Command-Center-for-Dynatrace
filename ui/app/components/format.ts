@@ -167,6 +167,7 @@ const FIELD_LABELS: Record<string, string> = {
   "engine.reportTimeoutSec": "Delivery report timeout",
   "engine.maxAttempts": "Delivery attempts",
   "engine.lockTtlSec": "Engine lock lease",
+  "engine.scanLimitGBytes": "Grail scan limit per query",
   "engine.workflowId": "Engine workflow ID",
   "retention.resolvedVisibleHours": "Keep resolved incidents visible",
   "retention.archiveDays": "Archive resolved incidents for",

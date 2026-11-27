@@ -19,6 +19,7 @@ import { createStore } from "../../ui/app/data/store";
 import { incidentIdFor } from "../../ui/app/domain/ids";
 import { CYCLE_BUDGET_MS, runEngineCycle, type CycleDeps, type CycleResult } from "./cycle";
 import { zeroCounts } from "./engine";
+import { engineScanLimitGBytes } from "./sources";
 
 /** Task input of the on-problem workflow: `{{ event()["event.id"] }}` and `{{ event()["event.status"] }}`. */
 export interface ProblemTriggerInput {
@@ -82,7 +83,7 @@ export async function runProblemTriggeredCycle(input: ProblemTriggerInput | unde
   /** True once Grail returns the problem in that state. */
   const readable = async (): Promise<boolean> => {
     try {
-      const rec = asGrailResult(await deps.runQuery(statusQuery, { timeoutMs: 10_000 })).records[0];
+      const rec = asGrailResult(await deps.runQuery(statusQuery, { timeoutMs: 10_000, scanLimitGBytes: engineScanLimitGBytes(settings) })).records[0];
       return rec !== undefined && upper(rec["event.status"]) === (closed ? "CLOSED" : "ACTIVE");
     } catch (e) {
       if (errors.length === 0) errors.push(`problem status: ${describeError(e)}`);

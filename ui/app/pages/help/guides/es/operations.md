@@ -179,7 +179,16 @@ La UI **no** ejecuta DQL: las pestañas abiertas solo leen App State.
 | Fuentes habilitadas | Q2 y Q3 agregan una consulta cada una por ejecución |
 | Look-back de problemas (72 h) | Una ventana más amplia escanea más datos |
 | Volumen de datos | Más problemas y eventos, más bytes escaneados |
-| Pestañas abiertas del navegador | Sin costo de Grail. Cada pestaña lee App State cada 30 s de forma predeterminada. |
+| Pestañas abiertas del navegador | Sin costo de Grail. Cada pestaña lee App State cada minuto de forma predeterminada. |
+
+**Límite de escaneo (protección de costo).** Cada consulta del motor lleva un límite de escaneo, *Grail scan limit per
+query* en Settings → Event sources (predeterminado 1 GB, de 1 a 100 GB enteros; Grail no acepta un valor menor). En el
+entorno trial, una consulta del motor escaneó como máximo 1,4 MB y una ejecución completa unos 2 MB, así que 1 GB nunca
+recorta una ejecución normal; limita lo que puede costar una ejecución si los datos crecen de forma inesperada. El
+límite es por consulta: el peor caso de una ejecución es su número de consultas (1 a 8) por el límite. Una consulta que
+lo alcanza cuenta como recortada: su fuente queda incompleta en esa ejecución (no se archiva nada de ella) y el último
+error del motor lo indica. Settings → Event sources muestra lo que escaneó la última ejecución y la estimación diaria
+con el intervalo actual.
 
 Cómo medir en tu entorno:
 
