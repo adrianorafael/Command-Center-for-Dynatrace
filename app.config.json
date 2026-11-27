@@ -3,16 +3,62 @@
   "environmentUrl": "https://YOUR-ENVIRONMENT.apps.dynatrace.com/",
   "app": {
     "name": "Command Center",
-    "version": "1.1.3",
-    "description": "Centralized problems management view for Dynatrace",
+    "version": "2.0.0",
+    "description": "NOC event console with on-call teams and escalation via Workflows",
     "id": "my.command.center",
-    "icon": "ui/assets/icons/headset-v2-128x128.svg",
+    "icon": "ui/assets/icons/command-center-icon.svg",
     "scopes": [
-      { "name": "storage:logs:read", "comment": "default template" },
-      { "name": "storage:buckets:read", "comment": "default template" },
-      { "name": "storage:events:read", "comment": "DQL access to dt.davis.problems table" },
-      { "name": "state:app-states:read", "comment": "Read persisted ack state" },
-      { "name": "state:app-states:write", "comment": "Persist ack/unack state" }
+      {
+        "name": "storage:buckets:read",
+        "comment": "Required for any Grail read"
+      },
+      {
+        "name": "storage:events:read",
+        "comment": "Read dt.davis.problems, dt.davis.events and events"
+      },
+      {
+        "name": "state:app-states:read",
+        "comment": "Read configuration, incidents and the notification ledger"
+      },
+      {
+        "name": "state:app-states:write",
+        "comment": "Persist configuration, incidents and operator actions"
+      },
+      {
+        "name": "state:app-states:delete",
+        "comment": "Remove folded actions and deleted configuration"
+      },
+      {
+        "name": "iam:users:read",
+        "comment": "Pick on-call team members from tenant users"
+      },
+      {
+        "name": "automation:workflows:read",
+        "comment": "Show the engine and custom workflow status (Integrations → Workflows)"
+      },
+      {
+        "name": "automation:workflows:run",
+        "comment": "Run your Custom workflow integration once per notification"
+      },
+      {
+        "name": "document:documents:read",
+        "comment": "List notebooks to attach to war rooms"
+      },
+      {
+        "name": "document:documents:write",
+        "comment": "Create post-mortem notebooks from war rooms"
+      },
+      {
+        "name": "credential-vault:entries:read",
+        "comment": "Read provider secrets (Credential Vault) when sending notifications"
+      }
+    ],
+    "actions": [
+      {
+        "name": "run-engine",
+        "title": "Run Command Center engine",
+        "description": "Runs one Command Center engine cycle: alerts, escalations, notifications."
+      }
     ]
   }
 }

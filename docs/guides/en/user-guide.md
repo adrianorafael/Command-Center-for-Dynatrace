@@ -1,0 +1,307 @@
+# User guide — every screen, icon and status
+
+🌐 **English** · [Português (BR)](../pt-BR/user-guide.md) · [Español](../es/user-guide.md)
+
+Screenshots were taken in **demo mode** with sample data.
+
+## Header
+
+![Console](../../screenshots/console.png)
+
+| Element | What it does |
+| --- | --- |
+| **Console · On-call · Teams · Escalations · Services · Integrations · War rooms · Reports** | Main navigation. **War rooms** shows a red count while rooms are in progress. |
+| 🔔 **Bell** | The last notifications of this session, with an unread count (up to `99+`). Icon states: bell = nothing new, active bell = unread items, crossed-out bell = pop-ups silenced. Selecting an item opens what it refers to. Closing the menu marks everything as read. |
+| 📞 **On-call indicator** | `You're on call` in a green circle when you are on call; otherwise `On call: <name>` (+N for more people), `On call` when nobody covers right now, or `No one on call` when there is no schedule yet. The menu lists who is on call per team until when, and offers **Leave on-call now…** or **Take on-call now…** (below). |
+| ⚙️ **Settings** | Opens [Settings](configuration.md). |
+| **?** Help menu | Get started, in-app guide, sending events, keyboard shortcuts, about. |
+
+### Notifications (bell and pop-ups)
+
+Pop-ups appear at the **bottom right** for four categories:
+
+| Category | Examples |
+| --- | --- |
+| New P1/P2 incidents | `P1 · <title>` (critical), `P2 · <title>` (warning). After three, they are grouped as `N more new P1/P2 incidents`. |
+| Confirmations of my actions | `Incident acknowledged` with **Undo** (10 seconds), `Incident resolved` with **Undo**, `Incident snoozed`… |
+| Errors | `Couldn't save your changes`, `Couldn't acknowledge …` with **Retry** |
+| Paging engine health | `Paging engine is not running`: no engine run for two intervals plus one minute (an engine error shows only in the Console banner) |
+
+In the bell menu, **Pop-ups on (click to silence)** switches to *Silenced: only counting*. **Show pop-ups for…**
+chooses the categories, and **Clear all** empties the list. Preferences are kept in this browser. The list itself lives
+in memory and is cleared when you reload the page. When pop-ups are silenced, the Undo button of the confirmations is
+not shown either.
+
+### Leave or take on-call
+
+- **Leave on-call now…** asks who covers the rest of your shift. The next person in the rotation is preselected. It
+  then creates a schedule **override** from now until the end of the current shift, so pages stop reaching you
+  immediately.
+- **Take on-call now…** appears for schedules where you are a participant but not on call. It creates an override that
+  puts you on call until the current shift ends, or for 8 hours if nobody was on call.
+- Overrides are listed in **On-call → Overrides**, with the note *Left on-call from the header* or *Took on-call from
+  the header*, and can be removed there.
+
+## Icons and colours
+
+**Incident status**
+
+| Indicator | Status | Meaning |
+| --- | --- | --- |
+| 🔴 Triggered | `triggered` | New or re-triggered. The escalation policy is running. |
+| 🟠 Acknowledged | `acknowledged` | Someone is on it. Escalation stops. |
+| ⚪ Snoozed | `snoozed` | Hidden until a time. Then it triggers again and escalation restarts. |
+| 🟢 Resolved | `resolved` | Closed by the source or by an operator. It stays visible for 24 hours (setting), then it is archived. |
+
+**Priority chips**: text only, no icon. **P1** is the only solid red chip, **P2** is red-tinted, **P3** amber, **P4**
+blue and **P5** grey. Meanings: P1 critical (major outage or customer impact), P2 high (a service is degraded), P3
+moderate (needs attention soon), P4 low (can wait for business hours), P5 informational. Priority does not decide
+*whether* someone is paged: the escalation policy does, and a routing rule can suppress. Priority selects people's
+notification rules ("for priority up to P2…") and the quiet-hours behaviour.
+
+**Notification (delivery) status**
+
+| Label | Meaning |
+| --- | --- |
+| Sending | Planned in this run, no result yet |
+| Sent | The provider accepted the message (HTTP 2xx). Delivery to the handset is not tracked. |
+| Failed | The provider refused it, or every attempt failed. The provider's error is shown. |
+| No result | No result arrived in time. The engine retries with a new attempt. |
+
+**Channels**: 📱 SMS · 📞 voice · 💬 chat (WhatsApp, Telegram, Slack, Microsoft Teams) · 🌐 HTTP (IFTTT, webhook). A
+red ✖ in *Last notified* means the last notification failed or got no result.
+
+**Sources**: the Davis (AI) icon marks a Davis problem; the event icon marks a Davis event or an Events API event.
+
+**Other icons**: ⬆ escalate · ⏸ snooze · 👤 assignee / reassign · ✎ priority or tag change · 📝 note · 👥 war room or
+whole team · 🕒 MTTA or *over the acknowledge target* · 🔇 suppressed · 🔁 the policy repeats · ✔ (green) step done ·
+spinner = current step · ○ pending step · 🔒 default route · ▶ run or send test · 🔑 Credential Vault · workflow icon =
+engine workflow.
+
+**Created-item highlight**: anything you create with a button in a list (a war room, a team, a member, a schedule, a
+layer, an override, a policy step, a service, a rule, a note…) pulses once for one second with an outline, so you can
+spot it. With the system setting *reduce motion* it fades once without pulsing.
+
+## Console
+
+The Console is the NOC screen: every open incident, newest first.
+
+**KPI tiles** (sparklines are counts per hour, last 24 hours):
+
+| Tile | Value | Click |
+| --- | --- | --- |
+| Triggered | Incidents waiting for someone (red when > 0) | Filters on Triggered |
+| Acknowledged | Incidents being worked on. Footer: acknowledgements vs. the previous hour | Filters on Acknowledged |
+| Open P1 | Unresolved P1 incidents (red when > 0) | Filters on open P1 |
+| MTTA today | **Median** time to acknowledge since local midnight. Red above your acknowledge target; the meter goes from 0 to twice the target. | — |
+| Assigned to me | Open incidents assigned to you | Filters on Assignee = me |
+| Open incidents | All open incidents, split by priority | — |
+
+**Filters**: search (title, ID, entity, tag), Status (default *Triggered + Acknowledged*), Priority, Team, Assignee
+(*Me*, *Unassigned*, members), Service, Source, Escalation level (*Not started*, *Step N*, *Exhausted*) and Created
+(time frame). All filters except the time frame are part of the URL, so a NOC view can be bookmarked.
+
+**Columns**: Priority, Status (and *until …* when snoozed), Incident (title, `#display ID · first entity`), Age (red
+with a clock icon when a **triggered** incident is older than the acknowledge target), Service, Team, Assignee,
+Escalation (*Step N of M*, *Not started*, *Exhausted*, *No policy*), Last notified. Source and Created are hidden by
+default. Use the column menu to show, hide or reorder columns. The choice is remembered in this browser. Rows can be
+expanded to show the description, the latest activity and the escalation.
+
+**Row actions**: **Acknowledge** (only when triggered), **Resolve**, and **⋮**: *Reassign…*, *Escalate now*,
+*Snooze* (15 min, 30 min, 1 h, 4 h, Custom…), *Change priority…*, *Add note*, *Open war room…* / *Join war room*, *Open
+Davis problem*, *Copy link*.
+
+**Bulk actions** (select rows): Acknowledge, Resolve (asks for confirmation above 10 incidents), Reassign, Snooze,
+Escalate now, Set priority.
+
+**Keyboard shortcuts** (Console only, never while typing): `j`/`k` next/previous, `a` acknowledge, `r` resolve, `x`
+select, `/` search, `Shift+R` refresh, `Esc` close details. They can be turned off in Settings → General.
+
+**Banners**: *The paging engine is late / reported an error / hasn't run yet* appears when the engine heartbeat is
+older than two run intervals plus one minute, or reports an error. *Demo mode* shows a permanent banner with **Turn off
+demo mode**.
+
+**Actions in detail**
+
+| Action | Effect |
+| --- | --- |
+| Acknowledge | Escalation stops. MTTA is measured. **Undo** within 10 seconds, or *Undo acknowledgement* later in the details. |
+| Resolve | Escalation stops. Nobody is notified about the resolution. Davis problems also resolve on their own when Davis closes them. |
+| Reopen | A resolved incident triggers again and escalation restarts. |
+| Snooze | Until a time in the future, optionally with a note. Then the incident triggers again and the policy restarts. |
+| Reassign | To a team or a person, optionally with a note |
+| Escalate now | Fires the **next step** of the policy immediately (an acknowledged or snoozed incident becomes triggered again) and runs the engine right away. If the immediate run fails, the toast says *Escalation recorded, but the engine didn't start*, and the next scheduled run sends it. |
+| Change priority | P1–P5 |
+| Add note | Markdown, append-only, part of the audit trail |
+
+Every action is recorded in the incident timeline with who did it and when.
+
+## Incident details
+
+![Incident](../../screenshots/incident.png)
+
+Opens beside the table. The header shows priority, status, `#ID`, a copy-link button, title, *Opened … · Service ·
+Team · Source*, and *Under maintenance: paging suppressed* when it applies. Buttons: Acknowledge, Resolve, Reopen,
+Reassign, Open/Join war room, Escalate now, Snooze, and ⋮ (Change priority, Add note, Undo acknowledgement, Copy link).
+Davis problems link to **Open in Problems app**.
+
+| Tab | Content |
+| --- | --- |
+| Timeline | Every event: created, routed, acknowledged, notifications, notes… Filters *All / Actions / Notifications / System*. Failed notifications are highlighted. |
+| Escalation | The policy, each step with its targets and channels, which step is next and when. *Escalation stops automatically while an incident is acknowledged or snoozed.* |
+| Notifications (N) | The ledger: channel, recipient, step (`N · try A`, with *repeat P*), status, time, provider details |
+| Entities (N) | Affected entities: name, type, entity ID |
+| Notes (N) | Add a note (Markdown). Notes are append-only. |
+
+## War rooms
+
+![War rooms](../../screenshots/war-rooms.png)
+
+A war room is a meeting link plus the incidents it handles and its notebooks.
+
+- **Open**: from an incident (**Open war room**, or **⋮ → Open war room…** in the Console) or with the **Open war
+  room** button. Paste the meeting link you created in Teams, Zoom, Meet or a Slack huddle (https only). Related open
+  incidents are added automatically: those with the same root cause, or the same service and started within 30 minutes.
+  Remove any that don't belong.
+- **Notebooks**: **Create post-mortem notebook** creates a Dynatrace Notebook named after the first incident (for
+  example `P-26112613 · Post-mortem: …`) with summary, timeline, root cause, impact, action items and a DQL section for
+  the room's problems. **Select an existing notebook** attaches any notebook you can access. You can also add any https
+  link. A new notebook belongs to the person who created it and, per the Dynatrace Document API, is not accessible to
+  other users until it is shared in the Notebooks app.
+- **List**: *Today* by default (open rooms and rooms opened or closed today), or *In progress*, *Closed*, *All*.
+  Columns: Status (*Open · duration* or *Closed*), War room (title and **Join** link), Incidents, Notebooks, Opened by,
+  Started, Ended, Duration.
+- **Close / Reopen** is done by people. A closed room keeps its link visible as plain text for reference, and it cannot
+  be clicked. While a room is open, the incident shows **Join war room**.
+
+## On-call
+
+![On-call](../../screenshots/oncall.png)
+
+| Tab | Content |
+| --- | --- |
+| Now | One card per team: who is on call until when, their contact methods (greyed out when not configured), who is next, and each layer. *No one is on call* comes with **Add override**. Below: *Upcoming shifts* (Gantt: shifts in green, overrides in a separate colour, gaps in amber, a *Now* marker). Filters: Team, Range (24 h, 7 days, 14 days). |
+| Schedules | Name, team, time zone, layers, on call now, next handoff, coverage for the next 7 days. Edit, Duplicate, Delete. |
+| Overrides | Who covers, for whom, schedule, from, to, reason. Upcoming or past. Remove. |
+
+**Schedule editor** ![Schedule editor](../../screenshots/schedule-editor.png)
+
+- **Schedule**: name, team, time zone (handoffs and restrictions follow it, including daylight saving time).
+- **Layers**: each layer has a name, a rotation (*Daily*, *Weekly*, or *Custom* with a shift length of 1–672 hours),
+  a start, a handoff time (HH:mm), optionally *Only during specific hours* (weekdays and from/to), and participants in
+  rotation order (drag to reorder). **Later layers take precedence over earlier ones**, and overrides beat every
+  layer.
+- **Coverage preview** (1, 2 or 4 weeks): *Full coverage* or *N gaps, … uncovered*, with a *Final schedule* row.
+
+**New override**: schedule, who covers, from, to (default: the next full hour, for 8 hours), reason. A preview sentence
+says exactly what will happen.
+
+## Teams
+
+![Teams](../../screenshots/teams.png) ![Team](../../screenshots/team.png)
+
+- **Teams list**: name, members, on call now, escalation policy, services, open incidents per priority. A team that is
+  still used by policies, rules or services cannot be deleted until those references are removed.
+- **Team detail tabs**: *Members*, *On-call*, *Escalation*, *Quiet hours*, *Services*.
+- **Ready to page?** A checklist of 5 steps with a fix button each: people who get paged, contact methods, an on-call
+  schedule, an escalation policy, and alerts routed to the team.
+- **Add people**: type at least 3 letters of a name or an email. Results come from Dynatrace IAM: active users of the
+  account that owns the environment. Roles:
+
+| Role | Paged? | Meant for |
+| --- | --- | --- |
+| Team admin | yes | Edits the team, its schedules and its policy |
+| Responder | yes | Acknowledges and resolves |
+| Observer | never | Watches the team's incidents |
+
+Roles are guidance: App State has no per-key permissions, so every user of the app can technically change
+configuration.
+
+- **Contact methods** (person → *Edit contact methods*): channel, address and label, plus **Send test** per method.
+  Address formats: phone in E.164 with the country code (SMS, voice, WhatsApp); Telegram chat ID; any label for
+  Slack, Teams and IFTTT (their webhook or applet decides the destination, and messages show the person's name); a
+  routing key for the webhook or custom workflow. Phone numbers and chat IDs are
+  readable by every user of the app. They are masked in lists. Email is not a separate channel: send email through a
+  webhook gateway.
+- **When I'm paged** (notification rules): *method*, *after N minutes* (counted from when the step fires) and *for
+  priority up to Px*. A person with methods but no rules gets every method immediately. A step with forced channels
+  uses the first method of each channel, with no delay.
+- **Quiet hours**: windows (days, from/to, time zone; a window may cross midnight) during which incidents **less
+  urgent** than a priority are either **held** (no paging until the window ends) or paged with **low-urgency** channels
+  only (Slack, Teams, Telegram, IFTTT, webhook). More urgent incidents always page. When windows overlap, *hold* wins.
+
+## Escalations
+
+![Escalations](../../screenshots/escalations.png) ![Policy editor](../../screenshots/policy-editor.png)
+
+- **List**: name, team, steps (`N · summary`), repeat, used by, last triggered. Deleting a policy makes its incidents
+  fall back to their team's default policy, or else the default policy from Settings.
+- **Editor**: steps run in order until someone acknowledges. Each step waits a number of minutes (0–1440) **counted
+  from the previous step**, then notifies its targets: *On-call of schedule*, *Team (all responders)*, which means
+  every non-observer, including admins, or a *User*. *Channels* are optional: leave them empty to use each person's
+  notification rules (recommended). Channels without a configured provider are disabled.
+- **Repeat**: *Repeat policy if nobody acknowledges* 1–5 times. Each repeat starts after the last step's delay (5
+  minutes if that delay is 0). When all repeats are done the policy is **exhausted** and the incident stays triggered.
+- **Simulation** (always visible in the editor): *If an incident is triggered now* lists, minute by minute, who would be paged on which channels, and
+  warns when a step pages no one (a schedule gap or an empty team).
+
+Timing precision equals the engine interval: a step fires on the first engine run after it is due. On the trial
+environment, with a 1-minute interval, every step of a four-step test policy fired within one minute of being due.
+
+## Services and routing
+
+![Services](../../screenshots/services.png) ![Routing](../../screenshots/routing.png)
+
+| Tab | Content |
+| --- | --- |
+| Services | Service, team, escalation policy (or *Team default*), rules, open incidents, noise last 7 days |
+| Routing rules (N) | Ordered rules (drag to reorder). **The first enabled rule that matches wins.** A new rule is placed above the first catch-all rule (a rule without conditions). Columns: #, name, conditions, actions, enabled, matched in 24 h. The last, fixed row is the default route. |
+| Test a rule | Load a recent alert or an example, edit the JSON, **Run test**: shows the matched rule (or the closest one), each condition ✔/✖, and the resulting service, team, policy and priority with its source |
+| Priority mapping | Priority by Davis category and by severity, plus the fallback |
+
+**Rule editor**: name, enabled, *Match all / any*, conditions (field, operator, value, *Not*), and **Then**: service,
+team, escalation policy, priority (or *Use priority mapping*), add tags, and *Suppress (create the incident, page
+nobody)*. Fields, operators and the
+routing order are listed in the [alerts reference](alerts-reference.md#how-an-alert-becomes-an-incident).
+
+**Service**: name (events reference it by name or ID in `cc.service`), description, owning team, escalation policy
+(empty = the team's default) and default priority.
+
+## Integrations
+
+| Tab | Content |
+| --- | --- |
+| Inbound ![Inbound](../../screenshots/integrations.png) | Each source with its status (*Receiving*, *Quiet > 1 h*, *Turned off*, *Never seen*), last event, incidents in 24 h and **Show events**. Copy-ready snippets (curl, PowerShell, Python, Dynatrace Workflow) and the fields the app reads. |
+| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | The nine providers (eight built-in plus **Custom workflow**), each with an **On/Off** switch: *Not configured*, *Off*, *Configured* or *Last delivery failed*, sent/failed counts, **Configure** (vault entry ID or workflow ID, parameters) and **Send test**. One provider per channel can be on. |
+| Workflows ![Workflows](../../screenshots/integrations-workflow.png) | Engine status (*Not installed*, *Installed · simple workflow*, *Update available*, *Installed as a standard workflow…*), the last engine run, **Run every**, **Install in Workflows**, **Download JSON**, **Run engine now**, **Refresh**, the setup steps and the hosts to allow. |
+
+Details: [integrations](integrations.md) and [getting started](getting-started.md).
+
+## Reports
+
+![Reports](../../screenshots/reports.png)
+
+The time frame defaults to the last 30 days. Response, volume, team and noise panels come from daily rollups (kept
+90 days). *Time to acknowledge* and the off-hours, night and acknowledgement columns of *On-call load* use the
+incidents still in the app and the notification ledger (kept 14 days), so they cover at most about 14 days.
+
+| Panel | Question it answers |
+| --- | --- |
+| Response at a glance | MTTA, MTTR, incidents, delivery success |
+| MTTA and MTTR | How are acknowledge and resolve times changing? |
+| Load by priority | How is the load split across priorities? |
+| Incidents per day | When do incidents arrive, and how urgent are they? |
+| Incidents by team | Which teams get the most incidents? |
+| Noisiest services and sources | Where do incidents come from? (top 10) |
+| Time to acknowledge | Distribution in minutes (bins from 0, 1, 2, 5, 10, 15, 30, 60 and 120 minutes; the last bin holds everything from 120 up) |
+| Notification delivery | Share of notifications the providers accepted |
+| On-call load | Per person: on-call hours, pages, off-hours pages, night pages (00–06), acknowledgements, average time to acknowledge |
+
+*Off-hours* means before 08:00, from 18:00, or on a weekend; *night* means before 06:00. Both use your browser's time
+zone.
+
+## Help
+
+**Get started** ticks itself from your data: create a team, a schedule, an escalation policy, configure a provider,
+install the engine workflow (a heartbeat exists), and send a test event (an incident exists). Then come concepts,
+Console workflow, sending events, notifications, keyboard shortcuts, troubleshooting and privacy.
