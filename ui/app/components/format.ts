@@ -150,3 +150,37 @@ export function pickerToMs(v: unknown): number | undefined {
 export function msToIso(ms: number | undefined): string | null {
   return ms === undefined || !Number.isFinite(ms) ? null : new Date(ms).toISOString();
 }
+
+const FIELD_LABELS: Record<string, string> = {
+  "sources.davisProblems.lookbackHours": "Look back (hours)",
+  "sources.genericEvents.eventType": "Generic event type",
+  "defaults.priority": "Fallback priority",
+  "engine.maxNotificationsPerTick": "Max notifications per run",
+  "engine.reportTimeoutSec": "Delivery report timeout",
+  "engine.maxAttempts": "Delivery attempts",
+  "engine.lockTtlSec": "Engine lock lease",
+  "engine.workflowId": "Engine workflow ID",
+  "retention.resolvedVisibleHours": "Keep resolved incidents visible",
+  "retention.archiveDays": "Archive resolved incidents for",
+  "ui.autoRefreshSec": "Auto-refresh default",
+  "ui.timeZone": "Tenant time zone",
+};
+const SEGMENT_LABELS: Record<string, string> = { methods: "Contact method", rules: "Rule", conditions: "Condition", steps: "Step", targets: "Target", layers: "Layer", providers: "Provider", quietHours: "Window" };
+
+/** Turns a validation path such as `methods[4].address` into "Contact method 5 · address" for people. */
+export function fieldLabel(path: string): string {
+  if (FIELD_LABELS[path]) return FIELD_LABELS[path];
+  return path
+    .split(".")
+    .map((seg) => {
+      const m = /^(\w+)\[(\d+)\]$/.exec(seg);
+      if (m) return `${SEGMENT_LABELS[m[1] ?? ""] ?? m[1]} ${Number(m[2]) + 1}`;
+      return seg.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+    })
+    .join(" · ");
+}
+
+/** "Label: message" lines for a list of validation errors. */
+export function describeErrors(errors: readonly { path: string; message: string }[], separator = "  "): string {
+  return errors.map((e) => `${fieldLabel(e.path)}: ${e.message}`).join(separator);
+}

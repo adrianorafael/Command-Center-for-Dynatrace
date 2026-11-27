@@ -16,7 +16,7 @@ import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { Health } from "../../components/StatusIndicator";
 import { ConfirmModal } from "../../components/ConfirmModal";
-import { formatDayTime, formatDuration } from "../../components/format";
+import { formatDateTime, formatDayTime, formatDuration } from "../../components/format";
 import { WarRoomModal, type WarRoomRequest } from "./WarRoomModal";
 
 type Filter = "today" | "open" | "closed" | "all";
@@ -50,6 +50,7 @@ const RoomLink = ({ room }: { room: WarRoom }) =>
 
 export const WarRoomsPage = () => {
   const { data, isLoading, error, refresh, mutate, userName, currentUser, now } = useAppData();
+  const tz = data?.settings.ui.timeZone;
   const [filter, setFilter] = useState<Filter>("today");
   const [modal, setModal] = useState<WarRoomRequest>();
   const [closing, setClosing] = useState<WarRoom>();
@@ -164,7 +165,9 @@ export const WarRoomsPage = () => {
         width: 120,
         cell: ({ rowData }) => (
           <Cell>
-            <Text>{formatDayTime(rowData.openedAt)}</Text>
+            <Tooltip text={formatDateTime(rowData.openedAt, tz)}>
+              <Text>{formatDayTime(rowData.openedAt, tz)}</Text>
+            </Tooltip>
           </Cell>
         ),
       },
@@ -176,7 +179,7 @@ export const WarRoomsPage = () => {
         width: 120,
         cell: ({ rowData }) => (
           <Cell>
-            {rowData.closedAt ? <Text>{formatDayTime(rowData.closedAt)}</Text> : <Text style={{ color: Colors.Text.Neutral.Subdued }}>–</Text>}
+            {rowData.closedAt ? <Text>{formatDayTime(rowData.closedAt, tz)}</Text> : <Text style={{ color: Colors.Text.Neutral.Subdued }}>–</Text>}
           </Cell>
         ),
       },
@@ -193,7 +196,7 @@ export const WarRoomsPage = () => {
         ),
       },
     ],
-    [incidentsById],
+    [incidentsById, tz],
   );
 
   const openCount = rooms.filter((r) => r.status === "open").length;

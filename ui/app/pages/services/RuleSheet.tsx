@@ -1,3 +1,4 @@
+import { describeErrors } from "../../components/format";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -76,7 +77,7 @@ export const RuleSheet = ({ rule, onClose, onSave }: { rule?: RoutingRule; onClo
         {tried && errors.length > 0 && (
           <MessageContainer variant="critical">
             <MessageContainer.Title>To save this rule:</MessageContainer.Title>
-            <MessageContainer.Description>{errors.map((e) => `· ${e.path}: ${e.message}`).join("  ")}</MessageContainer.Description>
+            <MessageContainer.Description>{describeErrors(errors)}</MessageContainer.Description>
           </MessageContainer>
         )}
         <Flex flexDirection="column" gap={16}>
@@ -208,7 +209,7 @@ export const RuleSheet = ({ rule, onClose, onSave }: { rule?: RoutingRule; onClo
               />
             </FormField>
             <Switch value={!!draft.then.suppress} onChange={(v) => setThen({ suppress: v || undefined })}>
-              Suppress (don't create an incident)
+              Suppress (create the incident, page nobody)
             </Switch>
           </Flex>
         </FieldSet>

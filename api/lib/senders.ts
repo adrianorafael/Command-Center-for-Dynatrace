@@ -207,6 +207,25 @@ const sendWebhook: SendFn = async (n, provider, cred, deps) => {
   return res.headers.get("x-request-id") ?? undefined;
 };
 
+/**
+ * Custom workflow: runs a workflow the customer owns, passing the notification as run params
+ * (POST /platform/automation/v1/workflows/{id}/run, scope automation:workflows:run). The prefilled example
+ * workflow reads them with the expression {{ execution().params | to_json }} (verified on a trial tenant).
+ * "Sent" means the run was accepted; what the workflow does afterwards is the customer's.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const sendViaWorkflow: SendFn = async (n, provider, _cred, deps) => {
+  const id = (provider.params?.workflowId ?? "").trim();
+  if (!UUID.test(id)) throw new Error("Custom workflow provider needs params.workflowId (the workflow UUID)");
+  const res = await post(deps, `/platform/automation/v1/workflows/${id}/run`, {
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ params: { source: "command-center", version: 1, notification: n } }),
+  });
+  if (!res.ok) throw await httpError(res);
+  const json = (await res.json().catch(() => ({}))) as { id?: string };
+  return json?.id;
+};
+
 export const SENDERS: Record<Channel, SendFn> = {
   sms: sendSms,
   voice: sendVoice,
@@ -241,10 +260,15 @@ export async function sendAll(
         const provider = providers.find((p) => p.id === n.providerId);
         if (!provider) throw new Error(`provider ${n.providerId} is not configured`);
         if (!provider.enabled) throw new Error(`provider ${n.providerId} is disabled`);
-        if (!provider.credentialVaultId) throw new Error(`provider ${provider.id} has no credential vault entry`);
-        if (!creds.has(provider.id)) creds.set(provider.id, await deps.readCredential(provider.credentialVaultId));
-        cred = creds.get(provider.id) ?? null;
-        const ref = await SENDERS[channel](n, provider, cred ?? {}, deps);
+        let ref: string | undefined;
+        if (provider.kind === "workflow") {
+          ref = await sendViaWorkflow(n, provider, {}, deps);
+        } else {
+          if (!provider.credentialVaultId) throw new Error(`provider ${provider.id} has no credential vault entry`);
+          if (!creds.has(provider.id)) creds.set(provider.id, await deps.readCredential(provider.credentialVaultId));
+          cred = creds.get(provider.id) ?? null;
+          ref = await SENDERS[channel](n, provider, cred ?? {}, deps);
+        }
         results.push({ key: n.key, status: "sent", ...(ref ? { providerRef: String(ref).slice(0, 100) } : {}), at });
       } catch (e) {
         results.push({ key: n.key, status: "failed", error: safeError(e, secretValues(cred)), at });

@@ -117,3 +117,16 @@ describe("checked-in workflow template", () => {
     expect(file).not.toMatch(/\.apps\.dynatrace\.com|\.live\.dynatrace\.com/);
   });
 });
+
+describe("custom integration workflow", () => {
+  it("is a SIMPLE on-demand workflow with one HTTP request task forwarding the run params as JSON", async () => {
+    const { buildCustomWorkflow, CUSTOM_WORKFLOW_TASK } = await import("../workflows/definition");
+    const wf = buildCustomWorkflow("my.command.center");
+    expect(wf.type).toBe("SIMPLE");
+    expect(wf).not.toHaveProperty("trigger");
+    const task = (wf.tasks ?? {})[CUSTOM_WORKFLOW_TASK] as { action?: string; input?: Record<string, unknown> };
+    expect(task.action).toBe("dynatrace.automations:http-function");
+    expect(task.input?.payload).toBe("{{ execution().params | to_json }}");
+    expect(String(task.input?.url)).toMatch(/^https:\/\/example\.com\//);
+  });
+});

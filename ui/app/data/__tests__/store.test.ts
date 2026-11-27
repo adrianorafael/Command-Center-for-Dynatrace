@@ -70,3 +70,14 @@ describe("store defaults", () => {
     expect((await store.listNotifications("inc-1")).map((n) => n.incidentId)).toEqual(["inc-1"]);
   });
 });
+
+describe("mergeSettings providers", () => {
+  it("appends providers added by a newer version, switched off, and keeps stored ones", async () => {
+    const { mergeSettings } = await import("../store");
+    const { defaultProviders } = await import("../../domain/validation/defaults");
+    const stored = defaultProviders().filter((p) => p.id !== "custom-workflow").map((p) => (p.id === "slack" ? { ...p, enabled: true, credentialVaultId: "CREDENTIAL_VAULT_ENTRY-0000000000000005" } : p));
+    const merged = mergeSettings({ providers: stored });
+    expect(merged.providers.find((p) => p.id === "slack")?.enabled).toBe(true);
+    expect(merged.providers.find((p) => p.id === "custom-workflow")).toMatchObject({ kind: "workflow", enabled: false });
+  });
+});

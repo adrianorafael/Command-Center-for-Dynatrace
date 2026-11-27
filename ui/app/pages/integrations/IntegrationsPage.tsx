@@ -14,7 +14,7 @@ import { DownloadIcon, KeyIcon, PlayIcon, RefreshIcon, FlowIcon } from "@dynatra
 import type { Timeseries } from "@dynatrace/strato-components/charts";
 import { engineStaleAfterMs, type ProviderConfig, type Settings } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
-import { exportWorkflowDefinition, getEngineStatus, openEngineInstallIntent, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
+import { exportCustomWorkflowDefinition, findCustomWorkflowIds, openCustomWorkflowInstall, exportWorkflowDefinition, getEngineStatus, openEngineInstallIntent, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
 import { Cell, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { Health } from "../../components/StatusIndicator";
@@ -180,6 +180,7 @@ const PARAMS: Record<ProviderConfig["kind"], { key: string; label: string; hint?
   "teams-webhook": [],
   "telegram-bot": [],
   webhook: [{ key: "authHeader", label: "Auth header name (optional)", hint: "Then use a username/password vault entry: username = endpoint URL, password = header value" }],
+  workflow: [],
 };
 
 const VAULT_HINT: Record<ProviderConfig["kind"], string> = {
@@ -189,6 +190,102 @@ const VAULT_HINT: Record<ProviderConfig["kind"], string> = {
   "teams-webhook": "Token entry: the full Teams Workflows webhook URL",
   "telegram-bot": "Token entry: the bot token",
   webhook: "Token entry: the full https URL of your endpoint (or username/password: URL + auth header value)",
+  workflow: "",
+};
+
+/** True when a provider has what it needs to send (vault entry, or the custom workflow's id). */
+function isConfigured(p: ProviderConfig): boolean {
+  return p.kind === "workflow" ? !!p.params["workflowId"]?.trim() : !!p.credentialVaultId;
+}
+
+const download = (fileName: string, json: string) => {
+  const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+/** Custom workflow provider: create the prefilled example workflow, then pick its id. */
+const CustomWorkflowFields = ({ draft, setDraft, error }: { draft: ProviderConfig; setDraft: (p: ProviderConfig) => void; error?: string }) => {
+  const { demo } = useAppData();
+  const [found, setFound] = useState<{ id: string; type?: string }[]>();
+  const [searching, setSearching] = useState(false);
+  const wfId = draft.params["workflowId"] ?? "";
+  const search = () => {
+    setSearching(true);
+    findCustomWorkflowIds()
+      .then(setFound)
+      .catch((e) => notify({ category: "error", type: "critical", title: "Couldn't list workflows", message: errorMessage(e), lifespan: 8000 }))
+      .finally(() => setSearching(false));
+  };
+  const chosen = found?.find((f) => f.id === wfId.trim());
+  return (
+    <Flex flexDirection="column" gap={12}>
+      <Paragraph>
+        Command Center runs a workflow you own once per notification and passes the notification to it. Start from the example: one HTTP request task
+        that forwards the notification as JSON to an example URL. Replace the URL and headers, or replace the task with any action (email, ITSM, chat…).
+      </Paragraph>
+      <List ordered>
+        <Text>Select Create example workflow (or Download example JSON and upload it in the Workflows app), adjust it and save it.</Text>
+        <Text>Select Find my workflow and choose it, or paste its ID from the Workflows app URL.</Text>
+        <Text>Add your endpoint's host to Settings → General → Environment management → External requests, turn the provider on and send a test.</Text>
+      </List>
+      <Flex gap={8} flexWrap="wrap">
+        <Tooltip text={demo ? "Not available in demo mode" : "Opens the Workflows app with the example workflow filled in"}>
+          <Button disabled={demo} onClick={openCustomWorkflowInstall}>
+            <Button.Prefix>
+              <FlowIcon />
+            </Button.Prefix>
+            Create example workflow
+          </Button>
+        </Tooltip>
+        <Button
+          onClick={() => {
+            const { fileName, json } = exportCustomWorkflowDefinition();
+            download(fileName, json);
+          }}
+        >
+          <Button.Prefix>
+            <DownloadIcon />
+          </Button.Prefix>
+          Download example JSON
+        </Button>
+        <Button disabled={demo} loading={searching} onClick={search}>
+          <Button.Prefix>
+            <RefreshIcon />
+          </Button.Prefix>
+          Find my workflow
+        </Button>
+      </Flex>
+      {found && found.length === 0 && <Text textStyle="small">No workflow named “Command Center · Custom integration” was found. Create it first.</Text>}
+      {found &&
+        found.map((f) => (
+          <Flex key={f.id} gap={8} alignItems="center">
+            <Text textStyle="small">
+              {f.id} · {f.type === "SIMPLE" ? "simple workflow" : f.type === "STANDARD" ? "standard workflow (consumes workflow hours)" : "workflow"}
+            </Text>
+            <Button size="condensed" onClick={() => setDraft({ ...draft, params: { ...draft.params, workflowId: f.id } })}>
+              Use
+            </Button>
+          </Flex>
+        ))}
+      {chosen?.type === "STANDARD" && (
+        <MessageContainer variant="warning">
+          <MessageContainer.Description>
+            This workflow is a standard workflow and consumes workflow hours. Upload the example JSON instead (it is a simple workflow) and use that one.
+          </MessageContainer.Description>
+        </MessageContainer>
+      )}
+      <FormField required={draft.enabled}>
+        <Label>Workflow ID</Label>
+        <TextInput value={wfId} onChange={(v) => setDraft({ ...draft, params: { ...draft.params, workflowId: v.trim() } })} placeholder="00000000-0000-0000-0000-000000000000" />
+        <FieldHint>The workflow runs as its own actor: it needs the permissions its task uses. Each notification is one workflow run.</FieldHint>
+        {error && <Text>{error}</Text>}
+      </FormField>
+    </Flex>
+  );
 };
 
 const ProviderSheet = ({ provider, onClose }: { provider?: ProviderConfig; onClose: () => void }) => {
@@ -197,7 +294,11 @@ const ProviderSheet = ({ provider, onClose }: { provider?: ProviderConfig; onClo
   const [busy, setBusy] = useState(false);
   useEffect(() => setDraft(provider), [provider]);
   if (!draft || !data) return null;
-  const errors = validateProvider(draft);
+  const others = data.settings.providers.filter((p) => p.id !== draft.id && p.enabled && p.channel === draft.channel);
+  const errors = [
+    ...validateProvider(draft),
+    ...(draft.enabled && others[0] ? [{ path: "enabled", message: `Only one provider per channel can be on: turn off ${others[0].name} first` }] : []),
+  ];
   const save = () => {
     if (errors.length) return;
     setBusy(true);
@@ -226,6 +327,9 @@ const ProviderSheet = ({ provider, onClose }: { provider?: ProviderConfig; onClo
         <Switch value={draft.enabled} onChange={(v) => setDraft({ ...draft, enabled: v })}>
           Enabled
         </Switch>
+        {draft.kind === "workflow" ? (
+          <CustomWorkflowFields draft={draft} setDraft={setDraft} error={err("params.workflowId")} />
+        ) : (
         <FormField required={draft.enabled}>
           <Label>Credential ID</Label>
           <TextInput
@@ -234,11 +338,12 @@ const ProviderSheet = ({ provider, onClose }: { provider?: ProviderConfig; onClo
             placeholder="CREDENTIAL_VAULT_ENTRY-…"
           />
           <FieldHint>
-            Paste the credential vault ID. {VAULT_HINT[draft.kind]}. Create the entry with scope AppEngine, owned by the workflow actor, with "Owner
-            access only" and "Allow access without app context" both on. The app never asks for, stores, or shows the secret itself.
+            Paste the credential vault ID. {VAULT_HINT[draft.kind]}. Create the entry with scope AppEngine, owned by the engine workflow's actor. The app
+            never asks for, stores, or shows the secret itself.
           </FieldHint>
           {err("credentialVaultId") && <Text>{err("credentialVaultId")}</Text>}
         </FormField>
+        )}
         {PARAMS[draft.kind].map((p) => (
           <FormField key={p.key}>
             <Label>{p.label}</Label>
@@ -247,10 +352,13 @@ const ProviderSheet = ({ provider, onClose }: { provider?: ProviderConfig; onClo
             {err(`params.${p.key}`) && <Text>{err(`params.${p.key}`)}</Text>}
           </FormField>
         ))}
-        <Flex alignItems="center" gap={4}>
-          <KeyIcon />
-          <ExternalLink href="https://docs.dynatrace.com/docs/manage/credential-vault">Manage credentials in the credential vault</ExternalLink>
-        </Flex>
+        {draft.kind !== "workflow" && (
+          <Flex alignItems="center" gap={4}>
+            <KeyIcon />
+            <ExternalLink href="https://docs.dynatrace.com/docs/manage/credential-vault">Manage credentials in the credential vault</ExternalLink>
+          </Flex>
+        )}
+        {err("enabled") && <Text>{err("enabled")}</Text>}
       </Flex>
     </Sheet>
   );
@@ -305,11 +413,36 @@ const TestModal = ({ provider, onClose }: { provider?: ProviderConfig; onClose: 
         </Text>
         <FormField required>
           <Label>Recipient</Label>
-          <TextInput value={address} onChange={setAddress} placeholder={provider.kind === "twilio" ? "+15550100000" : "Chat ID or routing key"} />
+          <TextInput value={address} onChange={setAddress} placeholder={provider.kind === "twilio" ? "+15550100000" : provider.kind === "workflow" ? "Any value: it is passed as notification.to.address" : "Chat ID or routing key"} />
         </FormField>
         {result && <Health status={result.ok ? "good" : "critical"}>{result.text}</Health>}
       </Flex>
     </Modal>
+  );
+};
+
+/** On/off switch on each provider card; opens the setup sheet when the provider can't be turned on yet. */
+const ProviderSwitch = ({ provider, onNeedsSetup }: { provider: ProviderConfig; onNeedsSetup: () => void }) => {
+  const { data, mutate } = useAppData();
+  const [busy, setBusy] = useState(false);
+  if (!data) return null;
+  const toggle = (on: boolean) => {
+    if (on && !isConfigured(provider)) return onNeedsSetup();
+    const clash = data.settings.providers.find((p) => p.id !== provider.id && p.enabled && p.channel === provider.channel);
+    if (on && clash) {
+      notify({ category: "error", type: "warning", title: `Turn off ${clash.name} first`, message: "One provider per channel can be on.", lifespan: 6000 });
+      return;
+    }
+    setBusy(true);
+    const settings = nextRev({ ...data.settings, providers: data.settings.providers.map((p) => (p.id === provider.id ? { ...p, enabled: on } : p)) });
+    mutate((s) => s.saveSettings(settings), `${provider.name} turned ${on ? "on" : "off"}`)
+      .catch(() => undefined)
+      .finally(() => setBusy(false));
+  };
+  return (
+    <Switch value={provider.enabled} disabled={busy} onChange={toggle} aria-label={`${provider.name} on or off`}>
+      {provider.enabled ? "On" : "Off"}
+    </Switch>
   );
 };
 
@@ -321,8 +454,9 @@ const OutboundTab = () => {
   return (
     <Flex flexDirection="column" gap={16}>
       <Paragraph>
-        Notifications leave Dynatrace only through the engine workflow. Each provider references a Credential Vault entry; Twilio (SMS, voice,
-        WhatsApp) and IFTTT are the defaults, the generic webhook covers any other tool.
+        Each integration is used only while it is switched on. Built-in providers are sent by the engine workflow and reference a Credential Vault
+        entry: Twilio (SMS, voice, WhatsApp) and IFTTT are the defaults, and the generic webhook covers any other tool. The custom workflow hands each
+        notification to a workflow you own and edit. One provider per channel can be on.
       </Paragraph>
       <Grid gridTemplateColumns="repeat(auto-fill, minmax(320px, 1fr))" gap={12}>
         {(data?.settings.providers ?? []).map((p) => {
@@ -332,12 +466,17 @@ const OutboundTab = () => {
           return (
             <Surface key={p.id} padding={16}>
               <Flex flexDirection="column" gap={12}>
-                <Flex alignItems="center" gap={8}>
-                  <ChannelIcon channel={p.channel} />
-                  <Heading level={3}>{p.name}</Heading>
+                <Flex alignItems="center" gap={8} justifyContent="space-between">
+                  <Flex alignItems="center" gap={8}>
+                    {p.kind === "workflow" ? <FlowIcon /> : <ChannelIcon channel={p.channel} />}
+                    <Heading level={3}>{p.name}</Heading>
+                  </Flex>
+                  <ProviderSwitch provider={p} onNeedsSetup={() => setConfigure({ ...p, enabled: true })} />
                 </Flex>
-                {!p.enabled || !p.credentialVaultId ? (
+                {!isConfigured(p) ? (
                   <Health status="neutral">Not configured</Health>
+                ) : !p.enabled ? (
+                  <Health status="neutral">Off</Health>
                 ) : failed ? (
                   <Health status="critical">Last delivery failed</Health>
                 ) : (
@@ -404,6 +543,13 @@ const WorkflowsTab = () => {
       .finally(() => setLoading(false));
   }, [settings]);
   useEffect(() => load(), [load]);
+  // The installed workflow's own interval wins (it may have been edited in Workflows or installed by script).
+  useEffect(() => {
+    const found = status?.intervalMinutes;
+    if (!settings || !found || found === settings.engine.intervalMinutes) return;
+    setIntervalMin(String(found));
+    void mutate((st) => st.saveSettings(nextRev({ ...settings, engine: { ...settings.engine, intervalMinutes: found } }))).catch(() => undefined);
+  }, [status?.intervalMinutes, settings, mutate]);
 
   const install = () => {
     if (!settings) return;
@@ -417,7 +563,10 @@ const WorkflowsTab = () => {
   const download = () => {
     if (!settings) return;
     try {
-      const { json, fileName } = exportWorkflowDefinition(settings);
+      const minutes = Number(interval);
+      const { json, fileName } = exportWorkflowDefinition(settings, minutes);
+      if (settings.engine.intervalMinutes !== minutes)
+        void mutate((st) => st.saveSettings(nextRev({ ...settings, engine: { ...settings.engine, intervalMinutes: minutes } })), "Engine interval saved").catch(() => undefined);
       const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
       const a = document.createElement("a");
       a.href = url;

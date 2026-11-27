@@ -1,3 +1,4 @@
+import { describeErrors } from "../../components/format";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -39,6 +40,7 @@ const SCOPES = [
   { scope: "state:app-states:delete", enables: "Delete configuration and the legacy v1 key" },
   { scope: "iam:users:read", enables: "Search tenant users for teams and schedules" },
   { scope: "automation:workflows:read", enables: "Show the engine workflow status" },
+  { scope: "automation:workflows:run", enables: "Run your custom workflow integration once per notification" },
   { scope: "document:documents:read", enables: "List notebooks to attach to war rooms" },
   { scope: "document:documents:write", enables: "Create post-mortem notebooks from war rooms" },
   { scope: "credential-vault:entries:read", enables: "Read provider secrets when the engine sends notifications" },
@@ -114,7 +116,7 @@ export const SettingsPage = () => {
   const errors = validateSettings(draft, { teams: data.teams, policies: data.policies });
   const save = () => {
     if (errors.length) {
-      notify({ category: "error", type: "critical", title: "Fix the settings first", message: errors.map((e) => `${e.path}: ${e.message}`).join("; "), lifespan: 8000 });
+      notify({ category: "error", type: "critical", title: "Fix the settings first", message: describeErrors(errors, "; "), lifespan: 8000 });
       return;
     }
     setBusy(true);
@@ -370,7 +372,7 @@ export const SettingsPage = () => {
             </FormField>
             <FormField>
               <Label>Max notifications per run</Label>
-              <NumberInput value={draft.engine.maxNotificationsPerTick} min={1} max={1000} onChange={(v) => set({ engine: { ...draft.engine, maxNotificationsPerTick: v ?? 100 } })} />
+              <NumberInput value={draft.engine.maxNotificationsPerTick} min={1} max={500} onChange={(v) => set({ engine: { ...draft.engine, maxNotificationsPerTick: v ?? 100 } })} />
             </FormField>
             <FormField>
               <Label>Delivery report timeout (seconds)</Label>

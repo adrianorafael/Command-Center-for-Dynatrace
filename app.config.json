@@ -34,7 +34,11 @@
       },
       {
         "name": "automation:workflows:read",
-        "comment": "Show the engine workflow status (Integrations \u2192 Workflow)"
+        "comment": "Show the engine and custom workflow status (Integrations → Workflows)"
+      },
+      {
+        "name": "automation:workflows:run",
+        "comment": "Run your Custom workflow integration once per notification"
       },
       {
         "name": "document:documents:read",

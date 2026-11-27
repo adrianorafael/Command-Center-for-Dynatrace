@@ -93,7 +93,7 @@ export const OverrideModal = ({ request, onClose }: { request?: { scheduleId?: s
         </FormField>
         <FormField required>
           <Label>Who covers</Label>
-          <UserPicker value={uid} onChange={(u) => setUid(u)} />
+          <UserPicker value={uid} onChange={(u) => setUid(u)} suggested={schedule?.layers.flatMap((l) => l.participants) ?? []} />
           {tried && errors.uid && <FieldError>{errors.uid}</FieldError>}
         </FormField>
         <Flex gap={16} flexWrap="wrap">

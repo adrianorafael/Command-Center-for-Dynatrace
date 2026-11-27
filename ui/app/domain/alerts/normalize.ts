@@ -348,6 +348,7 @@ function normalizeGenericSummary(rec: RawRecord, now: number): Alert | undefined
   const last = asTimestamp(rec["last_seen"]) ?? first;
   const flat: RawRecord = { ...rec };
   if (rec["title"] !== undefined && rec["event.name"] === undefined) flat["event.name"] = rec["title"];
+  if (rec["description"] !== undefined && rec["event.description"] === undefined) flat["event.description"] = rec["description"];
   if (rec["priority"] !== undefined && rec["cc.priority"] === undefined) flat["cc.priority"] = rec["priority"];
   if (rec["service"] !== undefined && rec["cc.service"] === undefined) flat["cc.service"] = rec["service"];
   if (rec["tags"] !== undefined && rec["cc.tags"] === undefined) flat["cc.tags"] = rec["tags"];

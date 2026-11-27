@@ -1,3 +1,4 @@
+import { exportCustomWorkflow, findCustomWorkflows, openCustomWorkflowIntent, type CustomWorkflowInfo } from "../data/workflows/installer";
 /**
  * The one seam between the UI and agents A (pure domain) and B (data/platform).
  * Pages import domain logic and platform calls from here only, so a signature change
@@ -96,8 +97,8 @@ export function newId(prefix: string): string {
  * Engine workflow definition as importable JSON (third-party apps can't hold
  * automation:workflows:write, so admins upload it in the Workflows app).
  */
-export function exportWorkflowDefinition(settings: Settings): { fileName: string; json: string } {
-  return getInstaller().exportDefinition(settings);
+export function exportWorkflowDefinition(settings: Settings, intervalMinutes?: number): { fileName: string; json: string } {
+  return getInstaller().exportDefinition(settings, intervalMinutes);
 }
 
 /** Absolute link to the Workflows app, or undefined outside the platform. */
@@ -111,3 +112,14 @@ export function workflowsAppUrl(): string | undefined {
   }
 }
 export { currentAppId };
+
+/** Custom integration workflow (provider kind "workflow"): prefilled example, created by the person in Workflows. */
+export function openCustomWorkflowInstall(): void {
+  openCustomWorkflowIntent(currentAppId());
+}
+export function exportCustomWorkflowDefinition(): { fileName: string; json: string } {
+  return exportCustomWorkflow(currentAppId());
+}
+export function findCustomWorkflowIds(): Promise<CustomWorkflowInfo[]> {
+  return isDemo() ? Promise.resolve([]) : findCustomWorkflows();
+}

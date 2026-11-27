@@ -46,7 +46,9 @@ export type ProviderKind =
   | "slack-webhook"
   | "teams-webhook"
   | "telegram-bot"
-  | "webhook";
+  | "webhook"
+  /** Hands the notification to a workflow the customer owns (run with params); no vault entry. */
+  | "workflow";
 
 // ─── Alerts (normalised inbound records) ─────────────────────────────────────
 

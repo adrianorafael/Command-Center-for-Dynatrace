@@ -23,7 +23,10 @@ export function useIncidentCommands() {
       } catch {
         return;
       }
-      if (demo) return;
+      if (demo) {
+        showToast({ type: "info", title: "Demo mode: the engine doesn't run", message: "In a real environment the next escalation step is sent right away.", lifespan: 6000 });
+        return;
+      }
       try {
         if (data) await runEngineNow(data.settings, "manual");
       } catch (e) {

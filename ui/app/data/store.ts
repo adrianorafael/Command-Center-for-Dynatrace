@@ -70,7 +70,8 @@ export function mergeSettings(stored: Partial<Settings> | undefined): Settings {
     engine: { ...d.engine, ...stored.engine },
     retention: { ...d.retention, ...stored.retention },
     ui: { ...d.ui, ...stored.ui },
-    providers: stored.providers ?? d.providers,
+    // Stored providers win; providers added by a later version are appended (switched off).
+    providers: stored.providers ? [...stored.providers, ...d.providers.filter((p) => !stored.providers?.some((s) => s.id === p.id))] : d.providers,
   };
   if (!merged.engine.workflowId) merged.engine.workflowId = d.engine.workflowId;
   return merged;

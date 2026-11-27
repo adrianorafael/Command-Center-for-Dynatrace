@@ -86,3 +86,44 @@ export function buildEngineWorkflowCreate(opts: DefinitionOptions): WorkflowCrea
 export function buildEngineWorkflowUpdate(opts: DefinitionOptions): WorkflowUpdate {
   return { ...buildEngineWorkflow(opts), ...(opts.actor ? { actor: opts.actor } : {}) };
 }
+
+// ─── Custom integration workflow (provider kind "workflow") ───────────────────
+
+export const CUSTOM_WORKFLOW_TITLE = "Command Center · Custom integration";
+export const CUSTOM_WORKFLOW_TASK = "send_notification";
+/** Placeholder endpoint the customer replaces in the Workflows app. */
+export const CUSTOM_WORKFLOW_EXAMPLE_URL = "https://example.com/command-center/notifications";
+
+/**
+ * A SIMPLE, on-demand workflow with one HTTP request task, prefilled with example data. Command Center runs it
+ * once per notification with params `{ source, version, notification }`; the task body forwards them as JSON with
+ * the expression `{{ execution().params | to_json }}` (verified on a trial tenant: the receiver got the substituted
+ * JSON, quotes escaped). The customer replaces the URL and headers, or the whole task with any other action
+ * (email, ITSM, chat…), using fields such as `{{ execution().params.notification.subject }}`.
+ */
+export function buildCustomWorkflow(appId: string): Pick<WorkflowCreate, "title" | "description" | "type" | "isPrivate" | "tasks"> {
+  return {
+    title: CUSTOM_WORKFLOW_TITLE,
+    description:
+      `Custom notification channel of the Command Center app (${appId}). Command Center runs this workflow once per ` +
+      "notification. Replace the example URL and headers, or replace the task with any action; the notification is in " +
+      "execution().params.notification (subject, text, priority, to.address, incidentUrl…).",
+    type: "SIMPLE",
+    isPrivate: false,
+    tasks: {
+      [CUSTOM_WORKFLOW_TASK]: {
+        name: CUSTOM_WORKFLOW_TASK,
+        action: "dynatrace.automations:http-function",
+        description: "Example: forward the notification as JSON. Replace the URL with your endpoint.",
+        input: {
+          url: CUSTOM_WORKFLOW_EXAMPLE_URL,
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Example-Header": "replace-or-remove" },
+          payload: "{{ execution().params | to_json }}",
+        },
+        position: { x: 0, y: 1 },
+        predecessors: [],
+      },
+    },
+  };
+}

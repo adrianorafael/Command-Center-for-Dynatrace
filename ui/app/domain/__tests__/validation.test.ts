@@ -33,3 +33,20 @@ describe("validation", () => {
     expect(looksLikeSecret("command_center_alert")).toBe(false);
   });
 });
+
+describe("provider validation", () => {
+  it("custom workflow needs a workflow UUID, not a vault entry; one enabled provider per channel; auto-refresh Off is valid", () => {
+    const s = defaultSettings();
+    s.ui.autoRefreshSec = 0;
+    expect(validateSettings(s)).toEqual([]);
+    const cw = s.providers.find((p) => p.id === "custom-workflow")!;
+    cw.enabled = true;
+    expect(paths(validateSettings(s))).toContain("providers[8].params.workflowId");
+    cw.params.workflowId = "00000000-0000-4000-8000-0000000000c1";
+    expect(validateSettings(s)).toEqual([]);
+    const wh = s.providers.find((p) => p.id === "webhook")!;
+    wh.enabled = true;
+    wh.credentialVaultId = "CREDENTIAL_VAULT_ENTRY-0000000000000009";
+    expect(validateSettings(s).some((e) => /Only one provider per channel/.test(e.message))).toBe(true);
+  });
+});

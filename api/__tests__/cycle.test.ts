@@ -96,6 +96,24 @@ describe("senders", () => {
     expect((f.mock.calls[0][1]?.headers as Record<string, string>)["Authorization"]).toBe("Bearer abc");
   });
 
+  it("custom workflow runs the customer's workflow with the notification as params, without a vault entry", async () => {
+    const f = okFetch({ id: "exec-1" });
+    const d = deps(f, {});
+    const wf = "00000000-0000-4000-8000-0000000000c1";
+    const r = await sendAll({ webhook: [note({ channel: "webhook", providerId: "custom-workflow" })] }, [provider({ id: "custom-workflow", channel: "webhook", kind: "workflow", credentialVaultId: undefined, params: { workflowId: wf } })], NOW + 60_000, d);
+    expect(f.mock.calls[0][0]).toBe(`/platform/automation/v1/workflows/${wf}/run`);
+    expect(JSON.parse(String(f.mock.calls[0][1]?.body))).toMatchObject({ params: { source: "command-center", version: 1, notification: { key: note().key } } });
+    expect(d.readCredential).not.toHaveBeenCalled();
+    expect(r[0]).toMatchObject({ status: "sent", providerRef: "exec-1" });
+  });
+
+  it("custom workflow without a valid workflow id fails without calling anything", async () => {
+    const f = okFetch({});
+    const r = await sendAll({ webhook: [note({ channel: "webhook", providerId: "cw" })] }, [provider({ id: "cw", channel: "webhook", kind: "workflow", params: { workflowId: "not-a-uuid" } })], NOW + 60_000, deps(f, {}));
+    expect(f).not.toHaveBeenCalled();
+    expect(r[0].status).toBe("failed");
+  });
+
   it("never leaks secrets or URLs in error text", async () => {
     expect(safeError(new Error("bad token secret-token at https://api.twilio.com/x"), ["secret-token"])).toBe("bad token *** at <url>");
     const f = vi.fn(async () => new Response("echo secret-token", { status: 401 }));

@@ -9,15 +9,16 @@
  *   JSON download (Workflows → Upload) and scripts/install-workflow.mjs for admins with a platform token.
  * - Status: workflowsClient.getWorkflow / getWorkflows (automation:workflows:read). Simple workflows keep only
  *   execution metadata, so engine health comes from the app's own heartbeat (hb.engine), not execution lists.
- * - On-demand runs ("Run engine now", tests) call the app function `engine-run` (same code as the action), so the
- *   app no longer needs automation:workflows:run.
+ * - On-demand runs ("Run engine now", tests) call the app function `engine-run` (same code as the action).
+ * - Custom integration: a customer-owned simple workflow, created the same way (intent / JSON), that the engine runs
+ *   once per notification (automation:workflows:run, api/lib/senders.ts).
  */
 
 import { workflowsClient } from "@dynatrace-sdk/client-automation";
 import { functions } from "@dynatrace-sdk/app-utils";
 import { sendIntent } from "@dynatrace-sdk/navigation";
 import type { EngineTickRequest, Settings } from "../../domain/contracts";
-import { ENGINE_DEFINITION_VERSION, ENGINE_WORKFLOW_TITLE, actionId, buildEngineWorkflow, buildEngineWorkflowCreate } from "./definition";
+import { CUSTOM_WORKFLOW_TITLE, ENGINE_DEFINITION_VERSION, ENGINE_WORKFLOW_TITLE, actionId, buildCustomWorkflow, buildEngineWorkflow, buildEngineWorkflowCreate } from "./definition";
 
 export interface ExecutionSummary {
   id: string;
@@ -41,6 +42,8 @@ export interface EngineWorkflowStatus {
   isDeployed?: boolean;
   /** "SIMPLE" (no workflow hours) or "STANDARD". */
   type?: string;
+  /** Interval of the installed workflow's schedule trigger, in minutes. */
+  intervalMinutes?: number;
   /** True when the workflow's task is this app's run-engine action. */
   usesAction?: boolean;
   actor?: string;
@@ -65,7 +68,7 @@ export interface EngineInstaller {
    */
   install(settings: Settings, opts?: { actor?: string }): Promise<InstallOutcome>;
   /** The engine workflow JSON for this app id and these settings (no secrets). */
-  exportDefinition(settings: Settings): WorkflowExport;
+  exportDefinition(settings: Settings, intervalMinutes?: number): WorkflowExport;
   /** Path of the Workflows app to import the JSON (relative to the environment). */
   workflowsAppPath(): string;
   getStatus(settings: Settings): Promise<EngineWorkflowStatus>;
@@ -111,6 +114,7 @@ interface WorkflowLike {
   actor?: string | null;
   type?: string;
   tasks?: Record<string, { action?: string }>;
+  trigger?: { schedule?: { trigger?: { intervalMinutes?: number } | null } | null } | null;
   lastExecution?: ExecutionLike | null;
 }
 
@@ -164,11 +168,32 @@ export function parseDefinitionVersion(description: string | undefined): number 
   return m ? Number(m[1]) : undefined;
 }
 
-export function exportEngineDefinition(appId: string, settings: Settings): WorkflowExport {
+export function exportEngineDefinition(appId: string, settings: Settings, intervalMinutes?: number): WorkflowExport {
   return {
     fileName: "command-center-engine.workflow.json",
-    json: `${JSON.stringify(buildEngineWorkflowCreate({ appId, settings }), null, 2)}\n`,
+    json: `${JSON.stringify(buildEngineWorkflowCreate({ appId, settings, intervalMinutes }), null, 2)}\n`,
   };
+}
+
+/** The prefilled custom-integration workflow as a file for Workflows → Upload. */
+export function exportCustomWorkflow(appId: string): WorkflowExport {
+  return { fileName: "command-center-custom-integration.workflow.json", json: `${JSON.stringify(buildCustomWorkflow(appId), null, 2)}\n` };
+}
+
+/** Opens the Workflows app with the custom-integration workflow prefilled (create workflow intent). */
+export function openCustomWorkflowIntent(appId: string): void {
+  sendIntent(buildCustomWorkflow(appId));
+}
+
+export interface CustomWorkflowInfo {
+  id: string;
+  type?: string;
+}
+
+/** Finds custom-integration workflows by title (newest first), to offer their id. */
+export async function findCustomWorkflows(client: AutomationClientLike = defaultClient): Promise<CustomWorkflowInfo[]> {
+  const list = await client.getWorkflows({ search: CUSTOM_WORKFLOW_TITLE, limit: 20 });
+  return list.results.filter((w) => w.title === CUSTOM_WORKFLOW_TITLE).map((w) => ({ id: w.id, ...(w.type ? { type: w.type } : {}) }));
 }
 
 export function createWorkflowInstaller(appId: string, client: AutomationClientLike = defaultClient, runner: EngineRunner = defaultRunner): EngineInstaller {
@@ -194,8 +219,8 @@ export function createWorkflowInstaller(appId: string, client: AutomationClientL
       return Promise.reject(new InstallNotPermittedError());
     },
 
-    exportDefinition(settings) {
-      return exportEngineDefinition(appId, settings);
+    exportDefinition(settings, intervalMinutes) {
+      return exportEngineDefinition(appId, settings, intervalMinutes);
     },
 
     workflowsAppPath: () => WORKFLOWS_APP_PATH,
@@ -217,6 +242,7 @@ export function createWorkflowInstaller(appId: string, client: AutomationClientL
         isDeployed: wf.isDeployed,
         type: wf.type,
         usesAction,
+        ...(wf.trigger?.schedule?.trigger?.intervalMinutes ? { intervalMinutes: wf.trigger.schedule.trigger.intervalMinutes } : {}),
         actor: wf.actor ?? undefined,
         lastExecution: wf.lastExecution ? summarize(wf.lastExecution) : recent[0],
         recentExecutions: recent,
@@ -239,8 +265,8 @@ export function createDemoInstaller(appId = "my.command.center"): EngineInstalle
     install() {
       return Promise.reject(new InstallNotPermittedError());
     },
-    exportDefinition(settings) {
-      return exportEngineDefinition(appId, settings);
+    exportDefinition(settings, intervalMinutes) {
+      return exportEngineDefinition(appId, settings, intervalMinutes);
     },
     workflowsAppPath: () => WORKFLOWS_APP_PATH,
     openInstallIntent() {

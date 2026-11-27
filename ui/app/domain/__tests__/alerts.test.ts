@@ -157,3 +157,12 @@ describe("dedup", () => {
     expect(r.alerts[0]!.title).toBe("new");
   });
 });
+
+describe("generic events summary row", () => {
+  it("keeps the description so routing rules can match it", async () => {
+    const { normalizeGenericEvents } = await import("../alerts/normalize");
+    const [a] = normalizeGenericEvents([{ "cc.dedup_key": "disk-db-01", last_action: "trigger", title: "Disk almost full", description: "Free space 3%", first_seen: "2026-11-27T01:00:00Z", last_seen: "2026-11-27T01:00:00Z" }], Date.parse("2026-11-27T01:05:00Z"));
+    expect(a?.description).toBe("Free space 3%");
+    expect(a?.title).toBe("Disk almost full");
+  });
+});

@@ -158,7 +158,7 @@ export const PoliciesPage = () => {
         onDismiss={() => setToDelete(undefined)}
         onConfirm={() => (toDelete ? mutate((s) => s.deletePolicy(toDelete.id), "Policy deleted").catch(() => undefined) : undefined)}
       >
-        Incidents routed to this policy fall back to the default policy from Settings.
+        Incidents routed to this policy fall back to their team's default policy, or else the default policy from Settings.
       </ConfirmModal>
     </PageLayout.Content>
   );

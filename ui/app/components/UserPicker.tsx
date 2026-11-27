@@ -31,6 +31,7 @@ export const UserPicker = ({
   name = "user",
   disabled,
   ariaLabel = "Search tenant users",
+  suggested = [],
 }: {
   value: string | null;
   onChange: (uid: string | null, user?: DirectoryUser) => void;
@@ -38,6 +39,8 @@ export const UserPicker = ({
   name?: string;
   disabled?: boolean;
   ariaLabel?: string;
+  /** User ids offered before the person types (for example the schedule's participants). */
+  suggested?: string[];
 }) => {
   const { users, userName, rememberUsers } = useAppData();
   const [q, setQ] = useState("");
@@ -72,7 +75,9 @@ export const UserPicker = ({
     return () => window.clearTimeout(t);
   }, [q]);
 
-  const visible = results.filter((u) => !exclude.includes(u.uid));
+  const typing = q.trim().length >= MIN_CHARS;
+  const suggestions: DirectoryUser[] = typing ? [] : [...new Set(suggested)].map((uid) => users.get(uid) ?? { uid, name: userName(uid) });
+  const visible = (typing ? results : suggestions).filter((u) => !exclude.includes(u.uid));
   // Keep the selected user as an option so the trigger can show its name.
   const selectedKnown = value && !visible.some((u) => u.uid === value) ? (users.get(value) ?? { uid: value, name: userName(value) }) : undefined;
   const options = selectedKnown ? [selectedKnown, ...visible] : visible;

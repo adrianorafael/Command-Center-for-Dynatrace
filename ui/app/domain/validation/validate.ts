@@ -237,6 +237,8 @@ export function looksLikeSecret(value: string): boolean {
   return false;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function validateProvider(p: ProviderConfig, prefix = ""): ValidationError[] {
   const c = new Collector();
   c.id(`${prefix}id`, p.id);
@@ -245,8 +247,13 @@ export function validateProvider(p: ProviderConfig, prefix = ""): ValidationErro
   if (p.credentialVaultId && !VAULT_ID_RE.test(p.credentialVaultId)) {
     c.add(`${prefix}credentialVaultId`, "Use a Credential Vault entry id (CREDENTIAL_VAULT_ENTRY-… or CREDENTIALS_VAULT-…)");
   }
-  if (p.enabled && !p.credentialVaultId) c.add(`${prefix}credentialVaultId`, "Required to enable the provider");
+  if (p.kind === "workflow") {
+    const wf = (p.params["workflowId"] ?? "").trim();
+    if (wf && !UUID_RE.test(wf)) c.add(`${prefix}params.workflowId`, "Use the workflow's ID (a UUID, shown in the Workflows app URL)");
+    if (p.enabled && !wf) c.add(`${prefix}params.workflowId`, "Required to enable the provider");
+  } else if (p.enabled && !p.credentialVaultId) c.add(`${prefix}credentialVaultId`, "Required to enable the provider");
   for (const [k, v] of Object.entries(p.params)) {
+    if (k === "workflowId" && UUID_RE.test(v.trim())) continue;
     if (looksLikeSecret(v)) c.add(`${prefix}params.${k}`, "Looks like a secret or URL — store it in the Credential Vault");
   }
   if (p.kind === "twilio" && p.enabled && p.params["from"] && !E164_RE.test(p.params["from"].replace(/^whatsapp:/, ""))) {
@@ -285,11 +292,19 @@ export function validateSettings(s: Settings, ctx: RefContext = {}): ValidationE
   if (!(Number.isInteger(s.retention.archiveDays) && s.retention.archiveDays >= 1 && s.retention.archiveDays <= 90)) {
     c.add("retention.archiveDays", "Between 1 and 90 days (App State TTL limit)");
   }
-  if (!(s.ui.autoRefreshSec >= 5 && s.ui.autoRefreshSec <= 3600)) c.add("ui.autoRefreshSec", "Between 5 and 3600 seconds");
+  if (!(s.ui.autoRefreshSec === 0 || (s.ui.autoRefreshSec >= 5 && s.ui.autoRefreshSec <= 3600))) c.add("ui.autoRefreshSec", "Off, or between 5 and 3600 seconds");
   if (s.ui.timeZone && !isValidTimeZone(s.ui.timeZone)) c.add("ui.timeZone", "Unknown IANA time zone");
   dupIds(c, "providers", s.providers.map((p) => p.id));
   const errors = [...c.errors];
   s.providers.forEach((p, i) => errors.push(...validateProvider(p, `providers[${i}].`)));
+  // The engine sends each channel through the first enabled provider of that channel: allow one.
+  const byChannel = new Map<string, string>();
+  s.providers.forEach((p, i) => {
+    if (!p.enabled) return;
+    const other = byChannel.get(p.channel);
+    if (other) errors.push({ path: `providers[${i}].enabled`, message: `Only one provider per channel can be on: turn off ${other} first` });
+    else byChannel.set(p.channel, p.name);
+  });
   return errors;
 }
 

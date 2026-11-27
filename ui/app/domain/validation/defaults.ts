@@ -22,6 +22,7 @@ export function defaultProviders(): ProviderConfig[] {
     { id: "teams", name: "Microsoft Teams", channel: "teams", kind: "teams-webhook", enabled: false, params: {} },
     { id: "telegram", name: "Telegram", channel: "telegram", kind: "telegram-bot", enabled: false, params: {} },
     { id: "webhook", name: "Generic webhook", channel: "webhook", kind: "webhook", enabled: false, params: {} },
+    { id: "custom-workflow", name: "Custom workflow", channel: "webhook", kind: "workflow", enabled: false, params: { workflowId: "" } },
   ];
 }
 

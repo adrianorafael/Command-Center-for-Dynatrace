@@ -280,7 +280,10 @@ export const RulesTab = ({ onlyService }: { onlyService?: string }) => {
         onSave={(r) => {
           const exists = rules.some((x) => x.id === r.id);
           if (!exists) markCreated("rule", r.id);
-          return saveRules(exists ? rules.map((x) => (x.id === r.id ? r : x)) : [...rules, r], exists ? "Rule saved" : "Rule created");
+          // A new rule goes above the first catch-all (a rule without conditions), otherwise it could never match.
+          const catchAll = rules.findIndex((x) => x.enabled && x.conditions.length === 0);
+          const added = catchAll < 0 ? [...rules, r] : [...rules.slice(0, catchAll), r, ...rules.slice(catchAll)];
+          return saveRules(exists ? rules.map((x) => (x.id === r.id ? r : x)) : added, exists ? "Rule saved" : catchAll < 0 ? "Rule created" : "Rule created above the catch-all rule");
         }}
       />
       <ConfirmModal

@@ -1,3 +1,4 @@
+import { describeErrors } from "../../components/format";
 import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useState } from "react";
@@ -21,10 +22,10 @@ const ADDRESS_HINT: Record<Channel, string> = {
   voice: "Phone in E.164, including the country code, for example +43…",
   whatsapp: "Phone in E.164, including the country code, for example +43…",
   telegram: "Telegram chat ID",
-  slack: "Slack member ID or channel",
-  teams: "Microsoft Teams user or channel reference",
-  ifttt: "IFTTT routing key (event name suffix)",
-  webhook: "Routing key passed to the generic webhook",
+  slack: "Any label, for example @ana: the Slack webhook decides the channel; the message shows the person's name",
+  teams: "Any label: the Teams webhook decides the chat or channel; the card shows the person's name",
+  ifttt: "Any label: your IFTTT applet decides where the message goes",
+  webhook: "Routing key passed to your webhook or custom workflow as notification.to.address",
 };
 
 /** Contact methods + personal notification rules for one person (DESIGN §7.2). */
@@ -92,7 +93,7 @@ export const ContactSheet = ({ uid, show, onClose }: { uid?: string; show: boole
         {tried && errors.length > 0 && (
           <MessageContainer variant="critical">
             <MessageContainer.Title>To save these contact methods:</MessageContainer.Title>
-            <MessageContainer.Description>{errors.map((e) => `· ${e.message} (${e.path})`).join("  ")}</MessageContainer.Description>
+            <MessageContainer.Description>{describeErrors(errors)}</MessageContainer.Description>
           </MessageContainer>
         )}
         {draft.methods.map((m, i) => {
