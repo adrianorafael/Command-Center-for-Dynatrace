@@ -21,7 +21,7 @@ import type { Schedule } from "../domain/contracts";
 import { civilDate, daysRange, isInDays, onCallHoursByUser, placeSpan, positionIn, scheduleTimeline, type ShiftSegment, type WeekDay } from "../hooks/domain";
 import { useAppData } from "../hooks/AppDataContext";
 import { gapsOf } from "./ShiftGantt";
-import { formatDayTime, formatDuration, formatTime, plural, zoneAbbr } from "./format";
+import { formatDayDateTime, formatDayTime, formatDuration, formatTime, plural, zoneAbbr } from "./format";
 
 /** A bar in a week row: a rotation shift, an override, or a gap (nobody on call). */
 interface WeekBar {
@@ -66,6 +66,8 @@ const BAR_STYLE: Record<WeekBar["kind"], React.CSSProperties> = {
 };
 
 const TRACK_HEIGHT = 28;
+/** Day lines, today's column and the Now line reach past the bar track to fill the row's height. */
+const GRID_BLEED = 16;
 /** Look-around for shifts that cross the week's edges (a weekly rotation lasts 7 days). */
 const TIMELINE_MARGIN_MS = 8 * 86_400_000;
 
@@ -98,7 +100,7 @@ const BarTooltip = ({ bar, name, tz }: { bar: WeekBar; name: string; tz: string 
   <Flex flexDirection="column" gap={2}>
     <Text textStyle="base-emphasized">{bar.kind === "gap" ? "No one on call" : name}</Text>
     <Text textStyle="small">
-      {formatDayTime(bar.from, tz)} – {formatDayTime(bar.to, tz)} {zoneAbbr(bar.from, tz)} ({formatDuration(bar.to - bar.from)})
+      {formatDayDateTime(bar.from, tz)} – {formatDayDateTime(bar.to, tz)} {zoneAbbr(bar.from, tz)} ({formatDuration(bar.to - bar.from)})
     </Text>
     {bar.kind === "override" && <Text textStyle="small">Override</Text>}
     {bar.kind === "shift" && bar.layerName && <Text textStyle="small">Layer: {bar.layerName}</Text>}
@@ -111,7 +113,9 @@ function barLabel(bar: WeekBar, name: string, showNames: boolean, tz: string): s
   // A person row already says who it is, so its bars show when instead: "08:00–20:00" within a
   // day, "Sun 08:00 – Tue 08:00" when the shift spans days.
   const sameDay = civilDate(bar.from, tz).day === civilDate(bar.to - 1, tz).day && bar.to - bar.from < 86_400_000;
-  const when = sameDay ? `${formatTime(bar.from, tz)}–${formatTime(bar.to, tz)}` : `${formatDayTime(bar.from, tz)} – ${formatDayTime(bar.to, tz)}`;
+  // A week-long shift would read "Fri 07:00 – Fri 07:00": add the date from six days on.
+  const fmt = bar.to - bar.from >= 6 * 86_400_000 ? formatDayDateTime : formatDayTime;
+  const when = sameDay ? `${formatTime(bar.from, tz)}–${formatTime(bar.to, tz)}` : `${fmt(bar.from, tz)} – ${fmt(bar.to, tz)}`;
   const text = showNames ? name : when;
   return bar.kind === "override" ? `${text} · override` : text;
 }
@@ -136,14 +140,14 @@ const WeekTrack = ({
   const n = days.length;
   const todayIdx = days.findIndex((d) => d.key === today);
   return (
-    <div style={{ position: "relative", height: TRACK_HEIGHT, width: "100%" }}>
+    <div style={{ position: "relative", height: TRACK_HEIGHT, width: "100%", marginBlock: 8 }}>
       {todayIdx >= 0 && (
         <div
           aria-hidden
           style={{
             position: "absolute",
-            top: -8,
-            bottom: -8,
+            top: -GRID_BLEED,
+            bottom: -GRID_BLEED,
             left: `${(todayIdx / n) * 100}%`,
             width: `${100 / n}%`,
             background: Colors.Background.Container.Primary.Default,
@@ -154,7 +158,7 @@ const WeekTrack = ({
         <div
           key={d.key}
           aria-hidden
-          style={{ position: "absolute", top: -8, bottom: -8, left: `${((i + 1) / n) * 100}%`, borderLeft: `1px solid ${Colors.Border.Neutral.Default}` }}
+          style={{ position: "absolute", top: -GRID_BLEED, bottom: -GRID_BLEED, left: `${((i + 1) / n) * 100}%`, borderLeft: `1px solid ${Colors.Border.Neutral.Default}` }}
         />
       ))}
       {bars.map((bar) => {
@@ -197,8 +201,8 @@ const WeekTrack = ({
           aria-label="Now"
           style={{
             position: "absolute",
-            top: -8,
-            bottom: -8,
+            top: -GRID_BLEED,
+            bottom: -GRID_BLEED,
             left: `${positionIn(now, days) * 100}%`,
             borderLeft: `2px solid ${Colors.Border.Critical.Accent}`,
             pointerEvents: "none",
@@ -336,9 +340,8 @@ export const WeekShiftGantt = ({
         width: "1fr",
         minWidth: 640,
         cell: ({ rowData }) => (
-          <DataTable.DefaultCell>
-            <WeekTrack bars={rowData.bars} days={days} today={today} now={now} tz={timeZone} showNames={!!rowData.subRows} />
-          </DataTable.DefaultCell>
+          // No DefaultCell here: its inset would shift the day grid away from the header labels.
+          <WeekTrack bars={rowData.bars} days={days} today={today} now={now} tz={timeZone} showNames={!!rowData.subRows} />
         ),
       },
     ],

@@ -47,7 +47,7 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 - **Cost driver:** the engine — a SIMPLE workflow (no workflow hours) whose single task is this app's custom action
   `run-engine` (`actions/run-engine.action.ts`), every 1, 2 or 5 minutes: one function invocation and 1–8 Grail queries
   per run. Measured on a trial tenant: one `ACTION` billing event per run. The UI runs no DQL; it polls App State
-  (default every 30 s). Never reintroduce a standard workflow or Run JavaScript tasks for the engine.
+  (default every minute). Never reintroduce a standard workflow or Run JavaScript tasks for the engine.
 - **Every workflow task execution is one billed function call, whatever the trigger** (Dynatrace licensing docs;
   measured for this app's actions and for Dynatrace's own HTTP request action). So the engine sends notifications
   itself; an integration's own workflow is opt-in (one more call per notification). Do not add workflows "for

@@ -182,9 +182,10 @@ export const ConsolePage = () => {
   // Everyone who acknowledged an incident in the loaded data (from `all`, so a chosen person never drops out of the list).
   const ackers = useMemo(() => {
     const uids = new Set<string>();
-    all.forEach((i) => i.acknowledgedBy && i.acknowledgedBy !== currentUser.uid && uids.add(i.acknowledgedBy));
+    // The current user stays listed by name too (as in Assignee), so a shared `ackby=<uid>` link has a matching option.
+    all.forEach((i) => i.acknowledgedBy && uids.add(i.acknowledgedBy));
     return [...uids].map((u) => ({ uid: u, name: userName(u) })).sort((a, b) => a.name.localeCompare(b.name));
-  }, [all, currentUser.uid, userName]);
+  }, [all, userName]);
   const maxSteps = Math.max(1, ...(data?.policies ?? []).map((p) => p.steps.length));
 
   return (
