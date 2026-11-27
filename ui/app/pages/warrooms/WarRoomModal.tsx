@@ -10,6 +10,7 @@ import { validateWarRoom, type WarRoom, type WarRoomLink } from "../../domain/wa
 import { useAppData } from "../../hooks/AppDataContext";
 import { newId } from "../../hooks/domain";
 import { FieldError, FieldHint } from "../../components/FieldHint";
+import { NewItemHighlight } from "../../components/NewItemHighlight";
 import { notify } from "../../hooks/notifications";
 import { errorMessage } from "../../components/format";
 import { createPostmortemNotebook, listNotebooks, type NotebookRef } from "../../data/notebooks";
@@ -57,16 +58,20 @@ export const WarRoomModal = ({ request, onClose }: { request: WarRoomRequest; on
   const [notebooks, setNotebooks] = useState<NotebookRef[]>();
   const [notebookError, setNotebookError] = useState<string>();
   const [creating, setCreating] = useState(false);
+  /** Document id of the notebook added by the last click: its row is highlighted. */
+  const [justAdded, setJustAdded] = useState<string>();
   useEffect(() => {
     listNotebooks()
       .then(setNotebooks)
       .catch((e: unknown) => setNotebookError(errorMessage(e)));
   }, []);
   const errors = validateWarRoom(room);
-  const addNotebook = (n: NotebookRef) =>
+  const addNotebook = (n: NotebookRef) => {
+    setJustAdded(n.id);
     setRoom((r) =>
       r.notebooks.some((x) => x.documentId === n.id) ? r : { ...r, notebooks: [...r.notebooks, { title: n.name, url: n.url, documentId: n.id }] },
     );
+  };
   const createNotebook = () => {
     setCreating(true);
     const ids = room.incidentIds.map((id) => incidents.find((i) => i.id === id)?.alert.displayId).filter((x): x is string => !!x);
@@ -185,7 +190,8 @@ export const WarRoomModal = ({ request, onClose }: { request: WarRoomRequest; on
             </FieldHint>
           )}
           {room.notebooks.map((n, i) => n.documentId ? (
-            <Flex key={i} gap={8} alignItems="center" justifyContent="space-between">
+            <NewItemHighlight key={n.documentId} active={n.documentId === justAdded}>
+            <Flex gap={8} alignItems="center" justifyContent="space-between">
               <Flex gap={8} alignItems="center" style={{ minWidth: 0 }}>
                 <DescriptionIcon />
                 <Text>{n.title}</Text>
@@ -199,6 +205,7 @@ export const WarRoomModal = ({ request, onClose }: { request: WarRoomRequest; on
                 </Button.Prefix>
               </Button>
             </Flex>
+            </NewItemHighlight>
           ) : (
             <Flex key={i} gap={8} alignItems="flex-start">
               <Flex flexDirection="column" style={{ flex: "0 0 30%" }}>
