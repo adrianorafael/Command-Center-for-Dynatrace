@@ -117,7 +117,7 @@ claude mcp add dt-app-mcp -- npx -y dt-app-mcp
 ```
 
 **Knowledge is not execution.** A query written with help from `get_dql_knowledgebase` has still never run.
-Current status: Q1, Q2 and Q4 executed on a tenant; Q3 (generic events) parses but is ⚠️ not validated with data.
+Current status: Q1–Q4 executed on a trial tenant, Q3 with data (generic events trigger and resolve).
 
 ## Dynatrace knowledge: reference, never vendor
 
@@ -166,7 +166,8 @@ Before every commit: `bash <skill>/assets/scripts/scan-secrets.sh` on the workin
   on status.
 - Grail timestamps arrive as ISO strings with nanoseconds; `event.end` is null while ACTIVE; `event.severity` can be null.
 - Never resolve an incident because it vanished from a result set — only on an explicit CLOSED/resolve record.
-- A private workflow is visible to its owner only, so on-demand runs (escalate now, tests) are owner-only.
+- The Workflows create-workflow intent payload has no `type`: the result may be a standard workflow (the Workflows tab
+  warns). The JSON upload and `scripts/install-workflow.mjs` carry `"type": "SIMPLE"`.
 - `TimeseriesChart` needs `Date` objects, not ISO strings.
 - Fixtures must be synthetic and pass the secret scanner (no emails, no real-looking entity IDs or tenant IDs).
 - No `.env` exists in this repository; scripts read `DT_ENVIRONMENT` / `DT_PLATFORM_TOKEN` from the shell only.
