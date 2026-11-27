@@ -119,7 +119,8 @@ Measured on the trial environment with test problems (2026-11-27):
 | --- | --- |
 | The trigger fires after the problem event | 1–4 s for a close or a first-seen update, 11–12 s for a new problem |
 | The problem record can be queried in Grail | About 30–40 s after its timestamp. Runs 24 s and 29 s after it did not find the record yet. |
-| Incident created by the problem-triggered run | 34 s, 40 s and 34 s after the problem's timestamp, in three tests. The scheduled run (1-minute interval) would have created them 50 s, 34 s and 45 s later. |
+| Incident created by the problem-triggered run | 34 s, 40 s and 34 s after the problem's timestamp, in three tests. Counted from posting the test event: 49 s, 65 s and 54 s, because Davis opened the problem 15–25 s after the event. |
+| Compared with scheduled runs alone | The gain is between nothing and one interval: without the trigger, an incident waits for the first scheduled run after the problem is readable. In these tests, timed so that a scheduled run (1-minute interval) fell just before that moment, it was 50 s, 34 s and 45 s. |
 | Incident resolved after the problem closed | Within 30 s of the close event (three closes) |
 | Routing | The incident got its service's team from `cc.service`: the problem's Davis event was readable by then |
 | Billing | One `ACTION` invocation per firing (runs of 23–30 s). The trigger fired once when the problem opened and once when it closed, not on the update in between. |

@@ -24,8 +24,8 @@ later.
   8,640 scheduled runs a month instead of 43,200, plus about two runs per problem). Install it from **Integrations →
   Workflows**, with the downloaded JSON, or with `node scripts/install-workflow.mjs --on-problem`. Measured on a trial
   tenant: the trigger fired 1–12 s after the problem event; the incident was created 34–40 s after the problem's
-  timestamp (the 1-minute scheduled run would have created it 34–50 s later) and resolved within 30 s of the close;
-  one billed invocation per firing. No provider was switched on in those tests, so no notification was sent by such
+  timestamp (49–65 s after the test event was posted) and resolved within 30 s of the close; one billed invocation
+  per firing. Compared with scheduled runs alone the gain is between nothing and one interval. No provider was switched on in those tests, so no notification was sent by such
   a run. The engine workflow stays installed: escalation steps, snooze ends and retries need its clock.
 - **Configure → Delivery** for each built-in integration: *By the engine* (default) or *Through its own workflow*.
 

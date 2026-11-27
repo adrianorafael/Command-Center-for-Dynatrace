@@ -122,7 +122,8 @@ Medido no ambiente trial com problemas de teste (2026-11-27):
 | --- | --- |
 | O gatilho dispara depois do evento do problema | 1–4 s para um fechamento ou uma atualização vista pela primeira vez, 11–12 s para um problema novo |
 | O registro do problema pode ser consultado no Grail | Cerca de 30–40 s depois do timestamp dele. Execuções 24 s e 29 s depois ainda não encontraram o registro. |
-| Incidente criado pela execução acionada pelo problema | 34 s, 40 s e 34 s depois do timestamp do problema, em três testes. A execução agendada (intervalo de 1 minuto) os teria criado 50 s, 34 s e 45 s mais tarde. |
+| Incidente criado pela execução acionada pelo problema | 34 s, 40 s e 34 s depois do timestamp do problema, em três testes. Contando do envio do evento de teste: 49 s, 65 s e 54 s, porque o Davis abriu o problema 15–25 s depois do evento. |
+| Comparado só com as execuções agendadas | O ganho fica entre nada e um intervalo: sem o gatilho, um incidente espera a primeira execução agendada depois que o problema fica legível. Nesses testes, cronometrados para que uma execução agendada (intervalo de 1 minuto) caísse logo antes desse momento, ele foi de 50 s, 34 s e 45 s. |
 | Incidente resolvido depois que o problema fechou | Em até 30 s do evento de fechamento (três fechamentos) |
 | Roteamento | O incidente recebeu a equipe do serviço a partir de `cc.service`: o evento do Davis do problema já podia ser lido |
 | Billing | Uma invocação `ACTION` por disparo (execuções de 23–30 s). O gatilho disparou uma vez quando o problema abriu e uma vez quando fechou, e não na atualização entre os dois. |
