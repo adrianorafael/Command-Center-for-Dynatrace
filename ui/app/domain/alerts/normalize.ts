@@ -1,8 +1,8 @@
 /**
  * Normalise raw Grail records into Alerts.
  *
- * Sources (spec §H3, §7 — field names UNVALIDATED against a tenant except where the lead
- * supplied live samples):
+ * Sources (spec §H3, §7 — field names UNVALIDATED against a tenant except the shapes observed on a trial tenant
+ * and listed in data/dql.ts):
  * - dt.davis.problems  → source "davis-problem"
  * - dt.davis.events    → source "davis-event" (custom Events API v2 `properties` arrive as
  *   top-level fields, so the `cc.*` convention also works there)
@@ -19,8 +19,10 @@
 import type { Alert, AlertSource, EntityRef } from "../contracts";
 import { dedupKeyFor } from "../ids";
 
+/** One Grail record as returned by a query. */
 export type RawRecord = Record<string, unknown>;
 
+/** Size caps on what an Alert keeps (characters / field count). */
 export const MAX_TITLE = 500;
 export const MAX_DESCRIPTION = 4000;
 export const MAX_FIELDS = 120;
@@ -45,6 +47,7 @@ const CATEGORY_ALIASES: Record<string, string> = {
 
 // ─── primitive coercion ──────────────────────────────────────────────────────
 
+/** String form of a primitive; undefined for empty strings, objects and non-finite numbers. */
 export function asString(v: unknown): string | undefined {
   if (typeof v === "string") return v.length > 0 ? v : undefined;
   if (typeof v === "number" && Number.isFinite(v)) return String(v);
@@ -53,6 +56,7 @@ export function asString(v: unknown): string | undefined {
   return undefined;
 }
 
+/** Finite number from a number, bigint or numeric string. */
 export function asNumber(v: unknown): number | undefined {
   if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
   if (typeof v === "bigint") return Number(v);
@@ -60,6 +64,7 @@ export function asNumber(v: unknown): number | undefined {
   return undefined;
 }
 
+/** Boolean from a boolean, "true"/"false" or a number (non-zero = true). */
 export function asBoolean(v: unknown): boolean | undefined {
   if (typeof v === "boolean") return v;
   if (typeof v === "string") {
@@ -138,6 +143,7 @@ function clip(s: string, max: number): string {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
 
+/** Upper-cased Davis category, aliases resolved; unknown values become "OTHER". */
 export function normalizeCategory(v: unknown): string | undefined {
   const s = asString(v)?.trim().toUpperCase();
   if (!s) return undefined;
@@ -154,6 +160,7 @@ function severityOf(v: unknown): number | undefined {
 
 // ─── shared extraction ───────────────────────────────────────────────────────
 
+/** Affected entities from smartscape.*, the deprecated affected_entity_* arrays and dt.source_entity (≤ 100). */
 export function extractEntities(rec: RawRecord): EntityRef[] {
   const out: EntityRef[] = [];
   const seen = new Set<string>();
@@ -183,6 +190,7 @@ export function extractEntities(rec: RawRecord): EntityRef[] {
   return out.slice(0, 100);
 }
 
+/** Root-cause entity from smartscape.* or the deprecated root_cause_entity_* fields. */
 export function extractRootCause(rec: RawRecord): Alert["rootCause"] {
   const ss = entityFromUnknown(rec["root_cause.smartscape_entity"]);
   const id = ss?.id ?? asString(rec["root_cause_entity_id"]);
@@ -191,6 +199,7 @@ export function extractRootCause(rec: RawRecord): Alert["rootCause"] {
   return { ...(id ? { id } : {}), ...(name ? { name } : {}) };
 }
 
+/** Tags from entity_tags, cc.tags and primary_tags.* fields. */
 export function extractTags(rec: RawRecord): string[] {
   const tags = new Set<string>();
   for (const t of asStringArray(rec["entity_tags"])) tags.add(t);
@@ -359,6 +368,7 @@ function normalizeGenericSummary(rec: RawRecord, now: number): Alert | undefined
   return a;
 }
 
+/** Raw records per source, as fetched by api/lib/sources.ts. */
 export interface RawSourceRecords {
   problems?: RawRecord[];
   davisEvents?: RawRecord[];

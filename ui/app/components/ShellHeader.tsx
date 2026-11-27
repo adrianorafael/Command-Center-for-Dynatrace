@@ -1,3 +1,4 @@
+/** App header: navigation, notification bell, on-call indicator and switch, settings and help menu. */
 import React, { useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { AppHeader, HelpMenu } from "@dynatrace/strato-components/layouts";
@@ -239,6 +240,7 @@ const OnCallNowAction = () => {
   );
 };
 
+/** Rendered once by App.tsx above every page. */
 export const ShellHeader = () => {
   const navigate = useNavigate();
   const { data } = useAppData();

@@ -4,7 +4,7 @@
  *
  * Write order matters (no transactions in App State):
  *   incidents → ledger records → delete folded actions → rollup → archives (+ delete their
- *   inc.* keys) → heartbeat → release lease (finally).
+ *   inc.* keys) → storage estimate → release lease, then heartbeat (both in `finally`).
  * Deleting actions only after the incident write succeeded means an ack is never lost; a crash
  * in between just folds the same (idempotent) actions again on the next tick.
  */
@@ -47,9 +47,11 @@ import {
 
 export { addRollup };
 
+/** App State TTL of a ledger record (`ntf.*`): 14 days. */
 export const NOTIFICATION_TTL_MS = 14 * 24 * 3600_000;
 const DAY_MS = 24 * 3600_000;
 
+/** Injected I/O of one tick (MemoryRepository and a fake Grail in tests). */
 export interface EngineDeps {
   repo: Repository;
   runQuery: QueryRunner;
@@ -60,7 +62,7 @@ export interface EngineDeps {
   appBaseUrl?: string;
 }
 
-/** Non-secret provider view handed to the send tasks through the tick result. */
+/** Non-secret provider view handed to the senders through the tick result (no secret, only the vault entry id). */
 export interface ProviderView {
   id: string;
   channel: Channel;
@@ -70,6 +72,7 @@ export interface ProviderView {
   params: Record<string, string>;
 }
 
+/** Tick result plus the provider views the senders need, so the send step does not re-read settings. */
 export type EngineTickResult = EngineTickResponse & { providers: ProviderView[] };
 
 export function zeroCounts(): EngineCounts {
@@ -83,6 +86,7 @@ export function zeroCounts(): EngineCounts {
   };
 }
 
+/** Copies each configured provider into a ProviderView (params cloned, so senders cannot mutate settings). */
 export function providerViews(settings: Settings): ProviderView[] {
   return settings.providers.map((p) => ({
     id: p.id,
@@ -193,8 +197,14 @@ async function recordLockedSkip(repo: Repository, now: number): Promise<void> {
 export function effectiveLockTtlSec(configured: number): number {
   return Math.min(MAX_LOCK_TTL_SEC, Math.max(MIN_LOCK_TTL_SEC, Number.isFinite(configured) ? configured : MIN_LOCK_TTL_SEC));
 }
+/** Upper clamp for `settings.engine.lockTtlSec`. */
 export const MAX_LOCK_TTL_SEC = 180;
 
+/**
+ * One tick under the engine lease: load state and sources, run the pure `tick`, write its output in the order given
+ * in the header. Returns the batches whose ledger records were written; sending is the caller's job (cycle.ts).
+ * reason "test" builds one test notification without the lease and without touching state.
+ */
 export async function runEngineTick(payload: EngineTickRequest, deps: EngineDeps): Promise<EngineTickResult> {
   const now = (deps.now ?? Date.now)();
   const started = Date.now();

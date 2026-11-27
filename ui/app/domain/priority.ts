@@ -5,6 +5,7 @@
 
 import { PRIORITIES, type Priority } from "./contracts";
 
+/** 1 for P1 … 5 for P5. */
 export function priorityRank(p: Priority): number {
   return PRIORITIES.indexOf(p) + 1;
 }
@@ -19,6 +20,7 @@ export function lessUrgentThan(a: Priority, b: Priority): boolean {
   return priorityRank(a) > priorityRank(b);
 }
 
+/** Type guard for an exact Priority string. */
 export function isPriority(v: unknown): v is Priority {
   return typeof v === "string" && (PRIORITIES as readonly string[]).includes(v);
 }

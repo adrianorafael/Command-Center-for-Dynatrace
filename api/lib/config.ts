@@ -42,6 +42,7 @@ import {
   type ValidationError,
 } from "../../ui/app/domain/validation/validate";
 
+/** The configuration as code document; every section is optional on import (absent sections are left as stored). */
 export interface ConfigBundle {
   settings?: Partial<Settings>;
   teams?: Team[];
@@ -56,6 +57,7 @@ export type ConfigRequest =
   | { op: "export" }
   | { op: "import"; bundle: ConfigBundle; dryRun?: boolean };
 
+/** `bundle` on export; `written` per section on import (also on a dry run); `errors` when nothing was written. */
 export interface ConfigResponse {
   ok: boolean;
   bundle?: Required<Omit<ConfigBundle, "settings">> & { settings: Settings };
@@ -63,6 +65,7 @@ export interface ConfigResponse {
   errors?: { entity: string; path: string; message: string }[];
 }
 
+/** Export, or validate-then-import a bundle. An import writes nothing unless every entity and key is valid. */
 export async function runConfig(req: ConfigRequest, repo: Repository): Promise<ConfigResponse> {
   const store = createStore(repo);
 
@@ -140,7 +143,9 @@ export async function runConfig(req: ConfigRequest, repo: Repository): Promise<C
   };
   if (req.dryRun) return { ok: true, written };
 
-  // Referenced entities first, so a concurrent engine tick never sees dangling ids.
+  // Referenced entities before the ones that point at them (services after policies, settings last), so a concurrent
+  // tick rarely sees a dangling id. Team.defaultPolicyId and policy.teamId point both ways, so that pair can't be
+  // fully ordered.
   for (const t of b.teams ?? []) await store.saveTeam(t);
   for (const s of b.schedules ?? []) await store.saveSchedule(s);
   for (const p of b.policies ?? []) await store.savePolicy(p);

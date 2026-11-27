@@ -1,8 +1,8 @@
 # Guia do usuário — cada tela, ícone e status
 
-🌐 [English](../en/user-guide.md) · **Português (BR)** · [Español](../es/user-guide.md)
-
+<!-- app:omit -->
 As capturas de tela foram feitas em **modo demo**, com dados de exemplo.
+<!-- /app:omit -->
 
 ## Cabeçalho
 
@@ -101,9 +101,13 @@ O Console é a tela do NOC: todos os incidentes abertos, os mais recentes primei
 | Assigned to me | Incidentes abertos atribuídos a você | Filtra por Assignee = me |
 | Open incidents | Todos os incidentes abertos, divididos por prioridade | — |
 
-**Filtros**: busca (título, ID, entidade, tag), Status (padrão *Triggered + Acknowledged*), Priority, Team, Assignee
-(*Me*, *Unassigned*, membros), Service, Source, Escalation level (*Not started*, *Step N*, *Exhausted*) e Created
-(intervalo de tempo). Todos os filtros, exceto o intervalo de tempo, fazem parte da URL, então uma visão de NOC pode ser salva nos favoritos.
+**Show** (abas acima da tabela): *Open* (Triggered + Acknowledged, o padrão), *Triggered*, *Acknowledged*,
+*Snoozed*, *Resolved* e *All*. Cada aba mostra uma contagem que acompanha os outros filtros.
+
+**Filtros**: busca (título, ID, entidade, tag), Priority, Team, Assignee (*Me*, *Unassigned*, membros), Service,
+Source, Escalation level (*Not started*, *Step N*, *Exhausted*) e Created (intervalo de tempo). Todos os filtros, exceto
+o intervalo de tempo, fazem parte da URL, assim como a aba **Show** (`status=…`), então uma visão de NOC pode ser salva
+nos favoritos.
 
 **Colunas**: Priority, Status (e *until …* quando em snooze), Incident (título, `#display ID · first entity`), Age
 (vermelho com um ícone de relógio quando um incidente **triggered** é mais antigo que a meta de reconhecimento),
@@ -235,7 +239,8 @@ Uma frase de prévia diz exatamente o que vai acontecer.
   não tem nenhum provedor ligado, ou quando o motor nunca rodou.
 - **Add people**: o seu próprio usuário é oferecido primeiro. Para os demais, digite pelo menos 3 letras de um nome ou
   de um email. Os resultados vêm do IAM do Dynatrace: usuários ativos da conta dona do ambiente (quem nunca fez login
-  não é encontrado). Papéis:
+  não é encontrado). As pessoas escolhidas ficam numa lista **Selected (n)** abaixo dos resultados, cada uma com
+  **Remove**, ao longo de várias buscas. Papéis:
 
 | Papel | Acionado? | Indicado para |
 | --- | --- | --- |
@@ -316,7 +321,7 @@ Davis detecta sozinho, precisam de uma regra de roteamento), descrição, equipe
 | Aba | Conteúdo |
 | --- | --- |
 | Inbound ![Inbound](../../screenshots/integrations.png) | Cada origem com o seu status (*Receiving*, *Quiet > 1 h*, *Turned off*, *Never seen*), último evento, incidentes em 24 h e **Show events**. Snippets prontos para copiar (curl, PowerShell, Python, Dynatrace Workflow) e os campos que o app lê. |
-| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | Os nove provedores (oito integrados mais **Custom workflow**), cada um com uma chave **On/Off**: *Not configured*, *Off*, *Configured* ou *Last delivery failed*, contagens de enviados/falhos, *Sent by the engine* (o padrão) ou *Sent by its workflow*, **Configure** (ID da entrada do vault ou ID do workflow, parâmetros, **Delivery**) e **Send test**. Em **Delivery** você escolhe quem envia um provedor integrado: *By the engine* (sem custo extra) ou *Through its own workflow* (uma chamada de função a mais por notificação). Só pode haver um provedor ativado por canal. |
+| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | Os nove provedores (oito integrados mais **Custom workflow**), cada um com uma chave **On/Off**: *Not configured*, *Off*, *Configured*, *Last delivery failed* ou *Host not allowed: add it to External requests*, contagens de enviados/falhos, *Sent by the engine* (o padrão) ou *Sent by its workflow*, **Configure** (ID da entrada do vault ou ID do workflow, parâmetros, **Delivery** e, para um provedor integrado, o host a liberar em *External requests*) e **Send test**. Em **Delivery** você escolhe quem envia um provedor integrado: *By the engine* (sem custo extra) ou *Through its own workflow* (uma chamada de função a mais por notificação). Só pode haver um provedor ativado por canal. |
 | Workflows ![Workflows](../../screenshots/integrations-workflow.png) | Status do motor (*Not installed*, *Installed · simple workflow*, *Update available*, *Installed as a standard workflow…*), a última execução do motor, **Run every**, **Install in Workflows**, **Download JSON**, **Run engine now**, **Refresh**, os passos de configuração e os hosts a liberar. Um segundo card, **Command Center · Engine on problem**, instala o workflow opcional que roda o motor quando o Davis abre ou fecha um problema (*Optional · not installed*, *Installed · simple workflow*, *Installed, but its trigger is switched off*). |
 
 Detalhes: [integrações](integrations.md) e [primeiros passos](getting-started.md).
@@ -351,3 +356,8 @@ significa antes das 06:00. Ambos usam o fuso horário do seu navegador.
 *Ready to page?* da equipe (marcado quando uma equipe tem os cinco passos concluídos), ligar um provedor, instalar o
 workflow do motor (existe um heartbeat) e enviar um evento de teste (existe um incidente). Depois vêm conceitos, fluxo de trabalho no Console, envio de eventos, notificações, atalhos de
 teclado, solução de problemas e privacidade.
+
+O menu à esquerda também lista os seis guias (primeiros passos, guia do usuário, referência de alertas, integrações,
+configuração, operações). O seletor de idioma os mostra em English, Português (BR) ou Español; a escolha fica
+guardada neste navegador, e o endereço de um guia leva o guia e o idioma, para que possa ser compartilhado. O Get
+started e as seções depois dele estão em inglês.

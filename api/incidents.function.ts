@@ -8,6 +8,7 @@ import type { IncidentStatus } from "../ui/app/domain/contracts";
 import { AppStateRepository } from "../ui/app/data/appStateRepository";
 import { createStore } from "../ui/app/data/store";
 
+/** One incident as returned to scripts: identifiers, status and timestamps (epoch ms) only. */
 export interface IncidentSummary {
   id: string;
   displayId?: string;

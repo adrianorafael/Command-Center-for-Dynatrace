@@ -1,349 +1,453 @@
 <!DOCTYPE html>
 <!--
-  Project page for Command Center for Dynatrace.
-  Single self-contained file: no build step, no CDN, no external JS.
+  Project page for Command Center for Dynatrace (GitHub Pages).
+  Single self-contained file: inline CSS and a few lines of inline JS, no build step, no CDN, no web fonts.
   Keep in sync with README.md: same disclaimer, scopes, cost numbers, troubleshooting rows and version.
+  Media: media/command-center-demo.* is produced by scripts/record-demo.mjs + scripts/edit-demo.sh;
+  screenshots/*.png by scripts/doc-screenshots.mjs (demo mode, synthetic data, dark theme).
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Command Center for Dynatrace</title>
-  <meta name="description" content="A demo Dynatrace App: NOC event console with on-call teams, schedules and escalation policies. Inbound from Davis problems and the Events API, outbound through one simple Dynatrace workflow to Twilio, IFTTT, Slack, Teams, Telegram or any webhook." />
+  <meta name="description" content="A demo Dynatrace App: NOC event console with on-call teams, schedules and escalation policies. Inbound from Davis problems and the Events API; one simple Dynatrace workflow pages people by SMS, voice, WhatsApp, IFTTT, Slack, Teams, Telegram or any webhook." />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0a0b14" />
+  <meta property="og:title" content="Command Center for Dynatrace" />
+  <meta property="og:description" content="NOC event console with on-call, schedules and escalation, inside Dynatrace. Watch the product tour." />
+  <meta property="og:image" content="https://adrianorafael.github.io/Command-Center-for-Dynatrace/media/command-center-demo-poster.jpg" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <style>
     :root {
-      --bg: #0b0b16; --bg-elev: #12121f; --bg-card: #16162a; --border: #262640;
-      --text: #e7e7f0; --text-dim: #a0a0b8; --text-faint: #6b6b85;
-      --blue: #1496ff; --green: #b4dc00; --purple: #8a4fd0;
-      --critical: #ff6b6b; --warning: #ffc043;
-      --radius: 14px; --maxw: 1080px;
+      --bg: #0a0b14; --bg-2: #0e1020; --card: #13152a; --card-2: #181b33; --border: #24284a; --border-2: #30355e;
+      --text: #eceef8; --dim: #a3a8c3; --faint: #6f7596;
+      --blue: #1496ff; --blue-2: #5cb4ff; --green: #b4dc00; --purple: #8a4fd0;
+      --red: #ff6b6b; --amber: #ffc043;
+      --radius: 16px; --maxw: 1160px;
+      --mono: ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased;
-    }
-    a { color: var(--blue); text-decoration: none; }
+    html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+    body { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    a { color: var(--blue-2); text-decoration: none; }
     a:hover { text-decoration: underline; }
-    code { font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace; font-size: 0.88em;
-      background: #1d1d33; padding: 2px 6px; border-radius: 6px; color: #c9d7ff; overflow-wrap: anywhere; }
+    b, strong { color: #fff; font-weight: 600; }
+    code { font-family: var(--mono); font-size: .86em; background: #1b1e38; border: 1px solid #262a4d;
+      padding: 1px 6px; border-radius: 6px; color: #cdd8ff; overflow-wrap: anywhere; }
     .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+    @media (max-width: 600px) { .wrap { padding: 0 16px; } }
 
-    nav { position: sticky; top: 0; z-index: 50; background: rgba(11,11,22,0.85);
-      backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
-    nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 62px; }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; }
-    .brand img { width: 30px; height: 30px; display: block; }
-    .nav-links { display: flex; gap: 18px; align-items: center; }
-    .nav-links a { color: var(--text-dim); font-size: 0.86rem; font-weight: 500; }
-    .nav-links a:hover { color: var(--text); text-decoration: none; }
-    .nav-gh { border: 1px solid var(--border); padding: 7px 14px; border-radius: 8px;
-      color: var(--text) !important; background: var(--bg-card); }
-    .nav-gh:hover { border-color: var(--blue); text-decoration: none !important; }
-    @media (max-width: 960px) { .nav-links a:not(.nav-gh) { display: none; } }
-
-    header.hero { padding: 84px 0 56px; position: relative; overflow: hidden; }
-    header.hero::before { content: ""; position: absolute; top: -160px; left: 50%;
-      transform: translateX(-50%); width: 900px; height: 500px; pointer-events: none;
-      background: radial-gradient(circle, rgba(20,150,255,0.16), transparent 62%); }
-    .hero-inner { position: relative; text-align: center; }
-    .hero-logo { width: 88px; height: 88px; margin: 0 auto 22px; display: block; }
-    .eyebrow { display: inline-block; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--green); border: 1px solid var(--border); background: var(--bg-card);
-      padding: 5px 12px; border-radius: 999px; margin-bottom: 22px; font-weight: 600; }
-    h1 { font-size: clamp(2.1rem, 6vw, 3.4rem); line-height: 1.1; font-weight: 800;
-      letter-spacing: -0.02em; margin-bottom: 18px; }
-    h1 .grad { background: linear-gradient(120deg, var(--blue), var(--green) 55%, var(--purple));
-      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .subtitle { font-size: clamp(1rem, 2.4vw, 1.22rem); color: var(--text-dim);
-      max-width: 720px; margin: 0 auto 30px; }
-    .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 46px; }
-    .btn { padding: 12px 22px; border-radius: 10px; font-weight: 600; font-size: 0.95rem;
-      border: 1px solid var(--border); transition: transform .12s, border-color .12s; }
-    .btn:hover { transform: translateY(-2px); text-decoration: none; }
-    .btn-primary { background: linear-gradient(120deg, var(--blue), #0f6fd0); color: #fff !important; border-color: transparent; }
-    .btn-ghost { background: var(--bg-card); color: var(--text) !important; }
+    /* ---- navigation ---- */
+    nav.top { position: sticky; top: 0; z-index: 50; background: rgba(10,11,20,.78);
+      backdrop-filter: saturate(140%) blur(12px); -webkit-backdrop-filter: saturate(140%) blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,.06); }
+    nav.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); white-space: nowrap; }
+    .brand:hover { text-decoration: none; }
+    .brand img { width: 28px; height: 28px; }
+    .brand small { font-weight: 500; color: var(--faint); font-size: .78rem; border: 1px solid var(--border);
+      border-radius: 999px; padding: 1px 8px; }
+    .links { display: flex; gap: 20px; align-items: center; }
+    .links a { color: var(--dim); font-size: .88rem; font-weight: 500; }
+    .links a:hover { color: var(--text); text-decoration: none; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 10px;
+      font-weight: 600; font-size: .95rem; border: 1px solid transparent; transition: transform .15s, background .15s, border-color .15s; }
+    .btn:hover { text-decoration: none; transform: translateY(-1px); }
+    .btn-primary { background: var(--blue); color: #fff; box-shadow: 0 8px 24px rgba(20,150,255,.28); }
+    .btn-primary:hover { background: #2aa2ff; }
+    .btn-ghost { border-color: var(--border-2); color: var(--text); background: rgba(255,255,255,.02); }
     .btn-ghost:hover { border-color: var(--blue); }
+    .btn-sm { padding: 7px 14px; font-size: .85rem; }
+    @media (max-width: 980px) { .links a:not(.btn) { display: none; } }
 
-    .stats { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-    .stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 18px 26px; min-width: 150px; }
-    .stat .num { font-size: 1.6rem; font-weight: 800;
-      background: linear-gradient(120deg, var(--blue), var(--green));
+    /* ---- hero ---- */
+    header.hero { position: relative; padding: 72px 0 40px; overflow: hidden; }
+    header.hero::before { content: ""; position: absolute; inset: -200px -10% auto; height: 760px; pointer-events: none;
+      background: radial-gradient(800px 420px at 50% 30%, rgba(20,150,255,.20), transparent 70%),
+                  radial-gradient(520px 320px at 85% 60%, rgba(138,79,208,.16), transparent 70%),
+                  radial-gradient(520px 320px at 12% 70%, rgba(180,220,0,.07), transparent 70%); }
+    .hero-inner { position: relative; text-align: center; }
+    .eyebrow { display: inline-flex; gap: 8px; align-items: center; font-size: .78rem; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--green); border: 1px solid var(--border); background: rgba(19,21,42,.7);
+      padding: 6px 14px; border-radius: 999px; font-weight: 600; margin-bottom: 24px; }
+    h1 { font-size: clamp(2.3rem, 6.4vw, 4.1rem); line-height: 1.04; font-weight: 800; letter-spacing: -.03em; }
+    .grad { background: linear-gradient(110deg, var(--blue) 5%, var(--green) 55%, var(--purple) 95%);
       -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .stat .lbl { font-size: 0.82rem; color: var(--text-dim); margin-top: 2px; }
+    .lead { font-size: clamp(1.02rem, 2.2vw, 1.22rem); color: var(--dim); max-width: 760px; margin: 22px auto 30px; }
+    .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
-    .disclaimer { max-width: var(--maxw); margin: 12px auto 0; padding: 16px 20px;
-      background: rgba(255,192,67,0.07); border: 1px solid rgba(255,192,67,0.32);
-      border-radius: var(--radius); color: var(--text-dim); font-size: 0.9rem; }
-    .disclaimer strong { color: var(--warning); }
-    .disclaimer + .disclaimer { margin-top: 10px; }
+    /* video frame */
+    .player { position: relative; max-width: 1080px; margin: 48px auto 0; border-radius: 18px; padding: 1px;
+      background: linear-gradient(140deg, rgba(20,150,255,.55), rgba(255,255,255,.06) 40%, rgba(138,79,208,.5));
+      box-shadow: 0 40px 120px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.03); }
+    .player-inner { border-radius: 17px; overflow: hidden; background: #07080f; }
+    .chrome { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: #0f1120;
+      border-bottom: 1px solid rgba(255,255,255,.06); }
+    .chrome i { width: 11px; height: 11px; border-radius: 50%; background: #2a2e4f; display: block; }
+    .chrome span { margin-left: 10px; font-size: .78rem; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; background: #07080f; }
+    .chapters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 18px auto 0; max-width: 1080px; }
+    .chapters button { font: inherit; font-size: .8rem; color: var(--dim); background: var(--card); border: 1px solid var(--border);
+      border-radius: 999px; padding: 5px 12px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+    .chapters button:hover { color: var(--text); border-color: var(--blue); }
+    .chapters button[aria-current="true"] { color: #fff; border-color: var(--blue); background: rgba(20,150,255,.16); }
+    .video-note { text-align: center; font-size: .82rem; color: var(--faint); margin-top: 12px; }
 
-    section { padding: 64px 0; border-top: 1px solid var(--border); }
-    .sec-head { text-align: center; margin-bottom: 42px; }
-    .sec-head h2 { font-size: clamp(1.6rem, 4vw, 2.1rem); font-weight: 800; letter-spacing: -0.02em; }
-    .sec-head p { color: var(--text-dim); margin-top: 10px; max-width: 680px; margin-left: auto; margin-right: auto; }
-    .kicker { color: var(--green); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.08em;
-      text-transform: uppercase; display: block; margin-bottom: 8px; }
-    h3.sub { font-size: 1.1rem; margin: 34px 0 14px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 1080px; margin: 44px auto 0; }
+    .stat { background: rgba(19,21,42,.7); border: 1px solid var(--border); border-radius: 14px; padding: 16px; text-align: left; }
+    .stat .num { font-weight: 700; font-size: 1.12rem; }
+    .stat .lbl { color: var(--dim); font-size: .84rem; }
+    @media (max-width: 820px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
-    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 24px; transition: transform .14s, border-color .14s; }
-    .card:hover { transform: translateY(-3px); border-color: #34345a; }
-    .card .ico { font-size: 1.5rem; margin-bottom: 12px; display: block; }
-    .card h3 { font-size: 1.06rem; margin-bottom: 8px; font-weight: 700; }
-    .card p { color: var(--text-dim); font-size: 0.92rem; }
-    .card .meta { margin-top: 12px; font-size: 0.78rem; color: var(--text-faint);
-      border-top: 1px solid var(--border); padding-top: 10px; }
+    .notice { max-width: 1080px; margin: 28px auto 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; }
+    .notice div { border: 1px solid rgba(255,192,67,.28); background: rgba(255,192,67,.06); border-radius: 14px;
+      padding: 14px 16px; font-size: .88rem; color: #e6dcc3; }
+    .notice div.crit { border-color: rgba(255,107,107,.3); background: rgba(255,107,107,.06); color: #f0d4d4; }
+    @media (max-width: 820px) { .notice { grid-template-columns: 1fr; } }
 
-    .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
-    figure.shot { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
-      overflow: hidden; transition: transform .14s, border-color .14s; }
-    figure.shot:hover { transform: translateY(-3px); border-color: #34345a; }
-    figure.shot a { display: block; background: var(--bg-elev); aspect-ratio: 16 / 10; }
-    figure.shot img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block;
-      color: var(--text-faint); font-size: 0.85rem; }
-    figure.shot figcaption { padding: 14px 16px; font-size: 0.88rem; color: var(--text-dim); }
-    figure.shot figcaption b { color: var(--text); }
+    /* ---- sections ---- */
+    section { padding: 84px 0; border-top: 1px solid rgba(255,255,255,.05); }
+    section.alt { background: linear-gradient(180deg, var(--bg-2), var(--bg)); }
+    .head { max-width: 760px; margin-bottom: 38px; }
+    .kicker { display: inline-block; font-size: .76rem; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--blue-2); font-weight: 700; margin-bottom: 10px; }
+    h2 { font-size: clamp(1.6rem, 3.6vw, 2.35rem); line-height: 1.15; letter-spacing: -.02em; font-weight: 750; }
+    .head p { color: var(--dim); margin-top: 12px; font-size: 1.04rem; }
+    h3 { font-size: 1.06rem; font-weight: 650; letter-spacing: -.005em; }
+    .sub { margin: 40px 0 16px; font-size: 1.2rem; }
+    .note { color: var(--faint); font-size: .88rem; margin-top: 16px; }
 
-    .behaviors { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
-    .beh { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--blue);
-      border-radius: var(--radius); padding: 20px 22px; }
-    .beh h3 { font-size: 1rem; margin-bottom: 8px; }
-    .beh p { color: var(--text-dim); font-size: 0.9rem; }
-    .beh.b-green { border-left-color: var(--green); }
-    .beh.b-purple { border-left-color: var(--purple); }
-    .beh.b-warn { border-left-color: var(--warning); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    @media (max-width: 400px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: linear-gradient(180deg, var(--card-2), var(--card)); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 22px; transition: border-color .2s, transform .2s; }
+    .card:hover { border-color: var(--border-2); }
+    .card p { color: var(--dim); font-size: .93rem; margin-top: 8px; }
+    .card .meta { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); font-size: .8rem; color: var(--faint); }
+    .ico { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 14px;
+      background: rgba(20,150,255,.12); border: 1px solid rgba(20,150,255,.25); }
+    .ico svg { width: 20px; height: 20px; stroke: var(--blue-2); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .ico.g { background: rgba(180,220,0,.1); border-color: rgba(180,220,0,.25); } .ico.g svg { stroke: var(--green); }
+    .ico.p { background: rgba(138,79,208,.14); border-color: rgba(138,79,208,.3); } .ico.p svg { stroke: #b48af0; }
 
-    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    th, td { text-align: left; padding: 13px 18px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    th { background: var(--bg-elev); font-weight: 600; font-size: 0.82rem;
-      text-transform: uppercase; letter-spacing: 0.04em; }
-    tr:last-child td { border-bottom: none; }
-    td { color: var(--text-dim); }
-    td b, td code { color: var(--text); }
-    .tag { display: inline-block; font-size: 0.72rem; padding: 2px 9px; border-radius: 999px;
-      font-weight: 600; white-space: nowrap; }
-    .tag.red { background: rgba(255,107,107,0.15); color: var(--critical); }
-    .tag.green { background: rgba(180,220,0,0.14); color: var(--green); }
-    .tag.warn { background: rgba(255,192,67,0.14); color: var(--warning); }
-    .tag.dim { background: #22223a; color: var(--text-dim); }
+    /* what it is */
+    .split { display: grid; grid-template-columns: 1.05fr 1fr; gap: 28px; align-items: start; }
+    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+    .prose p { color: var(--dim); margin-bottom: 14px; }
+    .kv { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--card); }
+    .kv div { display: grid; grid-template-columns: 120px 1fr; gap: 14px; padding: 13px 18px; border-top: 1px solid var(--border); font-size: .9rem; }
+    .kv div:first-child { border-top: 0; }
+    .kv dt { font-weight: 650; color: #fff; }
+    .kv dd { color: var(--dim); }
+    @media (max-width: 520px) { .kv div { grid-template-columns: 1fr; gap: 2px; } }
 
-    .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-    .chip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 999px;
-      padding: 8px 16px; font-size: 0.88rem; color: var(--text-dim); font-weight: 500; }
-    .chip b { color: var(--text); font-weight: 600; }
+    /* gallery */
+    .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 900px) { .shots { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .shots { grid-template-columns: 1fr; } }
+    .shot { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--card); transition: border-color .2s, transform .2s; }
+    .shot:hover { border-color: var(--blue); transform: translateY(-2px); }
+    .shot a { display: block; }
+    .shot img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top left; }
+    .shot figcaption { padding: 11px 14px 13px; font-size: .86rem; color: var(--dim); border-top: 1px solid var(--border); }
+    .shot figcaption b { display: block; font-size: .92rem; }
 
-    pre { background: #0d0d18; border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 20px; overflow-x: auto; font-size: 0.84rem; line-height: 1.7;
-      font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace; color: #c9d7ff; }
-    pre .c { color: var(--text-faint); }
-    pre .k { color: var(--green); }
-    pre .b { color: var(--blue); }
-    pre .w { color: var(--warning); }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    @media (max-width: 820px) { .two-col { grid-template-columns: 1fr; } }
-    .note { color: var(--text-dim); font-size: 0.9rem; margin-top: 18px; }
-    .callout { background: rgba(20,150,255,0.06); border: 1px solid rgba(20,150,255,0.3);
-      border-radius: var(--radius); padding: 14px 18px; font-size: 0.88rem; color: var(--text-dim); margin-top: 18px; }
-    .callout.warn { background: rgba(255,192,67,0.06); border-color: rgba(255,192,67,0.32); }
-    ul.tick { list-style: none; margin-top: 10px; }
-    ul.tick li { padding-left: 26px; position: relative; margin-bottom: 8px; color: var(--text-dim); font-size: 0.92rem; }
-    ul.tick li::before { content: "→"; position: absolute; left: 0; color: var(--green); font-weight: 700; }
-    ol.steps { counter-reset: s; list-style: none; display: grid; gap: 12px; }
-    ol.steps li { counter-increment: s; background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 16px 18px 16px 62px; position: relative; color: var(--text-dim); font-size: 0.92rem; }
-    ol.steps li::before { content: counter(s); position: absolute; left: 18px; top: 14px; width: 30px; height: 30px;
-      border-radius: 50%; background: linear-gradient(120deg, var(--blue), var(--purple)); color: #fff;
-      font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
-    ol.steps li b { color: var(--text); }
+    /* code + flow */
+    pre { background: #0b0d1a; border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; overflow-x: auto;
+      font-family: var(--mono); font-size: .83rem; line-height: 1.7; color: #cfd6f6; }
+    pre .c { color: #69709a; } pre .b { color: var(--blue-2); } pre .k { color: var(--green); }
+    .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 26px; }
+    @media (max-width: 900px) { .flow { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .flow { grid-template-columns: 1fr; } }
+    .node { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+    .node .n { font-family: var(--mono); font-size: .74rem; color: var(--faint); }
+    .node h3 { margin-top: 4px; }
+    .node p { color: var(--dim); font-size: .86rem; margin-top: 6px; }
+    .beh { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 26px; }
+    @media (max-width: 400px) { .beh { grid-template-columns: 1fr; } }
+    .beh div { border-left: 3px solid var(--blue); background: var(--card); border-radius: 0 12px 12px 0; padding: 14px 16px; }
+    .beh div.g { border-color: var(--green); } .beh div.p { border-color: var(--purple); } .beh div.w { border-color: var(--amber); }
+    .beh h3 { font-size: .96rem; } .beh p { color: var(--dim); font-size: .87rem; margin-top: 4px; }
 
-    footer { border-top: 1px solid var(--border); padding: 40px 0; text-align: center;
-      color: var(--text-faint); font-size: 0.88rem; }
-    footer a { color: var(--text-dim); }
-    footer .fnote { margin-top: 10px; font-size: 0.8rem; max-width: 560px; margin-left: auto; margin-right: auto; }
+    /* tables */
+    .table { border: 1px solid var(--border); border-radius: 14px; overflow-x: auto; background: var(--card); }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; min-width: 560px; }
+    th, td { text-align: left; padding: 12px 16px; border-top: 1px solid var(--border); vertical-align: top; }
+    thead th { border-top: 0; background: #171a33; color: var(--dim); font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; font-weight: 650; }
+    td { color: var(--dim); } td:first-child { color: var(--text); }
+    .tag { display: inline-block; font-size: .76rem; font-weight: 650; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+    .tag.green { background: rgba(180,220,0,.12); color: var(--green); } .tag.red { background: rgba(255,107,107,.13); color: var(--red); }
+    .tag.dim { background: rgba(255,255,255,.06); color: var(--dim); }
+    .callout { margin-top: 18px; border: 1px solid rgba(20,150,255,.3); background: rgba(20,150,255,.07); border-radius: 14px; padding: 16px 18px; color: #cfe3ff; font-size: .93rem; }
+    .big { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+    @media (max-width: 760px) { .big { grid-template-columns: 1fr; } }
+    .big div { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+    .big strong { display: block; font-size: 1.9rem; letter-spacing: -.02em; }
+    .big span { color: var(--dim); font-size: .88rem; }
+
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 820px) { .two { grid-template-columns: 1fr; } }
+    ul.tick { list-style: none; }
+    ul.tick li { position: relative; padding-left: 24px; margin-top: 9px; color: var(--dim); font-size: .92rem; }
+    ul.tick li::before { content: ""; position: absolute; left: 2px; top: .55em; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+
+    ol.steps { list-style: none; counter-reset: s; display: grid; gap: 12px; }
+    ol.steps li { counter-increment: s; position: relative; background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 18px 16px 62px; color: var(--dim); font-size: .93rem; }
+    ol.steps li::before { content: counter(s); position: absolute; left: 18px; top: 15px; width: 28px; height: 28px; border-radius: 50%;
+      display: grid; place-items: center; font-weight: 700; font-size: .85rem; color: #fff; background: linear-gradient(135deg, var(--blue), var(--purple)); }
+
+    .verified { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 820px) { .verified { grid-template-columns: 1fr; } }
+    .verified .card h3 { display: flex; align-items: center; gap: 8px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    .docs { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+    .doc { display: block; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; color: var(--text); transition: border-color .2s, transform .2s; }
+    .doc:hover { text-decoration: none; border-color: var(--blue); transform: translateY(-2px); }
+    .doc span { display: block; color: var(--dim); font-size: .86rem; margin-top: 6px; }
+    .doc h3::after { content: " →"; color: var(--blue-2); }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { font-size: .84rem; color: var(--dim); border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 6px 13px; }
+    .chip b { color: var(--text); }
+
+    footer { border-top: 1px solid rgba(255,255,255,.06); padding: 40px 0 56px; color: var(--faint); font-size: .88rem; }
+    footer .row { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
+    footer p { margin-top: 14px; font-size: .8rem; max-width: 820px; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
   </style>
 </head>
 <body>
 
-<nav>
+<nav class="top" aria-label="Main">
   <div class="wrap">
-    <div class="brand"><img src="icon.svg" alt="" /> Command Center</div>
-    <div class="nav-links">
+    <a class="brand" href="#top"><img src="icon.svg" alt="" /> Command Center <small>v2.4.0</small></a>
+    <div class="links">
+      <a href="#tour">Tour</a>
       <a href="#features">Features</a>
-      <a href="#screenshots">Screenshots</a>
       <a href="#how">How it works</a>
-      <a href="#cost">Query Cost</a>
-      <a href="#start">Quick Start</a>
-      <a href="#setup">Paging setup</a>
-      <a href="#trouble">Troubleshooting</a>
+      <a href="#cost">Cost</a>
+      <a href="#setup">Setup</a>
+      <a href="#verified">Verified</a>
       <a href="#docs">Docs</a>
-      <a class="nav-gh" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace" target="_blank" rel="noopener">GitHub ↗</a>
+      <a class="btn btn-ghost btn-sm" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </div>
 </nav>
 
-<header class="hero">
+<header class="hero" id="top">
   <div class="wrap hero-inner">
-    <img class="hero-logo" src="icon.svg" alt="Command Center icon" />
-    <span class="eyebrow">Demo Dynatrace App · Built with vibecoding · v2.3.0</span>
+    <span class="eyebrow">Demo Dynatrace App · Built with vibecoding · v2.4.0</span>
     <h1>Command Center<br /><span class="grad">for Dynatrace</span></h1>
-    <p class="subtitle">
-      A <strong>NOC event console with on-call teams, schedules and escalation policies</strong> — inside Dynatrace.
-      Davis problems and API events become incidents; one simple Dynatrace workflow pages the right person by SMS, voice call,
-      WhatsApp, IFTTT, Slack, Teams, Telegram or any webhook. An exploration of replacing Splunk On-Call (VictorOps),
-      Opsgenie or a Moogsoft-style console.
+    <p class="lead">
+      A <strong>NOC event console with on-call teams, schedules and escalation policies</strong>, inside Dynatrace.
+      Davis problems and API events become incidents; one simple Dynatrace workflow pages the right person by SMS,
+      voice call, WhatsApp, IFTTT, Slack, Teams, Telegram or any webhook.
     </p>
     <div class="cta">
-      <a class="btn btn-primary" href="#start">Get started</a>
+      <a class="btn btn-primary" href="#tour">▶ Watch the tour</a>
+      <a class="btn btn-ghost" href="#setup">Get started</a>
       <a class="btn btn-ghost" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace" target="_blank" rel="noopener">View on GitHub</a>
     </div>
+
+    <div class="player" id="tour">
+      <div class="player-inner">
+        <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>Command Center · product tour · demo mode, synthetic data</span></div>
+        <video id="demo" controls playsinline preload="metadata" width="1440" height="900"
+               poster="media/command-center-demo-poster.jpg"
+               aria-label="Product tour of Command Center: console, incident, on-call, teams, escalations, services, war rooms, integrations, reports, settings and help">
+          <source src="media/command-center-demo.mp4" type="video/mp4" />
+          <track kind="chapters" srclang="en" label="Chapters" src="media/command-center-demo.chapters.vtt" default />
+          Your browser cannot play this video. <a href="media/command-center-demo.mp4">Download the product tour (MP4)</a>.
+        </video>
+      </div>
+    </div>
+    <div class="chapters" id="chapters" aria-label="Video chapters"></div>
+    <p class="video-note">A full walk through the app in demo mode: every name, number and incident is sample data.
+      <a href="media/command-center-demo.mp4">Open the MP4</a>.</p>
+
     <div class="stats">
-      <div class="stat"><div class="num">React 18 + TS</div><div class="lbl">Strato Design System 3.x</div></div>
+      <div class="stat"><div class="num">React 18 + TypeScript</div><div class="lbl">Strato Design System 3.x</div></div>
       <div class="stat"><div class="num">Grail · DQL</div><div class="lbl">dt.davis.problems &amp; events</div></div>
       <div class="stat"><div class="num">8 channels</div><div class="lbl">one simple workflow, 0 workflow hours</div></div>
-      <div class="stat"><div class="num">EN · PT-BR · ES</div><div class="lbl">documentation</div></div>
+      <div class="stat"><div class="num">App State only</div><div class="lbl">no external database</div></div>
     </div>
-  </div>
-  <div class="wrap">
-    <div class="disclaimer">
-      ⚠️ <strong>Disclaimer:</strong> Created and maintained by
-      <a href="https://github.com/adrianorafael" target="_blank" rel="noopener">@adrianorafael</a>
-      with <strong>no affiliation with Dynatrace</strong> and no responsibility for any failures, issues,
-      or consumption of resources and licenses. It is a <strong>study/demo version with no official support</strong>.
-      Installing it in your environment is at your own risk.
-    </div>
-    <div class="disclaimer">
-      🚨 <strong>Paging is safety-critical.</strong> Do not make this app the only way your team is woken up until you
-      have tested every channel end to end in your own environment. See the limitations below.
+
+    <div class="notice">
+      <div>⚠️ <strong>Disclaimer:</strong> Created and maintained by
+        <a href="https://github.com/adrianorafael" target="_blank" rel="noopener">@adrianorafael</a>
+        with <strong>no affiliation with Dynatrace</strong> and no responsibility for any failures, issues,
+        or consumption of resources and licenses. It is a <strong>study/demo version with no official support</strong>.
+        Installing it in your environment is at your own risk.</div>
+      <div class="crit">🚨 <strong>Paging is safety-critical.</strong> Do not make this app the only way your team is woken up
+        until you have tested every channel end to end in your own environment. See
+        <a href="#verified">verified and not verified</a>.</div>
     </div>
   </div>
 </header>
 
-<section id="features">
+<section id="what">
+  <div class="wrap split">
+    <div>
+      <span class="kicker">What it is</span>
+      <h2>A dedicated alerting console, rebuilt as a Dynatrace App</h2>
+      <div class="prose" style="margin-top:18px">
+        <p>Command Center turns Davis problems and events posted to Dynatrace into <b>incidents</b> that operators
+          triage, acknowledge, assign, snooze and resolve. It <b>pages the on-call people</b> of a team through Twilio
+          (SMS, voice, WhatsApp) and IFTTT by default, plus Slack, Microsoft Teams, Telegram and a generic webhook.</p>
+        <p>It explores what it takes to replace a dedicated console such as <b>Splunk On-Call (VictorOps)</b>,
+          <b>Atlassian Opsgenie</b> or a <b>Moogsoft-style NOC console</b> with an app that lives inside Dynatrace:
+          inbound only through Dynatrace, outbound only through a Dynatrace workflow, everything else in one Strato app.</p>
+        <p>It is a demonstration of how far you can get building your own Dynatrace App by vibecoding, following the
+          official documentation at <a href="https://developer.dynatrace.com/" target="_blank" rel="noopener">developer.dynatrace.com</a>.</p>
+        <p class="note">Not implemented: two-way acknowledgement from SMS or chat replies, a mobile app, status pages,
+          and per-user permissions enforced on the server.</p>
+      </div>
+    </div>
+    <dl class="kv">
+      <div><dt>Inbound</dt><dd>Only through Dynatrace: Davis problems, optionally Davis events and generic events, read from Grail with DQL.</dd></div>
+      <div><dt>Console</dt><dd>Live incident table with KPI tiles, filters, bulk actions and keyboard shortcuts; incident details with timeline, escalation, notifications, entities and notes.</dd></div>
+      <div><dt>On-call</dt><dd>Teams of Dynatrace users (from IAM), layered schedules with overrides, escalation policies, contact methods, notification rules, quiet hours.</dd></div>
+      <div><dt>War rooms</dt><dd>A meeting link plus its incidents and Dynatrace Notebooks, including a generated post-mortem notebook.</dd></div>
+      <div><dt>Outbound</dt><dd>The simple workflow <i>Command Center · Engine</i> runs the app's own action every 1, 2 or 5 minutes and sends notifications itself.</dd></div>
+      <div><dt>Storage</dt><dd>Dynatrace App State. Provider secrets stay in the Credential Vault.</dd></div>
+      <div><dt>Demo mode</dt><dd>Per browser: sample data everywhere, nothing read, written or sent. Off: only real data.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section id="features" class="alt">
   <div class="wrap">
-    <div class="sec-head"><span class="kicker">Features</span><h2>What it does</h2>
-      <p>Inbound only through Dynatrace, outbound only through a Dynatrace Workflow, everything else in one Strato app.</p></div>
+    <div class="head"><span class="kicker">Features</span><h2>Everything a NOC shift needs</h2>
+      <p>From the first event to the post-mortem, in one app that uses Dynatrace for intake, identity and delivery.</p></div>
     <div class="grid">
-      <div class="card"><span class="ico">🖥️</span><h3>Console</h3>
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h8M8 16h5"/></svg></div>
+        <h3>Console</h3>
         <p>Live incident table with KPI strip, URL-based filters, search, bulk actions and keyboard shortcuts. Acknowledge with undo, reassign, snooze, escalate now, change priority, add notes, resolve.</p>
         <div class="meta">Engine-health banner when the engine is late (two intervals plus one minute)</div></div>
-      <div class="card"><span class="ico">🧾</span><h3>Incident detail</h3>
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <h3>Incident detail</h3>
         <p>Timeline and audit trail, escalation progress, notification ledger with provider errors, affected entities and root cause, notes, link to the Davis problem.</p>
         <div class="meta">Timeline capped at 200 entries per incident</div></div>
-      <div class="card"><span class="ico">📅</span><h3>On-call schedules</h3>
+      <div class="card"><div class="ico g"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+        <h3>On-call schedules</h3>
         <p>Layers with daily, weekly or every-N-hours rotations, handoff time, time zones and restrictions; overrides; "on call now", a coverage preview, and leave/take on-call from the header.</p>
         <div class="meta">Later layers win; overrides win over everything</div></div>
-      <div class="card"><span class="ico">👥</span><h3>Teams of real users</h3>
-        <p>Members are users of your Dynatrace environment, picked from IAM. Roles, contact methods, personal notification rules and team quiet hours.</p>
+      <div class="card"><div class="ico g"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg></div>
+        <h3>Teams of real users</h3>
+        <p>Members are users of your Dynatrace environment, picked from IAM. Roles, contact methods, personal notification rules, team quiet hours and a <b>Ready to page?</b> checklist per team.</p>
         <div class="meta">Only user IDs are stored; names and emails are read live</div></div>
-      <div class="card"><span class="ico">🪜</span><h3>Escalation policies</h3>
+      <div class="card"><div class="ico p"><svg viewBox="0 0 24 24"><path d="M4 20h4v-5h4v-5h4V5h4"/></svg></div>
+        <h3>Escalation policies</h3>
         <p>Delayed steps targeting a schedule's on-call, a user or a whole team; forced channels; repeats; a simulation of who is paged when.</p>
         <div class="meta">Stops as soon as someone acknowledges</div></div>
-      <div class="card"><span class="ico">🔀</span><h3>Services &amp; routing</h3>
+      <div class="card"><div class="ico p"><svg viewBox="0 0 24 24"><path d="M4 6h6l4 6-4 6H4M14 12h6M17 9l3 3-3 3"/></svg></div>
+        <h3>Services &amp; routing</h3>
         <p>Ordered routing rules (first match wins) on title, category, severity, entity, tags or any field; set service, team, policy, priority or suppress. Rule tester.</p>
         <div class="meta">Events route with <code>cc.service</code>, <code>cc.priority</code>, <code>cc.tags</code></div></div>
-      <div class="card"><span class="ico">📣</span><h3>Outbound via one simple workflow</h3>
-        <p>Twilio SMS, voice and WhatsApp and IFTTT by default; Slack, Microsoft Teams, Telegram, a generic JSON webhook, and a prefilled <b>custom workflow</b> you own for anything else. Every integration has an On/Off switch and is sent by the engine itself, at no extra cost; optionally it gets a workflow of its own. War rooms with meeting links and post-mortem notebooks.</p>
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 12h3l3-7 4 14 3-7h3"/></svg></div>
+        <h3>Outbound via one simple workflow</h3>
+        <p>Twilio SMS, voice and WhatsApp and IFTTT by default; Slack, Microsoft Teams, Telegram, a generic JSON webhook, and a prefilled <b>custom workflow</b> you own for anything else. Every integration has an On/Off switch and is sent by the engine itself; optionally it gets a workflow of its own.</p>
         <div class="meta">Secrets stay in the Credential Vault; the app stores entry IDs only</div></div>
-      <div class="card"><span class="ico">📊</span><h3>Reports</h3>
+      <div class="card"><div class="ico g"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-3 3 6 2-3h7"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg></div>
+        <h3>War rooms</h3>
+        <p>A meeting link, the incidents it handles and its Dynatrace Notebooks, including a generated post-mortem notebook.</p>
+        <div class="meta">Notebooks through the Document API</div></div>
+      <div class="card"><div class="ico p"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+        <h3>Reports</h3>
         <p>MTTA and MTTR, incidents per day, load by priority and team, noisiest services, time-to-acknowledge distribution, delivery success, on-call load.</p>
         <div class="meta">Built from daily rollups (~2 KB per day)</div></div>
-      <div class="card"><span class="ico">⚙️</span><h3>Settings &amp; demo mode</h3>
-        <p>Sources, defaults, engine limits, retention, configuration export/import, legacy-data cleanup. Demo mode per browser: sample data everywhere, nothing read, written or sent; off means only real data.</p>
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></div>
+        <h3>Settings &amp; demo mode</h3>
+        <p>Sources, defaults, engine limits, retention, configuration export/import, legacy-data cleanup. Demo mode per browser: sample data everywhere, nothing read, written or sent.</p>
         <div class="meta">Config as code: the <code>config</code> app function exports and imports (with dry run) the whole configuration</div></div>
+      <div class="card"><div class="ico g"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg></div>
+        <h3>In-app help</h3>
+        <p>The guides, inbound snippets (curl, PowerShell, Python, workflow task) and troubleshooting live inside the app, in English, Portuguese and Spanish.</p>
+        <div class="meta">A setup checklist that ticks itself off</div></div>
     </div>
   </div>
 </section>
 
-<section id="screenshots">
+<section id="screens">
   <div class="wrap">
-    <div class="sec-head"><span class="kicker">Tour</span><h2>Screenshots</h2>
-      <p>Taken in demo mode with synthetic data — no real environment, users or phone numbers.</p></div>
+    <div class="head"><span class="kicker">Screens</span><h2>A closer look</h2>
+      <p>Captured in demo mode with synthetic data, dark theme. Select a screen to open it at full size.</p></div>
     <div class="shots">
-      <figure class="shot"><a href="screenshots/console.png"><img src="screenshots/console.png" alt="Console: incident table with KPI strip and filters" loading="lazy" /></a>
-        <figcaption><b>Console</b> — triage table, KPIs and bulk actions</figcaption></figure>
-      <figure class="shot"><a href="screenshots/incident.png"><img src="screenshots/incident.png" alt="Incident detail with timeline and escalation" loading="lazy" /></a>
-        <figcaption><b>Incident</b> — timeline, escalation, notification ledger</figcaption></figure>
-      <figure class="shot"><a href="screenshots/oncall.png"><img src="screenshots/oncall.png" alt="On-call now and schedule coverage" loading="lazy" /></a>
-        <figcaption><b>On-call</b> — who is on call now and next</figcaption></figure>
-      <figure class="shot"><a href="screenshots/teams.png"><img src="screenshots/teams.png" alt="Teams with members picked from Dynatrace users" loading="lazy" /></a>
-        <figcaption><b>Teams</b> — members, roles and contact methods</figcaption></figure>
-      <figure class="shot"><a href="screenshots/escalations.png"><img src="screenshots/escalations.png" alt="Escalation policy steps" loading="lazy" /></a>
-        <figcaption><b>Escalations</b> — steps, repeats and simulation</figcaption></figure>
-      <figure class="shot"><a href="screenshots/integrations.png"><img src="screenshots/integrations.png" alt="Integrations: inbound, outbound providers and workflows" loading="lazy" /></a>
-        <figcaption><b>Integrations</b> — inbound snippets, providers, engine workflow</figcaption></figure>
-      <figure class="shot"><a href="screenshots/reports.png"><img src="screenshots/reports.png" alt="Reports with MTTA, MTTR and load charts" loading="lazy" /></a>
-        <figcaption><b>Reports</b> — MTTA/MTTR, volume, delivery, on-call load</figcaption></figure>
-      <figure class="shot"><a href="screenshots/settings.png"><img src="screenshots/settings.png" alt="Settings: sources, engine, retention, export and import" loading="lazy" /></a>
-        <figcaption><b>Settings</b> — sources, engine, retention, export/import</figcaption></figure>
+      <figure class="shot"><a href="screenshots/console.png"><img src="screenshots/console.png" alt="Console: incident table with KPI strip and filters" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>Console</b>Triage table, KPIs and bulk actions</figcaption></figure>
+      <figure class="shot"><a href="screenshots/incident.png"><img src="screenshots/incident.png" alt="Incident detail with timeline and escalation" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>Incident</b>Timeline, escalation, notification ledger</figcaption></figure>
+      <figure class="shot"><a href="screenshots/oncall.png"><img src="screenshots/oncall.png" alt="On-call now and schedule coverage" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>On-call</b>Who is on call now and next</figcaption></figure>
+      <figure class="shot"><a href="screenshots/team.png"><img src="screenshots/team.png" alt="Team page with the Ready to page checklist and members" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>Team</b>Ready to page? checklist, members, contact methods</figcaption></figure>
+      <figure class="shot"><a href="screenshots/policy-editor.png"><img src="screenshots/policy-editor.png" alt="Escalation policy editor with simulation" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>Escalations</b>Steps, repeats and simulation</figcaption></figure>
+      <figure class="shot"><a href="screenshots/routing.png"><img src="screenshots/routing.png" alt="Ordered routing rules" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>Routing</b>Ordered rules, first match wins</figcaption></figure>
+      <figure class="shot"><a href="screenshots/integrations-outbound.png"><img src="screenshots/integrations-outbound.png" alt="Outbound providers with On/Off switches" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>Integrations</b>Outbound providers, each with a test</figcaption></figure>
+      <figure class="shot"><a href="screenshots/integrations-workflow.png"><img src="screenshots/integrations-workflow.png" alt="Engine and Engine on problem workflows" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>Workflows</b>Engine and Engine on problem</figcaption></figure>
+      <figure class="shot"><a href="screenshots/reports.png"><img src="screenshots/reports.png" alt="Reports with MTTA, MTTR and load charts" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>Reports</b>MTTA/MTTR, volume, delivery, on-call load</figcaption></figure>
     </div>
   </div>
 </section>
 
-<section id="how">
+<section id="how" class="alt">
   <div class="wrap">
-    <div class="sec-head"><span class="kicker">Under the hood</span><h2>How it works</h2>
-      <p>The important behaviours to understand before running it in a real environment.</p></div>
+    <div class="head"><span class="kicker">Under the hood</span><h2>How it works</h2>
+      <p>Inbound only through Dynatrace, outbound only through a Dynatrace workflow. The behaviours to understand before running it in a real environment.</p></div>
+    <div class="flow">
+      <div class="node"><div class="n">01 · inbound</div><h3>Your tools → Dynatrace</h3><p>Events go to the Events API v2 (Davis opens a problem) or, optionally, generic events to OpenPipeline.</p></div>
+      <div class="node"><div class="n">02 · engine</div><h3>Simple workflow</h3><p><i>Command Center · Engine</i> runs the app's <code>run-engine</code> action every 1, 2 or 5 minutes: one task, no workflow hours.</p></div>
+      <div class="node"><div class="n">03 · decide</div><h3>Route &amp; escalate</h3><p>Lease, DQL, dedup, routing, operator actions, escalation and notification planning, all in one run.</p></div>
+      <div class="node"><div class="n">04 · page</div><h3>Send &amp; record</h3><p>Secrets from the Credential Vault, HTTPS to the providers, results in the notification ledger in App State.</p></div>
+    </div>
 <pre><span class="c"># inbound</span>
 Your tool ──POST /api/v2/events/ingest──▶ <span class="b">Davis</span> opens a problem ──▶ <span class="b">Grail</span> dt.davis.problems / dt.davis.events
 Your tool ──POST /platform/ingest/v1/events (optional)──▶ <span class="b">Grail</span> events
 
 <span class="c"># every 1, 2 or 5 minutes: simple workflow "Command Center · Engine" (one task, no workflow hours)</span>
-<span class="k">run-engine</span> action ── lease ▸ DQL Q1–Q4 ▸ dedup ▸ route ▸ apply operator actions ▸ escalate ▸ plan
+<span class="k">run-engine</span> action ── lease ▸ DQL ▸ dedup ▸ route ▸ apply operator actions ▸ escalate ▸ plan
                   ├── Credential Vault ▸ provider HTTPS (Twilio · IFTTT · Slack · Teams · Telegram · webhook)
                   └── App State: incidents, notification ledger, heartbeat
 
+<span class="c"># optional: simple workflow "Command Center · Engine on problem" (Problem trigger, same action)</span>
+
 <span class="c"># UI</span>
 Strato UI ── reads App State, writes configuration + append-only operator actions ── app function engine-run for "Run engine now", tests, "Escalate now"</pre>
-    <div class="behaviors" style="margin-top:22px">
-      <div class="beh"><h3>🔵 The engine is the heart</h3><p>Nothing is paged unless the engine workflow runs. The console warns when it is late (two intervals plus one minute), reports an error, or has never run.</p></div>
-      <div class="beh b-green"><h3>🟢 Never resolved by absence</h3><p>A failed or empty query is not "all clear". Incidents resolve only on an explicit CLOSED record, <code>cc.action: resolve</code>, or an operator.</p></div>
-      <div class="beh b-purple"><h3>🟣 One confirmation to install</h3><p>Apps not provided by Dynatrace cannot hold <code>automation:workflows:write</code>. The app opens the Workflows app with the workflow filled in; you confirm it once (or upload the JSON, or run the admin script).</p></div>
-      <div class="beh"><h3>🔵 Simple workflow, custom action</h3><p>A simple workflow allows one task that is not Run JavaScript, so the engine is the app's own action. Measured: one function invocation per run, no workflow hours.</p></div>
-      <div class="beh b-green"><h3>🟢 Optional: run on problems</h3><p>A second simple workflow with a Problem trigger runs the same action when Davis opens or closes a problem. Measured: the incident is created 34–40 s after the problem opens, whatever the interval, for about two runs per problem.</p></div>
-      <div class="beh b-green"><h3>🟢 At-least-once paging</h3><p>A notification ledger plans one entry per person, step, channel and attempt. A notification without a result is retried, up to 3 attempts. Rare races can notify twice.</p></div>
-      <div class="beh b-purple"><h3>🟣 cc.* properties</h3><p>Event properties land on the Davis event, not the problem. The engine copies <code>cc.*</code> from a problem's events onto the problem so routing can use them.</p></div>
-      <div class="beh b-warn"><h3>🟡 Shared, last-write-wins state</h3><p>All data is in App State: readable by every app user, no optimistic locking, 50 MB per app. Roles are guidance, not server-side permissions.</p></div>
-      <div class="beh b-warn"><h3>🟡 Timing precision = interval</h3><p>An escalation step or snooze end takes effect on the first engine run after it is due: within 1, 2 or 5 minutes.</p></div>
-      <div class="beh b-warn"><h3>🟡 Demo mode per browser</h3><p>Sample data only in the browser that turned it on, so a demo never replaces the real console of the people on call.</p></div>
-    </div>
-  </div>
-</section>
-
-<section id="stack">
-  <div class="wrap">
-    <div class="sec-head"><span class="kicker">Built with</span><h2>Tech stack</h2>
-      <p>A Dynatrace App Toolkit project with a pure TypeScript domain core shared by the UI, the app functions and the workflow action.</p></div>
-    <div class="chips">
-      <span class="chip"><b>React</b> 18.3</span>
-      <span class="chip"><b>TypeScript</b> 5.x</span>
-      <span class="chip"><b>Strato</b> Design System 3.x</span>
-      <span class="chip"><b>DQL</b> / Grail</span>
-      <span class="chip"><b>App State</b> service</span>
-      <span class="chip"><b>App functions</b></span>
-      <span class="chip"><b>Custom workflow action</b></span>
-      <span class="chip"><b>Simple workflow</b></span>
-      <span class="chip"><b>Credential Vault</b></span>
-      <span class="chip"><b>Document API</b> notebooks</span>
-      <span class="chip"><b>IAM</b> users</span>
-      <span class="chip"><b>dt-app</b> CLI</span>
-      <span class="chip"><b>vitest</b></span>
-      <span class="chip"><b>app id</b> <code>my.command.center</code></span>
+    <div class="beh">
+      <div><h3>The engine is the heart</h3><p>Nothing is paged unless the engine workflow runs. The console warns when it is late (two intervals plus one minute), reports an error, or has never run.</p></div>
+      <div class="g"><h3>Never resolved by absence</h3><p>A failed or empty query is not "all clear". Incidents resolve only on an explicit CLOSED record, <code>cc.action: resolve</code>, or an operator.</p></div>
+      <div class="p"><h3>One confirmation to install</h3><p>Apps not provided by Dynatrace cannot hold <code>automation:workflows:write</code>. The app opens the Workflows app with the workflow filled in; you confirm it once (or upload the JSON, or run the admin script).</p></div>
+      <div><h3>Simple workflow, custom action</h3><p>A simple workflow allows one task that is not Run JavaScript, so the engine is the app's own action. Measured: one function invocation per run, no workflow hours.</p></div>
+      <div class="g"><h3>Optional: run on problems</h3><p>A second simple workflow with a Problem trigger runs the same action when Davis opens or closes a problem. Measured: the incident is created 34–40 s after the problem opens, whatever the interval, for about two runs per problem.</p></div>
+      <div class="g"><h3>At-least-once paging</h3><p>A notification ledger plans one entry per person, step, channel and attempt. A notification without a result is retried, up to 3 attempts. Rare races can notify twice.</p></div>
+      <div class="p"><h3>cc.* properties</h3><p>Event properties land on the Davis event, not the problem. The engine copies <code>cc.*</code> from a problem's events onto the problem so routing can use them.</p></div>
+      <div class="w"><h3>Shared, last-write-wins state</h3><p>All data is in App State: readable by every app user, no optimistic locking, 50 MB per app. Roles are guidance, not server-side permissions.</p></div>
+      <div class="w"><h3>Timing precision = interval</h3><p>An escalation step or snooze end takes effect on the first engine run after it is due: within 1, 2 or 5 minutes.</p></div>
+      <div class="w"><h3>Demo mode per browser</h3><p>Sample data only in the browser that turned it on, so a demo never replaces the real console of the people on call.</p></div>
     </div>
   </div>
 </section>
 
 <section id="cost">
   <div class="wrap">
-    <div class="sec-head"><span class="kicker">Cost awareness</span><h2>Query cost &amp; consumption (DPS)</h2>
+    <div class="head"><span class="kicker">Cost awareness</span><h2>Query cost &amp; consumption (DPS)</h2>
       <p>The engine runs all day, independently of users. The UI runs <b>no</b> Grail queries. Understand and measure the
-         consumption to avoid surprises on your bill.</p></div>
-    <div class="table-wrap">
+        consumption to avoid surprises on your bill.</p></div>
+    <div class="big">
+      <div><strong>1</strong><span>function invocation per engine run (measured)</span></div>
+      <div><strong>0</strong><span>workflow hours: the engine is a simple workflow</span></div>
+      <div><strong>1–8</strong><span>Grail queries per run; the UI runs none</span></div>
+    </div>
+    <div class="table">
       <table>
         <thead><tr><th>Item</th><th>1-minute interval</th><th>2 minutes</th><th>5 minutes</th></tr></thead>
         <tbody>
@@ -357,25 +461,22 @@ Strato UI ── reads App State, writes configuration + append-only operator ac
     </div>
     <div class="callout"><b>Measured on a trial environment</b> (billing events in <code>dt.system.events</code>): the previous
       standard-workflow engine used about <b>690 function invocations per hour plus one workflow hour per hour</b>. The
-      simple-workflow engine uses <b>one invocation per run</b> — 10 per 10 minutes at a 1-minute interval — and no workflow hours.</div>
-    <div class="table-wrap" style="margin-top:18px">
+      simple-workflow engine uses <b>one invocation per run</b> (60 per hour at a 1-minute interval) and no workflow hours.
+      With the optional <i>Engine on problem</i> workflow the first page does not wait for the interval, so 5 minutes is
+      enough for most teams.</div>
+    <div class="table" style="margin-top:18px">
       <table>
         <thead><tr><th>Cost driver</th><th>Impact</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td><b>Run interval</b></td><td><span class="tag red">Dominant</span></td>
-              <td>Runs are linear in the interval. A longer interval also means coarser escalation timing.</td></tr>
-          <tr><td>Enabled sources</td><td><span class="tag dim">+1 query per source</span></td>
-              <td>Davis problems (Q1) always; Davis events (Q2) and generic events (Q3) off by default.</td></tr>
-          <tr><td>Problems with events</td><td><span class="tag dim">+1 per 100 IDs</span></td>
-              <td>Q4 reads <code>cc.*</code> of linked events; at most 5 per run.</td></tr>
-          <tr><td>Look-back</td><td><span class="tag dim">Medium</span></td>
-              <td>Q1 default 72 h; Q2/Q3 fixed 24 h; Q4 uses the problem look-back.</td></tr>
-          <tr><td>Open tabs / users</td><td><span class="tag green">No Grail cost</span></td>
-              <td>Each open tab reads App State every 30 s by default.</td></tr>
+          <tr><td><b>Run interval</b></td><td><span class="tag red">Dominant</span></td><td>Runs are linear in the interval. A longer interval also means coarser escalation timing.</td></tr>
+          <tr><td>Enabled sources</td><td><span class="tag dim">+1 query per source</span></td><td>Davis problems (Q1) always; Davis events (Q2) and generic events (Q3) off by default.</td></tr>
+          <tr><td>Problems with events</td><td><span class="tag dim">+1 per 100 IDs</span></td><td>Q4 reads <code>cc.*</code> of linked events; at most 5 per run.</td></tr>
+          <tr><td>Look-back</td><td><span class="tag dim">Medium</span></td><td>Q1 default 72 h; Q2/Q3 fixed 24 h; Q4 uses the problem look-back.</td></tr>
+          <tr><td>Open tabs / users</td><td><span class="tag green">No Grail cost</span></td><td>Each open tab reads App State every 30 s by default.</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="two-col" style="margin-top:22px">
+    <div class="two" style="margin-top:18px">
       <div class="card"><h3>Measure it</h3>
         <ul class="tick">
           <li><code>fetch dt.system.events | filter event.kind == "BILLING_USAGE_EVENT"</code>, grouped by <code>event.type</code> and <code>function.type</code>.</li>
@@ -389,33 +490,17 @@ Strato UI ── reads App State, writes configuration + append-only operator ac
           <li>Leave integrations on delivery by the engine (the default): a workflow of its own costs one invocation per notification.</li>
         </ul></div>
     </div>
-    <p class="note">All four queries are in the <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/operations.md#cost-and-consumption">operations guide</a> and in <code>ui/app/data/dql.ts</code>; each was executed on a trial environment.</p>
+    <p class="note">The queries are in the <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/operations.md#cost-and-consumption">operations guide</a> and in <code>ui/app/data/dql.ts</code>; each was executed on a trial environment.</p>
   </div>
 </section>
 
-<section id="structure">
+<section id="setup" class="alt">
   <div class="wrap">
-    <div class="sec-head"><span class="kicker">Codebase</span><h2>Project structure</h2></div>
-<pre>app.config.json                 <span class="c"># app id, version, scopes, the run-engine action</span>
-actions/run-engine.action.ts    <span class="c"># the workflow action: one engine cycle</span>
-api/                            <span class="c"># app functions engine-run, config, status, incidents, directory</span>
-└── lib/                        <span class="c"># engine cycle, sources Q1–Q4, lease, senders, config as code</span>
-ui/app/
-├── domain/                     <span class="c"># pure TS core: routing, schedules, escalation, planning, reports</span>
-├── data/                       <span class="c"># App State, DQL, IAM directory, notebooks, workflow definition</span>
-├── pages/                      <span class="c"># console, war rooms, on-call, teams, escalations, services, integrations, reports, settings, help</span>
-└── components/ hooks/          <span class="c"># shared UI, notifications, app data context</span>
-workflow-templates/             <span class="c"># generated engine workflow + trial-only alert simulator</span>
-scripts/                        <span class="c"># install-workflow, gen-workflow-templates, preview-server, screenshot</span>
-docs/                           <span class="c"># this page, guides/en · pt-BR · es, screenshots/</span></pre>
-  </div>
-</section>
-
-<section id="start">
-  <div class="wrap">
-    <div class="sec-head"><span class="kicker">Get running</span><h2>Quick start</h2>
-      <p>Deploy the app, then follow the paging setup below.</p></div>
-    <div class="two-col">
+    <div class="head"><span class="kicker">Get running</span><h2>Quick start &amp; paging setup</h2>
+      <p>Deploy the app, then make it page. Full detail in the
+        <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/getting-started.md">getting-started guide</a>;
+        the app's Help page has a short checklist that ticks itself off, and every team page has its own <b>Ready to page?</b> checklist.</p></div>
+    <div class="two">
       <div class="card"><h3>Prerequisites</h3>
         <ul class="tick"><li>Node.js ≥ 22 and npm</li>
           <li>Dynatrace SaaS (latest Dynatrace) with <b>Grail</b>, AppEngine and Workflows</li>
@@ -427,7 +512,7 @@ docs/                           <span class="c"># this page, guides/en · pt-BR 
           <li><code>npm test</code> · <code>npm run typecheck</code> · <code>npm run lint</code></li>
           <li><code>npm run check</code> — all of them plus build</li></ul></div>
     </div>
-<pre style="margin-top:20px"><span class="c"># 1. Clone and install</span>
+<pre style="margin-top:18px"><span class="c"># 1. Clone and install</span>
 git clone https://github.com/adrianorafael/Command-Center-for-Dynatrace.git
 cd Command-Center-for-Dynatrace
 npm install
@@ -439,32 +524,10 @@ npm install
 npx dt-app auth
 npx dt-app deploy
 
-<span class="c"># Offline preview in demo mode, no environment needed</span>
+<span class="c"># Offline preview in demo mode, no environment needed (?demo=empty starts with no data)</span>
 npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># http://127.0.0.1:4173/ui/</span></pre>
 
-    <p class="note" style="margin-top:28px"><b>Required OAuth scopes</b> — each was accepted at deploy and exercised on a trial environment; the Dynatrace documentation link for each is in the getting-started guide.</p>
-    <div class="table-wrap">
-      <table><thead><tr><th>Scope</th><th>Purpose</th></tr></thead>
-        <tbody>
-          <tr><td><code>storage:buckets:read</code></td><td>Any Grail read</td></tr>
-          <tr><td><code>storage:events:read</code></td><td>Read <code>dt.davis.problems</code>, <code>dt.davis.events</code> and <code>events</code></td></tr>
-          <tr><td><code>state:app-states:read</code> / <code>:write</code> / <code>:delete</code></td><td>Configuration, incidents, operator actions, notification ledger</td></tr>
-          <tr><td><code>iam:users:read</code></td><td>Team member search and names</td></tr>
-          <tr><td><code>automation:workflows:read</code></td><td>Engine workflow install status; finding your custom workflow</td></tr>
-          <tr><td><code>automation:workflows:run</code></td><td>Custom workflow integration: run your workflow once per notification</td></tr>
-          <tr><td><code>document:documents:read</code> / <code>:write</code></td><td>War rooms: attach notebooks, create the post-mortem notebook</td></tr>
-          <tr><td><code>credential-vault:entries:read</code></td><td>The engine reads provider secrets when it sends</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="note">Not requested: <code>automation:workflows:write</code> — the platform rejected it at deploy (only apps provided by Dynatrace may use it). No ingest scope: your tools send events with their own token.</p>
-  </div>
-</section>
-
-<section id="setup">
-  <div class="wrap">
-    <div class="sec-head"><span class="kicker">Make it page</span><h2>Paging setup</h2>
-      <p>Full detail in the getting-started guide. The app's Help page has a short checklist that ticks itself off, and every team page has its own <b>Ready to page?</b> checklist.</p></div>
+    <h3 class="sub">Make it page</h3>
     <ol class="steps">
       <li><b>Credential Vault.</b> One entry per provider (IDs like <code>CREDENTIAL_VAULT_ENTRY-…</code>), scope <b>AppEngine</b>, owned by the workflow actor.
         Twilio: username/password (SID and token). IFTTT, Slack, Teams, Telegram, webhook: token.</li>
@@ -481,7 +544,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
       <li><b>Send an event.</b> A platform token with <code>openpipeline:events.davis:ingest</code>, and
         <code>cc.service</code>, <code>cc.priority</code>, <code>cc.tags</code> as properties.</li>
     </ol>
-<pre style="margin-top:20px">curl -X POST "https://YOUR-ENVIRONMENT.live.dynatrace.com/api/v2/events/ingest" \
+<pre style="margin-top:18px">curl -X POST "https://YOUR-ENVIRONMENT.live.dynatrace.com/api/v2/events/ingest" \
   -H "Authorization: Bearer YOUR-PLATFORM-TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"eventType":"CUSTOM_ALERT","title":"Checkout latency above 2 s","timeout":30,
@@ -489,13 +552,51 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
     <div class="callout">The default path is <b>event → Davis problem → incident</b>: the incident resolves when Davis
       closes the problem. <code>cc.dedup_key</code> and <code>cc.action</code> only apply to the optional Davis-events and
       generic-events sources.</div>
+
+    <h3 class="sub">Required OAuth scopes</h3>
+    <div class="table">
+      <table><thead><tr><th>Scope</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>storage:buckets:read</code></td><td>Any Grail read</td></tr>
+          <tr><td><code>storage:events:read</code></td><td>Read <code>dt.davis.problems</code>, <code>dt.davis.events</code> and <code>events</code></td></tr>
+          <tr><td><code>state:app-states:read</code> / <code>:write</code> / <code>:delete</code></td><td>Configuration, incidents, operator actions, notification ledger</td></tr>
+          <tr><td><code>iam:users:read</code></td><td>Team member search and names</td></tr>
+          <tr><td><code>automation:workflows:read</code></td><td>Engine workflow install status; finding your custom workflow</td></tr>
+          <tr><td><code>automation:workflows:run</code></td><td>Custom workflow integration: run your workflow once per notification</td></tr>
+          <tr><td><code>document:documents:read</code> / <code>:write</code></td><td>War rooms: attach notebooks, create the post-mortem notebook</td></tr>
+          <tr><td><code>credential-vault:entries:read</code></td><td>The engine reads provider secrets when it sends</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Each scope was accepted at deploy and exercised on a trial environment; the Dynatrace documentation link for each is in the getting-started guide.
+      Not requested: <code>automation:workflows:write</code> — the platform rejected it at deploy (only apps provided by Dynatrace may use it). No ingest scope: your tools send events with their own token.</p>
   </div>
 </section>
 
-<section id="trouble">
+<section id="verified">
   <div class="wrap">
-    <div class="sec-head"><span class="kicker">Help</span><h2>Troubleshooting</h2></div>
-    <div class="table-wrap">
+    <div class="head"><span class="kicker">Honest status</span><h2>Verified and not verified</h2>
+      <p>What was exercised end to end on a trial environment, and what was implemented from vendor documentation only.</p></div>
+    <div class="verified">
+      <div class="card"><h3><span class="dot" style="background:var(--green)"></span> Verified</h3>
+        <ul class="tick">
+          <li>End to end: Davis event ingest → Davis problem → engine → routing by <code>cc.service</code> → schedule → escalation steps → <b>generic webhook</b> delivered → ledger updated. A four-step policy fired every step within one minute of being due.</li>
+          <li>Generic events (<code>/platform/ingest/v1/events</code>) trigger and resolve by <code>cc.dedup_key</code>; the queries executed.</li>
+          <li>The engine as a simple workflow with the app's own action: every run successful; one function invocation per run.</li>
+          <li>The custom workflow integration: a test and a scheduled escalation ran the customer's workflow, which delivered the full notification JSON.</li>
+          <li><i>Engine on problem</i> (Problem trigger): it fired when test problems opened and closed; the run waited until the problem was readable, created the incident 34–40 s after the problem's timestamp with the right team, and resolved it on close. One billed invocation per firing. No provider was switched on in those tests, so nothing was sent by such a run.</li>
+        </ul></div>
+      <div class="card"><h3><span class="dot" style="background:var(--amber)"></span> Not verified / not implemented</h3>
+        <ul class="tick">
+          <li>Twilio (SMS, voice, WhatsApp), IFTTT, Slack, Teams and Telegram senders: implemented from vendor documentation, <b>not exercised live</b> — test every channel you enable.</li>
+          <li>The Install in Workflows intent and the JSON upload were not clicked through (engine, engine on problem, an integration's own workflow); the API install of the same definitions is verified. The minimal actor permission set was not isolated.</li>
+          <li>User search returned nobody for just-invited users; IAM lists only active users.</li>
+          <li>Not implemented: two-way acknowledgement by SMS or chat, server-side role enforcement.</li>
+        </ul></div>
+    </div>
+
+    <h3 class="sub">Troubleshooting</h3>
+    <div class="table">
       <table><thead><tr><th>Symptom</th><th>Cause &amp; fix</th></tr></thead>
         <tbody>
           <tr><td>"The paging engine hasn't run yet" / "is late"</td>
@@ -519,55 +620,102 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
         </tbody>
       </table>
     </div>
-    <h3 class="sub">Verified and not verified</h3>
-    <ul class="tick">
-      <li>✅ End to end on a trial environment: Davis event ingest → Davis problem → engine → routing by <code>cc.service</code> → schedule → escalation steps → <b>generic webhook</b> delivered → ledger updated. A four-step policy fired every step within one minute of being due.</li>
-      <li>✅ Generic events (<code>/platform/ingest/v1/events</code>) trigger and resolve by <code>cc.dedup_key</code>; all four queries executed.</li>
-      <li>✅ The engine as a simple workflow with the app's own action: every run successful; one function invocation per run.</li>
-      <li>✅ The custom workflow integration: a test and a scheduled escalation ran the customer's workflow, which delivered the full notification JSON.</li>
-      <li>✅ <i>Engine on problem</i> (Problem trigger): it fired when test problems opened and closed; the run waited until the problem was readable, created the incident 34–40 s after the problem's timestamp with the right team, and resolved it on close. One billed invocation per firing. No provider was switched on in those tests, so nothing was sent by such a run.</li>
-      <li>⚠️ Twilio (SMS, voice, WhatsApp), IFTTT, Slack, Teams and Telegram senders: implemented from vendor documentation, <b>not exercised live</b> — test every channel you enable.</li>
-      <li>⚠️ The Install in Workflows intent and the JSON upload were not clicked through (engine, engine on problem, an integration's own workflow); the API install of the same definitions is verified. The minimal actor permission set was not isolated.</li>
-      <li>⚠️ User search returned nobody for just-invited users; IAM lists only active users.</li>
-      <li>Not implemented: two-way acknowledgement by SMS or chat, server-side role enforcement.</li>
-    </ul>
   </div>
 </section>
 
-<section id="docs">
+<section id="docs" class="alt">
   <div class="wrap">
-    <div class="sec-head"><span class="kicker">Documentation</span><h2>Guides in three languages</h2></div>
-    <div class="table-wrap">
-      <table><thead><tr><th>Guide</th><th>English</th><th>Português (BR)</th><th>Español</th></tr></thead>
-        <tbody>
-          <tr><td>README</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/README.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/README.pt-BR.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/README.es.md">Español</a></td></tr>
-          <tr><td>Getting started</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/getting-started.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/getting-started.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/getting-started.md">Español</a></td></tr>
-          <tr><td>User guide</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/user-guide.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/user-guide.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/user-guide.md">Español</a></td></tr>
-          <tr><td>Alerts reference</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/alerts-reference.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/alerts-reference.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/alerts-reference.md">Español</a></td></tr>
-          <tr><td>Integrations</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/integrations.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/integrations.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/integrations.md">Español</a></td></tr>
-          <tr><td>Configuration</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/configuration.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/configuration.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/configuration.md">Español</a></td></tr>
-          <tr><td>Operations</td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/operations.md">English</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/pt-BR/operations.md">Português</a></td><td><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/es/operations.md">Español</a></td></tr>
-        </tbody>
-      </table>
+    <div class="head"><span class="kicker">Documentation</span><h2>Guides</h2>
+      <p>The guides on GitHub are in English. Inside the app, the Help page carries the documentation in English,
+        Portuguese and Spanish.</p></div>
+    <div class="docs">
+      <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/getting-started.md"><h3>Getting started</h3><span>Deploy, every permission with its Dynatrace documentation, Credential Vault, allowlist, engine install, first test</span></a>
+      <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/user-guide.md"><h3>User guide</h3><span>Every screen and menu, icons, statuses, KPIs, notifications, war rooms, on-call switch</span></a>
+      <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/alerts-reference.md"><h3>Alerts reference</h3><span>The three inbound paths, JSON formats, fields, <code>cc.*</code> properties, routing order</span></a>
+      <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/integrations.md"><h3>Integrations</h3><span>The eight channels, what each provider receives, webhook payload, message texts, tests</span></a>
+      <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/configuration.md"><h3>Configuration</h3><span>Every setting with its default, app functions for automation, stored data</span></a>
+      <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/docs/guides/en/operations.md"><h3>Operations</h3><span>Architecture, the simple-workflow cost study with measurements, troubleshooting, security, what is verified</span></a>
+      <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/README.md"><h3>README</h3><span>Overview, what it replaces, scopes, cost, development and scripts</span></a>
+      <a class="doc" href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/CHANGELOG.md"><h3>Changelog</h3><span>Every release, in Keep a Changelog format</span></a>
     </div>
-    <p class="note"><a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace/blob/main/CHANGELOG.md">Changelog</a></p>
+
+    <h3 class="sub">Built with</h3>
+    <div class="chips">
+      <span class="chip"><b>React</b> 18.3</span><span class="chip"><b>TypeScript</b> 5.x</span>
+      <span class="chip"><b>Strato</b> Design System 3.x</span><span class="chip"><b>DQL</b> / Grail</span>
+      <span class="chip"><b>App State</b> service</span><span class="chip"><b>App functions</b></span>
+      <span class="chip"><b>Custom workflow action</b></span><span class="chip"><b>Simple workflow</b></span>
+      <span class="chip"><b>Credential Vault</b></span><span class="chip"><b>Document API</b> notebooks</span>
+      <span class="chip"><b>IAM</b> users</span><span class="chip"><b>dt-app</b> CLI</span><span class="chip"><b>vitest</b></span>
+      <span class="chip"><b>app id</b> <code>my.command.center</code></span>
+    </div>
+<pre style="margin-top:22px">app.config.json                 <span class="c"># app id, version, scopes, the run-engine action</span>
+actions/run-engine.action.ts    <span class="c"># the workflow action: one engine cycle (interval, or started by a problem)</span>
+api/                            <span class="c"># app functions engine-run, config, status, incidents, directory</span>
+└── lib/                        <span class="c"># engine cycle, problem-triggered run, sources, lease, senders, config as code</span>
+ui/app/
+├── domain/                     <span class="c"># pure TS core: routing, schedules, escalation, planning, reports</span>
+├── data/                       <span class="c"># App State, DQL, IAM directory, notebooks, workflow definition</span>
+├── pages/                      <span class="c"># console, war rooms, on-call, teams, escalations, services, integrations, reports, settings, help</span>
+└── components/ hooks/          <span class="c"># shared UI, notifications, app data context</span>
+workflow-templates/             <span class="c"># generated engine workflows (interval, on problem) + trial-only alert simulator</span>
+scripts/                        <span class="c"># install-workflow, gen-workflow-templates, preview-server, screenshots, demo video</span>
+docs/                           <span class="c"># this page, guides/en, screenshots/, media/</span></pre>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <div>
-      Built by <a href="https://github.com/adrianorafael" target="_blank" rel="noopener">@adrianorafael</a> ·
-      <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace" target="_blank" rel="noopener">Source on GitHub</a> ·
-      <a href="https://developer.dynatrace.com/" target="_blank" rel="noopener">Dynatrace Developer</a> ·
-      Version 2.3.0
+    <div class="row">
+      <a class="brand" href="#top"><img src="icon.svg" alt="" /> Command Center for Dynatrace</a>
+      <div>
+        Built by <a href="https://github.com/adrianorafael" target="_blank" rel="noopener">@adrianorafael</a> ·
+        <a href="https://github.com/adrianorafael/Command-Center-for-Dynatrace" target="_blank" rel="noopener">Source on GitHub</a> ·
+        <a href="https://developer.dynatrace.com/" target="_blank" rel="noopener">Dynatrace Developer</a> ·
+        Version 2.4.0
+      </div>
     </div>
-    <p class="fnote">
-      Not affiliated with, endorsed by, or supported by Dynatrace. Provided "as is" for study and demonstration
-      purposes. Dynatrace and the Dynatrace logo are trademarks of Dynatrace LLC.
-    </p>
+    <p>Not affiliated with, endorsed by, or supported by Dynatrace. Provided "as is" for study and demonstration
+      purposes. Dynatrace and the Dynatrace logo are trademarks of Dynatrace LLC.</p>
   </div>
 </footer>
 
+<script>
+  // Chapter buttons for the tour video, built from its WebVTT chapter track (written by scripts/edit-demo.sh).
+  (function () {
+    var video = document.getElementById("demo");
+    var bar = document.getElementById("chapters");
+    if (!video || !bar || !video.textTracks || !video.textTracks.length) return;
+    var track = video.textTracks[0];
+    track.mode = "hidden";
+    var built = false;
+    function build() {
+      if (built || !track.cues || !track.cues.length) return;
+      built = true;
+      Array.prototype.forEach.call(track.cues, function (cue) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.textContent = cue.text;
+        b.addEventListener("click", function () {
+          video.currentTime = cue.startTime + 0.05;
+          video.play();
+        });
+        b.dataset.start = cue.startTime;
+        b.dataset.end = cue.endTime;
+        bar.appendChild(b);
+      });
+    }
+    var el = video.querySelector("track");
+    if (el) el.addEventListener("load", build);
+    video.addEventListener("loadedmetadata", build);
+    setTimeout(build, 1500);
+    video.addEventListener("timeupdate", function () {
+      var t = video.currentTime;
+      Array.prototype.forEach.call(bar.children, function (b) {
+        b.setAttribute("aria-current", String(t >= +b.dataset.start && t < +b.dataset.end));
+      });
+    });
+  })();
+</script>
 </body>
 </html>

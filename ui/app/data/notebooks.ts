@@ -10,6 +10,7 @@ import { getDocumentLink } from "@dynatrace-sdk/navigation";
 import { buildPostmortemNotebook } from "../domain/warrooms";
 import { isDemo } from "./demoMode";
 
+/** A notebook as linked from a war room; `url` is empty when the navigation SDK cannot build a link. */
 export interface NotebookRef {
   id: string;
   name: string;

@@ -1,3 +1,4 @@
+/** Team detail: readiness checklist and the Members, On-call, Escalation, Quiet hours and Services tabs. */
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { Flex, Grid, PageLayout } from "@dynatrace/strato-components/layouts";

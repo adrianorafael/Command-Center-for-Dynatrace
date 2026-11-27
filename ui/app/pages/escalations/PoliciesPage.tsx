@@ -1,3 +1,4 @@
+/** Escalation policies list (route `/escalations`). */
 import { markCreated } from "../../components/NewItemHighlight";
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";

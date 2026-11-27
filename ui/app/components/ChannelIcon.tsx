@@ -1,3 +1,4 @@
+/** Icon per notification channel, shared by every screen that lists channels. */
 import React from "react";
 import { CallIcon, ChatIcon, HttpIcon, MobileIcon } from "@dynatrace/strato-icons";
 import type { Channel } from "../domain/contracts";

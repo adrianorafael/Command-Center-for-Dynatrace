@@ -27,9 +27,11 @@ import type {
 } from "../contracts";
 import { parsePriority } from "../priority";
 
+/** Regex limits from the header: longest pattern, and how much of a value is tested (characters). */
 export const MAX_REGEX_LENGTH = 500;
 export const MAX_REGEX_INPUT = 1_000;
 
+/** Rule fields that validation accepts and the editor offers, besides `fields.<name>`. */
 export const RULE_FIELDS = [
   "title",
   "description",
@@ -204,6 +206,7 @@ function matchOne(value: string, cond: RuleCondition): boolean {
   }
 }
 
+/** One condition against an alert, with the semantics in the header (never throws). */
 export function evaluateCondition(alert: Alert, cond: RuleCondition): boolean {
   const values = fieldValues(alert, cond.field);
   const hit = cond.op === "exists" ? values.some((x) => x !== "") : values.some((x) => matchOne(x, cond));

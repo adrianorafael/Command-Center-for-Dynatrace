@@ -1,3 +1,4 @@
+/** Accessible icon-only button used in tables and toolbars. */
 import React from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Tooltip } from "@dynatrace/strato-components/overlays";

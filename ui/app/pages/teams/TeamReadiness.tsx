@@ -1,3 +1,4 @@
+/** "Ready to page?" checklist component; the rules themselves live in ./readiness.ts. */
 import React, { useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Flex, Surface } from "@dynatrace/strato-components/layouts";

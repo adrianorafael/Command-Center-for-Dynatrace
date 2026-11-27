@@ -1,3 +1,4 @@
+/** Escalation policy editor: steps, targets, channels and repeat, with a simulation of the draft. */
 import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useMemo, useState } from "react";

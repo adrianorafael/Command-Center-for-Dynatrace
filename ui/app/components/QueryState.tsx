@@ -1,3 +1,4 @@
+/** Loading / error / empty / content wrapper and the shared error and empty-state views. */
 import React from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { MessageContainer, SkeletonText, EmptyState } from "@dynatrace/strato-components/content";
@@ -56,6 +57,7 @@ export const QueryState = ({
   return <>{children}</>;
 };
 
+/** Strato empty state with a title and optional details and actions. */
 export const SimpleEmpty = ({
   title,
   details,

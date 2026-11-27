@@ -1,3 +1,4 @@
+/** On-call (route `/on-call`): who is on call now, schedules with their Gantt, and overrides. */
 import { markCreated } from "../../components/NewItemHighlight";
 import React, { useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom";
@@ -33,6 +34,7 @@ const CONTACT_ICONS: { channels: Channel[]; icon: React.ReactElement; label: str
   { channels: ["webhook", "ifttt"], icon: <HttpIcon />, label: "Webhook" },
 ];
 
+/** One icon per channel group (SMS, voice, chat, webhook); dimmed where the person has no contact method for it. */
 export const ContactIcons = ({ uid }: { uid: string }) => {
   const { data } = useAppData();
   const methods = data?.contacts.find((c) => c.uid === uid)?.methods ?? [];

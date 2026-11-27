@@ -16,17 +16,21 @@
  * Secrets are never returned, logged or stored: errors are redacted before they leave this module.
  */
 
+import { EXTERNAL_REQUESTS_PATH, HOST_NOT_ALLOWED } from "../../ui/app/domain/outboundHosts";
 import type { Channel, DeliveryResult, NotificationRequest } from "../../ui/app/domain/contracts";
 import type { ProviderView } from "./engine";
 
+/** Timeout of one provider HTTP request; sendAll also stops this long before its deadline. */
 export const REQUEST_TIMEOUT_MS = 10_000;
 
+/** Secret fields of a Credential Vault entry (token entry, or username/password entry). Never persisted. */
 export interface Credential {
   token?: string;
   user?: string;
   password?: string;
 }
 
+/** Injected I/O for the senders (real fetch and vault reader in production, fakes in tests). */
 export interface SenderDeps {
   fetch: typeof fetch;
   readCredential: (vaultId: string) => Promise<Credential>;
@@ -51,10 +55,20 @@ function secretValues(cred: Credential | null): string[] {
   return [cred?.token, cred?.user, cred?.password].filter((s): s is string => typeof s === "string" && s.length >= 4);
 }
 
+/**
+ * The Dynatrace JavaScript runtime refuses hosts that are not on the environment's allowlist with an error named
+ * "NotCapable" and this message (observed on a trial tenant, 2026-11-27):
+ *   Blocked request to 'example.org' (host not in allowlist). To find out about how to manage allowed domains …
+ */
+const BLOCKED_HOST_RE = /Blocked request to '([^']+)' \(host not in allowlist\)/;
+
 /** Error text without secrets: credential values and every URL (several embed keys) are removed, then truncated. */
 export function safeError(e: unknown, secrets: string[]): string {
   const err = e as { name?: string; message?: string } | undefined;
   let m = err?.name === "TimeoutError" ? "request timed out" : typeof err?.message === "string" ? err.message : typeof e === "string" ? e : "error";
+  // Say exactly what to do: the host name is not a secret, the rest of the URL may be.
+  const blocked = BLOCKED_HOST_RE.exec(m);
+  if (blocked) m = `${HOST_NOT_ALLOWED}: ${blocked[1]}. Add it in ${EXTERNAL_REQUESTS_PATH}.`;
   for (const s of secrets) m = m.split(s).join("***");
   m = m.replace(/https?:\/\/\S+/g, "<url>");
   return m.slice(0, 300);
@@ -82,6 +96,7 @@ export const slackEscape = (s: string) => String(s).replace(/&/g, "&amp;").repla
 /** Adaptive Card markdown: backslash-escape markdown syntax so alert text cannot form links or emphasis. */
 export const cardEscape = (s: string) => String(s).replace(/([\\[\]()*_`~#>!|])/g, "\\$1");
 
+/** XML escaping for text placed inside TwiML. */
 export const xmlEscape = (s: string) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
@@ -217,13 +232,15 @@ const sendWebhook: SendFn = async (n, provider, cred, deps) => {
   return res.headers.get("x-request-id") ?? undefined;
 };
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Custom workflow: runs a workflow the customer owns, passing the notification as run params
  * (POST /platform/automation/v1/workflows/{id}/run, scope automation:workflows:run). The prefilled example
  * workflow reads them with the expression {{ execution().params | to_json }} (verified on a trial tenant).
  * "Sent" means the run was accepted; what the workflow does afterwards is the customer's.
+ * sendAll uses the same call for the opt-in hand-off to an integration's own workflow.
  */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function runWorkflow(deps: SenderDeps, id: string, n: NotificationRequest): Promise<string | undefined> {
   const res = await post(deps, `/platform/automation/v1/workflows/${id}/run`, {
     headers: { "Content-Type": "application/json" },
@@ -262,6 +279,7 @@ export async function deliverDirect(n: NotificationRequest, provider: ProviderVi
   }
 }
 
+/** Sender per channel for built-in providers; its key order is also the order in which sendAll walks the channels. */
 export const SENDERS: Record<Channel, SendFn> = {
   sms: sendSms,
   voice: sendVoice,
@@ -274,7 +292,8 @@ export const SENDERS: Record<Channel, SendFn> = {
 };
 
 /**
- * Sends every notification of every channel, sequentially per provider, until `deadline` (epoch ms).
+ * Sends every notification of every channel, one request at a time, until `deadline` (epoch ms). A provider with a
+ * linked workflow (params.workflowId) gets a hand-off instead of a direct send (see PROVIDER_WORKFLOW_PARAM).
  * Items not attempted before the deadline are not reported: the ledger times them out and the engine
  * retries them with a new attempt number on a later cycle.
  */

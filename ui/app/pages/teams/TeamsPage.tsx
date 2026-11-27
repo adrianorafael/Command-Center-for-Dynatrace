@@ -1,3 +1,4 @@
+/** Teams (route `/teams`): team list, create/edit dialog and safe delete. */
 import { markCreated } from "../../components/NewItemHighlight";
 import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -154,6 +155,7 @@ export async function deleteTeamAndDefault(s: Store, teamId: string, data: AppDa
   }
 }
 
+/** What still points at a team (policies, rules, services), as phrases for the delete confirmation. */
 export function teamReferences(teamId: string, data: NonNullable<ReturnType<typeof useAppData>["data"]>): string[] {
   const refs: string[] = [];
   const pol = data.policies.filter((p) => p.teamId === teamId || p.steps.some((s) => s.targets.some((t) => t.type === "team" && t.teamId === teamId)));

@@ -1,7 +1,5 @@
 # Referência de configuração — cada configuração, função do app e chave armazenada
 
-🌐 [English](../en/configuration.md) · **Português (BR)** · [Español](../es/configuration.md)
-
 As configurações valem **para o app inteiro**: uma alteração se aplica a todos os usuários do app no ambiente. As
 únicas exceções são os itens marcados como *this browser* (este navegador), que são salvos imediatamente. As seções
 General, Event sources, Routing defaults, Paging engine e Data retention têm cada uma o seu próprio botão **Save**. A

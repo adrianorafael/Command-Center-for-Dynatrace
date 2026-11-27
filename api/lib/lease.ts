@@ -13,6 +13,7 @@
 
 import { KEY, type Repository } from "../../ui/app/data/repository";
 
+/** Value stored under `lock.engine`: who holds the lease and since when (epoch ms; 0 marks a released lease). */
 export interface EngineLock {
   holder: string;
   acquiredAt: number;
@@ -33,6 +34,10 @@ export async function leaseLost(repo: Repository, holder: string, acquiredAt: nu
   return !!cur && cur.holder !== holder && cur.acquiredAt >= acquiredAt;
 }
 
+/**
+ * Takes the lease unless another holder's lease is younger than `ttlSec`. Writes, then re-reads to tell a stale read
+ * of our own write from a competitor's write; returns false when a competitor wrote at the same time or later.
+ */
 export async function acquireLease(
   repo: Repository,
   holder: string,

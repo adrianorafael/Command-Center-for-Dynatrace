@@ -1,3 +1,4 @@
+/** Shared DataTable variant and cell components, so list tables look the same on every page. */
 import React from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
@@ -19,13 +20,13 @@ export const LIST_TABLE_VARIANT = {
   verticalAlignment: { header: "center", body: "center" },
 } as const;
 
-/** Single-line cell text: truncates with an ellipsis and shows the full text in a tooltip. */
 /**
  * Custom cells don't get the default cell inset; DataTable.DefaultCell restores it so custom and
  * plain cells line up with their headers.
  */
 export const Cell = ({ children }: { children: React.ReactNode }) => <DataTable.DefaultCell>{children}</DataTable.DefaultCell>;
 
+/** Single-line cell text: truncates with an ellipsis and shows the full text in a tooltip. */
 export const CellText = ({ children, subdued, code }: { children: string; subdued?: boolean; code?: boolean }) => (
   <Cell>
   <Tooltip text={children}>

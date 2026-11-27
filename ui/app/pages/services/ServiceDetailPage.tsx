@@ -1,3 +1,4 @@
+/** Service create/edit page: name, team, escalation policy and default priority. */
 import { markCreated } from "../../components/NewItemHighlight";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useState } from "react";

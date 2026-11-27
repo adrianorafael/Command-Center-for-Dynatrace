@@ -15,6 +15,7 @@ interface Entry {
   expiresAt?: number;
 }
 
+/** One initial entry (demo fixtures, test setup); seeds never expire. */
 export interface MemorySeed {
   key: string;
   value: unknown;
@@ -29,6 +30,7 @@ export interface MemoryRepositoryOptions {
   now?: () => number;
 }
 
+/** Repository in a Map, with TTL expiry checked on read. Unlike App State it does not validate keys. */
 export class MemoryRepository implements Repository {
   private readonly entries = new Map<string, Entry>();
   private readonly now: () => number;
@@ -110,7 +112,9 @@ export class MemoryRepository implements Repository {
   }
 }
 
+/** Shortest TTL App State accepts (1 min). */
 export const TTL_MIN_MS = 60_000;
+/** Longest TTL App State accepts (90 days). */
 export const TTL_MAX_MS = 90 * 24 * 3600_000;
 
 /** Platform window for validUntilTime: now+1m … now+90d (client-state PersistenceState docs). */

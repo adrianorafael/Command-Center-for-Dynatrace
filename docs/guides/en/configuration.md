@@ -1,7 +1,5 @@
 # Configuration reference — every setting, app function and stored key
 
-🌐 **English** · [Português (BR)](../pt-BR/configuration.md) · [Español](../es/configuration.md)
-
 Settings are **app-wide**: a change applies to every user of the app in the environment. The only exceptions are the
 items marked *this browser*, which are saved immediately. The General, Event sources, Routing defaults, Paging engine
 and Data retention sections each have their own **Save** button. Validation runs before saving and names the field

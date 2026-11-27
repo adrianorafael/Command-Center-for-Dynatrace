@@ -13,6 +13,7 @@ import type { Channel, Incident, Priority, QuietHours, Settings, Team } from "./
 import { lessUrgentThan } from "./priority";
 import { inWeeklyWindow, safeTimeZone } from "./time/tz";
 
+/** Channels allowed during low-urgency quiet hours: no SMS, voice or WhatsApp. */
 export const LOW_URGENCY_CHANNELS: readonly Channel[] = ["slack", "teams", "telegram", "ifttt", "webhook"];
 
 /** The quiet-hours window that applies at `now` (hold beats low-urgency), if any. */
@@ -27,10 +28,12 @@ export function activeQuietHours(team: Team | undefined, priority: Priority, now
   return found;
 }
 
+/** True when the alert is under maintenance and the settings do not page during maintenance. */
 export function maintenanceSuppressed(inc: Incident, settings: Settings): boolean {
   return inc.alert.underMaintenance && !settings.sources.davisProblems.pageDuringMaintenance;
 }
 
+/** Whether an incident may page now, and on which channels. */
 export interface PagingState {
   /** False when nothing may be sent now. */
   page: boolean;
@@ -40,6 +43,7 @@ export interface PagingState {
   allowedChannels?: readonly Channel[];
 }
 
+/** Applies rule suppression, then maintenance, then quiet hours (first that applies wins). */
 export function pagingState(inc: Incident, team: Team | undefined, settings: Settings, now: number): PagingState {
   if (inc.suppressed === "rule") return { page: false, suppressed: "rule" };
   if (maintenanceSuppressed(inc, settings)) return { page: false, suppressed: "maintenance" };

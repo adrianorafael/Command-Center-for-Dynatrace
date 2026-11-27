@@ -11,6 +11,37 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-11-27
+
+### Added
+- **Console → Show tabs** above the incident table (Open, Triggered, Acknowledged, Snoozed, Resolved, All), each with
+  a count that follows the other filters; they replace the Status filter. Links with `status=…` keep working.
+- **Add people** keeps the people picked across several searches in a *Selected (n)* list, each with **Remove**.
+- **External requests**: a built-in provider's **Configure** shows the host to allow (Settings → General →
+  Environment management → External requests). When Dynatrace refuses a host, the ledger records
+  *Host not allowed: <host>* with the fix, and the provider card says so (runtime message verified on a trial tenant).
+- Project page redesigned, with a demo video of the whole app in demo mode (dark theme) and dark screenshots;
+  reproducible with `scripts/record-demo.mjs`, `scripts/edit-demo.sh` and `scripts/doc-screenshots.mjs`.
+
+### Fixed
+- Demo mode no longer warns after a few minutes that the paging engine is not running.
+- Code comments: module headers and API docs throughout; stale comments from the old workflow-script design and the
+  2.3.0 delivery change corrected. No behaviour change.
+
+### Changed
+- **Help holds the full documentation** in English, Portuguese (BR) and Spanish. The six guides (getting started,
+  user guide, alerts reference, integrations, configuration, operations) open inside the app, with a table of
+  contents, links between guides that stay in the app, and a language selector. The language follows the browser
+  language until you choose one; the choice is remembered in this browser, and a guide's address
+  (`/help?doc=…&lang=…`) carries the guide and the language, so it can be shared. Each language loads only when it is
+  opened. The overview (Get started, concepts, sending events, shortcuts, troubleshooting) stays in English.
+- **GitHub is English only**: `README.pt-BR.md` and `README.es.md` are removed, and the Portuguese and Spanish guides
+  moved from `docs/guides/pt-BR` and `docs/guides/es` to `ui/app/pages/help/guides/`. The markdown stays the source:
+  `node scripts/gen-help-content.mjs` generates the in-app modules, and a unit test fails when they drift.
+- Guides: the Console's **Show** tabs (Open, Triggered, Acknowledged, Snoozed, Resolved, All, with counts) replace the
+  Status filter; **Add people** keeps picked people in a *Selected (n)* list; a built-in provider's **Configure** shows
+  the host to allow in *External requests*, and a refused host reads *Host not allowed* (new troubleshooting row).
+
 ## [2.3.0] - 2026-11-27
 
 Lower running cost. Every workflow task execution is one billed function call, whatever starts the workflow, so this

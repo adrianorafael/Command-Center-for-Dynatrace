@@ -22,6 +22,7 @@ export function assertValidKey(key: string): string {
   return key;
 }
 
+/** Parts of a notification key (see notificationKey). */
 export interface NotificationKeyParts {
   incidentId: string;
   cycle: number;
@@ -46,6 +47,7 @@ export function withAttempt(key: string, attempt: number): string {
   return `${i < 0 ? key : key.slice(0, i)}.${attempt}`;
 }
 
+/** A notification key split back into its parts; the uid is only available as its hash. */
 export interface ParsedNotificationKey {
   incidentId: string;
   cycle: number;
@@ -55,6 +57,7 @@ export interface ParsedNotificationKey {
   attempt: number;
 }
 
+/** Splits a notification key (with or without the `ntf.` prefix); undefined when it is malformed. */
 export function parseNotificationKey(key: string): ParsedNotificationKey | undefined {
   const k = key.startsWith(PREFIX.notification) ? key.slice(PREFIX.notification.length) : key;
   const parts = k.split(".");

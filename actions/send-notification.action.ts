@@ -1,8 +1,10 @@
 /**
  * Custom workflow action "Send Command Center notification".
  *
- * The single task of a per-integration simple workflow ("Command Center · Slack", …). The engine runs that workflow
- * once per notification with the notification as run params; the task input passes them on:
+ * The single task of a per-integration simple workflow ("Command Center · Slack", …). That workflow is opt-in: by
+ * default the engine sends directly (api/lib/senders.ts), and only a provider whose params.workflowId links such a
+ * workflow is handed to it. The engine then runs it once per notification (one more billed function call each),
+ * with the notification as run params; the task input passes them on:
  *   { "providerId": "slack", "notification": "{{ execution().params.notification }}" }
  * The action reads the provider from the app's settings (App State), its secret from the Credential Vault, sends,
  * and records the result in the notification ledger. A failed delivery fails the task, so it is visible in the

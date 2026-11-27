@@ -142,6 +142,9 @@ describe("senders", () => {
 
   it("never leaks secrets or URLs in error text", async () => {
     expect(safeError(new Error("bad token secret-token at https://api.twilio.com/x"), ["secret-token"])).toBe("bad token *** at <url>");
+    // The runtime's refusal of a host outside the allowlist (message observed on a trial tenant) becomes the fix.
+    const blocked = Object.assign(new Error("Blocked request to 'maker.ifttt.com' (host not in allowlist). To find out about how to manage allowed domains please visit https://dt-url.net/allow-outbound-connections"), { name: "NotCapable" });
+    expect(safeError(blocked, [])).toBe("Host not allowed: maker.ifttt.com. Add it in Settings → General → Environment management → External requests.");
     const f = vi.fn(async () => new Response("echo secret-token", { status: 401 }));
     const r = await sendAll({ sms: [note()] }, [provider()], NOW + 60_000, { fetch: f as unknown as typeof fetch, readCredential: async () => ({ user: SID, password: FAKE_PW }), now: () => NOW });
     expect(r[0].status).toBe("failed");

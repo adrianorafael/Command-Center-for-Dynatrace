@@ -1,3 +1,4 @@
+/** Configuration panel the Workflows app shows for the "Send Command Center notification" action task. */
 import React from "react";
 import { Text } from "@dynatrace/strato-components/typography";
 import type { ActionWidget } from "@dynatrace-sdk/automation-action-utils";

@@ -1,16 +1,16 @@
+/**
+ * The one seam between the UI and the lower layers: the pure domain (ui/app/domain) and the data/platform
+ * adapters (ui/app/data). Pages import domain logic and platform calls from here, so a signature change on either
+ * side is reconciled in this file.
+ */
 import { exportOnProblemDefinition, getOnProblemStatus, openOnProblemIntent, type OnProblemWorkflowStatus } from "../data/workflows/installer";
 import { exportCustomWorkflow, exportProviderWorkflow, findCustomWorkflows, findProviderWorkflows, openCustomWorkflowIntent, openProviderWorkflowIntent, type CustomWorkflowInfo } from "../data/workflows/installer";
-/**
- * The one seam between the UI and agents A (pure domain) and B (data/platform).
- * Pages import domain logic and platform calls from here only, so a signature change
- * on either side is reconciled in this file.
- */
 import type { Channel, DirectoryUser, EngineTickRequest, Settings } from "../domain/contracts";
 import type { Store } from "../data/repository";
 import { currentAppId, DEMO_ACTOR, getDirectory, getInstaller, getStore, isDemo, isRuntimeMissing, setDemoPreference } from "../data/demoMode";
 import { getCurrentUserDetails, getEnvironmentUrl } from "@dynatrace-sdk/app-environment";
 
-// ─── A: pure domain ───────────────────────────────────────────────────────────
+// ─── Pure domain ──────────────────────────────────────────────────────────────
 export { effectiveIncident } from "../domain/incidents/actions";
 export { onCallAt, onCallUids, layerOnCallAt } from "../domain/schedule/resolve";
 export type { OnCall } from "../domain/schedule/resolve";
@@ -27,10 +27,11 @@ export type { MetricsSummary } from "../domain/reports/metrics";
 export { defaultSettings } from "../domain/validation/defaults";
 export { isValidTimeZone } from "../domain/time/tz";
 
-// ─── B: data / platform ───────────────────────────────────────────────────────
+// ─── Data / platform ──────────────────────────────────────────────────────────
 export type { EngineWorkflowStatus, InstallOutcome } from "../data/workflows/installer";
 export { setDemoPreference, isRuntimeMissing };
 
+/** The shared Store (App State, or the in-memory demo store). */
 export function createAppStore(): Store {
   return getStore();
 }
@@ -39,6 +40,7 @@ export function isDemoActive(): boolean {
   return isDemo();
 }
 
+/** The signed-in user; a placeholder identity in demo mode or when the runtime cannot tell. */
 export function getCurrentUser(): DirectoryUser {
   if (isDemo()) return { uid: DEMO_ACTOR, name: "You (demo)" };
   try {
@@ -49,14 +51,17 @@ export function getCurrentUser(): DirectoryUser {
   }
 }
 
+/** Resolve uids to directory users (IAM, or the synthetic demo directory). */
 export function loadDirectoryUsers(uids: string[]): Promise<DirectoryUser[]> {
   return uids.length ? getDirectory().resolve(uids) : Promise.resolve([]);
 }
 
+/** Search active users by name or email (at least SEARCH_MIN_CHARS characters, else []). */
 export function searchDirectory(query: string): Promise<DirectoryUser[]> {
   return getDirectory().search(query);
 }
 
+/** Engine workflow status for the Workflows tab (read-only Automation API calls). */
 export function getEngineStatus(settings: Settings) {
   return getInstaller().getStatus(settings);
 }
@@ -120,9 +125,11 @@ export { currentAppId };
 export function openCustomWorkflowInstall(): void {
   openCustomWorkflowIntent(currentAppId());
 }
+/** The custom-integration workflow as a file for Workflows → Upload. */
 export function exportCustomWorkflowDefinition(): { fileName: string; json: string } {
   return exportCustomWorkflow(currentAppId());
 }
+/** Custom-integration workflows found by title (none in demo mode). */
 export function findCustomWorkflowIds(): Promise<CustomWorkflowInfo[]> {
   return isDemo() ? Promise.resolve([]) : findCustomWorkflows();
 }
@@ -142,13 +149,14 @@ export function getOnProblemWorkflowStatus(): Promise<OnProblemWorkflowStatus> {
     : getOnProblemStatus(currentAppId());
 }
 
-/** Per-integration workflow of a built-in provider. */
+/** Per-integration workflow of a built-in provider (opt-in delivery; by default the engine sends directly). */
 export function openProviderWorkflowInstall(provider: { id: string; name: string }): void {
   openProviderWorkflowIntent(currentAppId(), provider);
 }
 export function exportProviderWorkflowDefinition(provider: { id: string; name: string }): { fileName: string; json: string } {
   return exportProviderWorkflow(currentAppId(), provider);
 }
+/** Workflows titled for this provider (none in demo mode), to link one to the provider. */
 export function findProviderWorkflowIds(providerName: string): Promise<CustomWorkflowInfo[]> {
   return isDemo() ? Promise.resolve([]) : findProviderWorkflows(providerName);
 }

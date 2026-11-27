@@ -6,6 +6,7 @@
 
 import type { Channel, Incident } from "../contracts";
 
+/** Maximum message text length per channel (characters). */
 export const TEXT_LIMITS: Record<Channel, number> = {
   sms: 300,
   voice: 300,
@@ -16,7 +17,9 @@ export const TEXT_LIMITS: Record<Channel, number> = {
   ifttt: 1000,
   webhook: 4000,
 };
+/** Maximum subject length (characters). */
 export const SUBJECT_LIMIT = 150;
+/** Maximum length of the text read out on voice calls (characters). */
 export const SPEECH_LIMIT = 600;
 
 export interface TemplateContext {
@@ -31,6 +34,7 @@ export interface TemplateContext {
   appName?: string;
 }
 
+/** `speech` is set for the voice channel only. */
 export interface RenderedMessage {
   subject: string;
   text: string;
@@ -54,6 +58,7 @@ export function plainText(md: string): string {
     .trim();
 }
 
+/** The id operators recognise: the source display id (e.g. P-24051), else the incident id. */
 export function incidentLabel(inc: Incident): string {
   return inc.alert.displayId ?? inc.id;
 }
@@ -63,6 +68,7 @@ export function speakableId(id: string): string {
   return id.replace(/[-_.]/g, " ").replace(/(\d)/g, " $1 ").replace(/\s+/g, " ").trim();
 }
 
+/** "[P1] P-24051 Title · Command Center", truncated to SUBJECT_LIMIT. */
 export function renderSubject(inc: Incident, ctx: TemplateContext): string {
   const app = ctx.appName ?? "Command Center";
   return truncate(`[${inc.priority}] ${incidentLabel(inc)} ${inc.alert.title} · ${app}`, SUBJECT_LIMIT);
@@ -97,6 +103,7 @@ export function renderText(inc: Incident, channel: Channel, ctx: TemplateContext
   return `${body}\n${link}`;
 }
 
+/** Text-to-speech script: no URL, the id spelled out. */
 export function renderSpeech(inc: Incident, ctx: TemplateContext): string {
   const p = inc.priority.replace("P", "priority ");
   const svc = ctx.serviceName ? ` on service ${ctx.serviceName}` : "";
@@ -106,6 +113,7 @@ export function renderSpeech(inc: Incident, ctx: TemplateContext): string {
   );
 }
 
+/** Subject, channel text and (voice only) speech for one notification. */
 export function renderMessage(inc: Incident, channel: Channel, ctx: TemplateContext): RenderedMessage {
   return {
     subject: renderSubject(inc, ctx),
@@ -114,6 +122,7 @@ export function renderMessage(inc: Incident, channel: Channel, ctx: TemplateCont
   };
 }
 
+/** Relative app path used when the absolute app URL is unknown. */
 export const DEFAULT_APP_BASE_URL = "/ui/apps/my.command.center";
 
 /** Link to the incident detail page. `appBaseUrl` should be absolute for outbound messages. */

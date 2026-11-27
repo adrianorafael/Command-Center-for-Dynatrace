@@ -1,3 +1,4 @@
+/** Sheet that edits one person's contact methods and notification rules. */
 import { describeErrors } from "../../components/format";
 import { CreatedMarker, markCreated } from "../../components/NewItemHighlight";
 import { FieldError, FieldHint } from "../../components/FieldHint";

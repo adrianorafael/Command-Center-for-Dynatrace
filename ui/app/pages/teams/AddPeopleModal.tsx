@@ -1,3 +1,4 @@
+/** Dialog that adds tenant users to a team with one role. */
 import { markCreated } from "../../components/NewItemHighlight";
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -6,6 +7,7 @@ import { Modal } from "@dynatrace/strato-components/overlays";
 import { Avatar, ProgressCircle } from "@dynatrace/strato-components/content";
 import { Checkbox, FormField, Label, Radio, RadioGroup, TextInput } from "@dynatrace/strato-components/forms";
 import { Text } from "@dynatrace/strato-components/typography";
+import { XmarkIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { DirectoryUser, Team, TeamRole } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
@@ -16,6 +18,7 @@ import { initials } from "../../components/format";
 
 const MIN_CHARS = 3;
 
+/** Roles offered when adding people, with the help text shown next to each. */
 export const ROLE_CHOICES: { role: TeamRole; label: string; help: string }[] = [
   { role: "responder", label: "Responder", help: "Gets paged and can acknowledge and resolve incidents." },
   { role: "admin", label: "Team admin", help: "Gets paged and can edit the team, its schedules and its escalation policy." },
@@ -25,6 +28,9 @@ export const ROLE_CHOICES: { role: TeamRole; label: string; help: string }[] = [
 /**
  * "Add people" (team detail): search tenant users by name or email, tick several, pick one role,
  * add them in one save. Calls onAdded with the uids that were added.
+ *
+ * People picked from different searches stay visible in a "Selected" list (with a remove button), so the person
+ * adding them always sees who will be added, whatever is typed in the search box now.
  */
 export const AddPeopleModal = ({ team, show, onClose, onAdded }: { team: Team; show: boolean; onClose: () => void; onAdded?: (uids: string[]) => void }) => {
   const { mutate, rememberUsers, setPaused, currentUser, users } = useAppData();
@@ -168,11 +174,31 @@ export const AddPeopleModal = ({ team, show, onClose, onAdded }: { team: Team; s
               );
             })}
         </Surface>
-        {n > 0 && (
-          <Text textStyle="small">
-            Selected: {[...picked.values()].map((u) => u.name).join(", ")}
-          </Text>
-        )}
+        <Flex flexDirection="column" gap={4}>
+          <Text textStyle="base-emphasized">{n ? `Selected (${n})` : "Selected"}</Text>
+          {n === 0 ? (
+            <Text textStyle="small" style={{ color: Colors.Text.Neutral.Subdued }}>
+              Nobody yet. Tick people in the list above; you can search again and keep adding.
+            </Text>
+          ) : (
+            <Surface padding={8} style={{ maxHeight: 160, overflowY: "auto" }}>
+              {[...picked.values()].map((u) => (
+                <Flex key={u.uid} alignItems="center" gap={12} padding={4}>
+                  <Avatar size="small" abbreviation={initials(u.name)}>
+                    <Avatar.Label>{u.name}</Avatar.Label>
+                    {u.email && <Avatar.Subtitle>{u.email}</Avatar.Subtitle>}
+                  </Avatar>
+                  <Button size="condensed" variant="default" style={{ marginLeft: "auto" }} aria-label={`Remove ${u.name}`} onClick={() => toggle(u, false)}>
+                    <Button.Prefix>
+                      <XmarkIcon />
+                    </Button.Prefix>
+                    Remove
+                  </Button>
+                </Flex>
+              ))}
+            </Surface>
+          )}
+        </Flex>
         <FormField>
           <Label>Role for the selected people</Label>
           <RadioGroup value={role} onChange={(v) => setRole(v as TeamRole)}>

@@ -19,15 +19,20 @@
 import type { WorkflowCreate, WorkflowUpdate } from "@dynatrace-sdk/client-automation";
 import type { Settings } from "../../domain/contracts";
 
+/** Title of the engine workflow; the status check also finds the workflow by it. */
 export const ENGINE_WORKFLOW_TITLE = "Command Center · Engine";
+/** Action name from app.config.json; the full action id is `<appId>:run-engine`. */
 export const RUN_ENGINE_ACTION = "run-engine";
 /** Bumped whenever the generated definition changes; shown by the installer status. */
 export const ENGINE_DEFINITION_VERSION = 3;
+/** Version marker written into the workflow description and read back by parseDefinitionVersion. */
 export const DEFINITION_MARKER = `[command-center-engine v${ENGINE_DEFINITION_VERSION}]`;
+/** Task name inside the engine workflows. */
 export const ENGINE_TASK = "run_engine";
 /** Engine interval choices offered in Settings (minutes). Escalation timing granularity equals the interval. */
 export const ENGINE_INTERVALS = [1, 2, 5] as const;
 
+/** Inputs of the engine workflow builders; `settings.engine` gives the fixed id and whether the trigger is on. */
 export interface DefinitionOptions {
   appId: string;
   settings: Pick<Settings, "engine">;
@@ -39,10 +44,12 @@ export interface DefinitionOptions {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** True for a workflow UUID. */
 export function isWorkflowId(id: string): boolean {
   return UUID_RE.test(id);
 }
 
+/** Full id of the run-engine action for this app id. */
 export function actionId(appId: string): string {
   return `${appId}:${RUN_ENGINE_ACTION}`;
 }
@@ -78,11 +85,13 @@ export function buildEngineWorkflow(opts: DefinitionOptions): Pick<WorkflowCreat
   };
 }
 
+/** POST body: the shared object plus the fixed id (when it is a UUID) and the optional actor. */
 export function buildEngineWorkflowCreate(opts: DefinitionOptions): WorkflowCreate {
   const id = opts.settings.engine.workflowId;
   return { ...(isWorkflowId(id) ? { id } : {}), ...buildEngineWorkflow(opts), ...(opts.actor ? { actor: opts.actor } : {}) };
 }
 
+/** PUT body: like the create body but without an id. */
 export function buildEngineWorkflowUpdate(opts: DefinitionOptions): WorkflowUpdate {
   return { ...buildEngineWorkflow(opts), ...(opts.actor ? { actor: opts.actor } : {}) };
 }
@@ -92,6 +101,7 @@ export function buildEngineWorkflowUpdate(opts: DefinitionOptions): WorkflowUpda
 export const ON_PROBLEM_WORKFLOW_TITLE = "Command Center · Engine on problem";
 /** Bumped whenever this definition changes. */
 export const ON_PROBLEM_DEFINITION_VERSION = 1;
+/** Version marker in the description, read back by parseOnProblemVersion. */
 export const ON_PROBLEM_MARKER = `[command-center-engine-on-problem v${ON_PROBLEM_DEFINITION_VERSION}]`;
 
 /**
@@ -144,12 +154,14 @@ export function buildOnProblemWorkflow(opts: Pick<DefinitionOptions, "appId" | "
   };
 }
 
+/** POST body of the "Engine on problem" workflow; no fixed id (it is found by title). */
 export function buildOnProblemWorkflowCreate(opts: Pick<DefinitionOptions, "appId" | "settings" | "actor">): WorkflowCreate {
   return { ...buildOnProblemWorkflow(opts), ...(opts.actor ? { actor: opts.actor } : {}) };
 }
 
 // ─── Custom integration workflow (provider kind "workflow") ───────────────────
 
+/** Title of the prefilled custom-integration workflow; findCustomWorkflows looks it up by this. */
 export const CUSTOM_WORKFLOW_TITLE = "Command Center · Custom integration";
 export const CUSTOM_WORKFLOW_TASK = "send_notification";
 /** Placeholder endpoint the customer replaces in the Workflows app. */
@@ -189,19 +201,23 @@ export function buildCustomWorkflow(appId: string): Pick<WorkflowCreate, "title"
   };
 }
 
-// ─── Per-integration workflows (one per built-in provider) ─────────────────────
+// ─── Per-integration workflows (opt-in, one per built-in provider that uses one) ──
 
+/** Action name from app.config.json; the full action id is `<appId>:send-notification`. */
 export const SEND_NOTIFICATION_ACTION = "send-notification";
+/** Task name inside a per-integration workflow. */
 export const PROVIDER_WORKFLOW_TASK = "send";
 
+/** Title of an integration's own workflow; findProviderWorkflows matches it exactly. */
 export function providerWorkflowTitle(providerName: string): string {
   return `Command Center · ${providerName}`;
 }
 
 /**
  * The workflow of one integration: SIMPLE, on demand (no trigger), one task — this app's send-notification action
- * with the provider id and the notification passed through from the run params. Created by the person when the
- * integration is switched on (Workflows "create workflow" intent, or JSON upload); the engine then runs it once per
+ * with the provider id and the notification passed through from the run params. Opt-in: by default the engine sends
+ * directly. The person creates it (Workflows "create workflow" intent, or JSON upload) only after choosing delivery
+ * through the integration's own workflow; once its id is linked (params.workflowId) the engine runs it once per
  * notification of that provider.
  */
 export function buildProviderWorkflow(appId: string, provider: { id: string; name: string }): Pick<WorkflowCreate, "title" | "description" | "type" | "isPrivate" | "tasks"> {

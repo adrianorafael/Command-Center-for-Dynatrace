@@ -1,3 +1,4 @@
+/** Text under form controls: neutral hints and always-visible errors. */
 import React from "react";
 import { FormFieldMessages } from "@dynatrace/strato-components/forms";
 import { Text } from "@dynatrace/strato-components/typography";

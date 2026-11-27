@@ -4,6 +4,7 @@
  * (the engine never changes it). Stored under `war.<id>`. Pure module: no React, no SDK.
  */
 
+/** A document attached to a war room. */
 export interface WarRoomLink {
   title: string;
   url: string;
@@ -11,6 +12,7 @@ export interface WarRoomLink {
   documentId?: string;
 }
 
+/** A war room (`war.<id>`); times are epoch ms. */
 export interface WarRoom {
   schemaVersion: 1;
   id: string;
@@ -31,6 +33,7 @@ export interface WarRoom {
   rev: number;
 }
 
+/** Longest accepted war room title (characters). */
 export const WAR_ROOM_TITLE_MAX = 120;
 
 /** True for absolute https URLs only (no javascript:, data:, http:). */
@@ -71,6 +74,7 @@ export function warRoomDuration(w: WarRoom, now: number): number {
   return Math.max(0, (w.status === "closed" ? (w.closedAt ?? now) : now) - w.openedAt);
 }
 
+/** Number of rooms with status "open". */
 export function openWarRoomCount(rooms: readonly WarRoom[]): number {
   return rooms.filter((r) => r.status === "open").length;
 }
@@ -83,14 +87,17 @@ export function isTodaysRoom(w: WarRoom, now: number): boolean {
   return w.status === "open" || w.openedAt >= s || (w.closedAt ?? 0) >= s;
 }
 
+/** Open rooms that include this incident. */
 export function openRoomsForIncident(rooms: readonly WarRoom[], incidentId: string): WarRoom[] {
   return rooms.filter((r) => r.status === "open" && r.incidentIds.includes(incidentId));
 }
 
+/** Closed copy of a room (rev + 1). */
 export function closeWarRoom(w: WarRoom, by: string, now: number, summary?: string): WarRoom {
   return { ...w, status: "closed", closedAt: Math.max(now, w.openedAt), closedBy: by, ...(summary ? { summary } : {}), rev: w.rev + 1 };
 }
 
+/** Reopened copy of a room: closedAt/closedBy removed (summary kept), rev + 1. */
 export function reopenWarRoom(w: WarRoom): WarRoom {
   const { closedAt: _a, closedBy: _b, ...rest } = w;
   void _a;

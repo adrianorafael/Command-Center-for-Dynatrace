@@ -15,8 +15,11 @@ import type { DailyRollup, NotificationRecord } from "../../ui/app/domain/contra
 import { applyRollupDelta, isEmptyDelta, type RollupDelta } from "../../ui/app/domain/reports/metrics";
 
 const DAY_MS = 24 * 3600_000;
+/** Daily rollups live as long as App State allows (90 days). */
 export const ROLLUP_TTL_MS = 90 * DAY_MS;
+/** App State limit per app. */
 export const APP_STATE_LIMIT_BYTES = 50 * 1024 * 1024;
+/** Above this estimate the engine deletes the oldest archives, leaving headroom below the 50 MB limit. */
 export const SHED_THRESHOLD_BYTES = 40 * 1024 * 1024;
 
 export interface PrefixUsage {
@@ -24,6 +27,7 @@ export interface PrefixUsage {
   bytes: number;
 }
 
+/** Storage snapshot written into the heartbeat (`at` epoch ms; sizes are bytesOf estimates). */
 export interface StorageEstimate {
   at: number;
   totalBytes: number;
@@ -39,12 +43,14 @@ export function isFinalRecord(r: NotificationRecord, maxAttempts: number): boole
   return (r.status === "failed" || r.status === "timeout") && r.attempt >= maxAttempts;
 }
 
+/** Final-record form kept in the ledger: `text` emptied and `speech` removed; the subject stays for the UI. */
 export function slimRecord(r: NotificationRecord): NotificationRecord {
   const { speech: _speech, ...rest } = r;
   void _speech;
   return { ...rest, text: "" };
 }
 
+/** Size estimate: length of the JSON text (UTF-16 code units, not exact bytes); 0 when not serialisable. */
 export function bytesOf(value: unknown): number {
   try {
     return JSON.stringify(value)?.length ?? 0;
@@ -87,6 +93,7 @@ export async function foldRollupDeltas(repo: Repository, rows: Stored<DailyRollu
   return folded;
 }
 
+/** Key count and estimated bytes of a set of stored rows. */
 export function usage(rows: readonly { value: unknown }[]): PrefixUsage {
   return { keys: rows.length, bytes: rows.reduce((n, r) => n + bytesOf(r.value), 0) };
 }

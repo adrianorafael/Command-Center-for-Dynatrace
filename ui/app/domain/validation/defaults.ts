@@ -9,6 +9,7 @@ import {
   type Settings,
 } from "../contracts";
 
+/** Default event.type of the generic events convention (Q3). */
 export const GENERIC_EVENT_TYPE = "command_center.alert";
 
 /** Default provider slots (all disabled until an admin adds a Credential Vault entry id). */
@@ -26,6 +27,7 @@ export function defaultProviders(): ProviderConfig[] {
   ];
 }
 
+/** Settings of a fresh tenant (data/domainPort.ts adds the engine workflow id and lease TTL). */
 export function defaultSettings(): Settings {
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -64,6 +66,7 @@ export function defaultSettings(): Settings {
   };
 }
 
+/** No rules: every alert routes through the settings defaults. */
 export function defaultRoutingRules(): RoutingRules {
   return { schemaVersion: SCHEMA_VERSION, rev: 0, rules: [] };
 }

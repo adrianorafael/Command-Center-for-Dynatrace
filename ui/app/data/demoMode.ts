@@ -14,12 +14,14 @@ import { AppStateRepository } from "./appStateRepository";
 import { createIamDirectory, createStaticDirectory, type Directory } from "./directory";
 import { demoSeed, demoUsers } from "./demoPort";
 import { MemoryRepository } from "./memoryRepository";
-import type { Repository } from "./repository";
+import { KEY, type Repository } from "./repository";
 import { createStore } from "./store";
 import type { Store } from "./repository";
 import { createDemoInstaller, createWorkflowInstaller, type EngineInstaller } from "./workflows/installer";
 
+/** What getEnvironmentId() returns without the Dynatrace runtime (see header). */
 export const MISSING_ENVIRONMENT_ID = "dt.missing.environment.id";
+/** localStorage key of the per-browser demo preference. */
 export const DEMO_STORAGE_KEY = "cc.demo";
 /** Placeholder app id used when the runtime is missing (matches app.config.json). */
 export const FALLBACK_APP_ID = "my.command.center";
@@ -82,6 +84,7 @@ export function setDemoPreference(on: boolean): void {
   }
 }
 
+/** This app's id from the runtime, or FALLBACK_APP_ID offline. */
 export function currentAppId(): string {
   try {
     const id = getAppId();
@@ -108,25 +111,48 @@ function emptyDemoRequested(): boolean {
   }
 }
 
+/**
+ * Demo mode has no engine, so the seeded heartbeat would age and, after a few minutes, every page would warn that
+ * the paging engine is late. This wrapper reports the seeded heartbeat as if the engine had just run (at the start
+ * of the current minute), so a demo stays clean however long it is shown. Nothing else is changed.
+ */
+export function withLiveDemoHeartbeat(inner: Repository, now: () => number = Date.now): Repository {
+  return {
+    async get<T>(key: string) {
+      const hit = await inner.get<T>(key);
+      if (key !== KEY.heartbeat || !hit) return hit;
+      const t = now();
+      return { ...hit, value: { ...(hit.value as object), lastTickAt: t - (t % 60_000) } as T };
+    },
+    list: (prefix) => inner.list(prefix),
+    put: (key, value, ttlMs) => inner.put(key, value, ttlMs),
+    delete: (key) => inner.delete(key),
+  };
+}
+
+/** The process-wide Repository: demo fixtures in memory (live heartbeat) in demo mode, App State otherwise. Cached. */
 export function getRepository(): Repository {
   if (!repo) {
     repo = isDemo()
-      ? new MemoryRepository(emptyDemoRequested() ? [] : demoSeed(Date.now()), { actor: DEMO_ACTOR })
+      ? withLiveDemoHeartbeat(new MemoryRepository(emptyDemoRequested() ? [] : demoSeed(Date.now()), { actor: DEMO_ACTOR }))
       : new AppStateRepository();
   }
   return repo;
 }
 
+/** Store over getRepository(). Cached. */
 export function getStore(): Store {
   if (!store) store = createStore(getRepository());
   return store;
 }
 
+/** User directory: synthetic users in demo mode, IAM otherwise. Cached. */
 export function getDirectory(): Directory {
   if (!directory) directory = isDemo() ? createStaticDirectory(demoUsers(Date.now())) : createIamDirectory();
   return directory;
 }
 
+/** Engine workflow installer: offline stand-in in demo mode, Automation API otherwise. Cached. */
 export function getInstaller(): EngineInstaller {
   if (!installer) installer = isDemo() ? createDemoInstaller(currentAppId()) : createWorkflowInstaller(currentAppId());
   return installer;

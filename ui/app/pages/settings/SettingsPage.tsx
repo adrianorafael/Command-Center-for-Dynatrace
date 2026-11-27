@@ -1,3 +1,4 @@
+/** Settings (route `/settings`): sources, routing defaults, engine, retention, export/import, permissions, about. */
 import { getAppVersion } from "@dynatrace-sdk/app-environment";
 import { describeErrors } from "../../components/format";
 import { FieldHint } from "../../components/FieldHint";
@@ -32,7 +33,7 @@ const SECTIONS = [
   { id: "about", label: "About" },
 ];
 
-/** Mirrors app.config.json scopes (owned by the lead). */
+/** Mirrors the scopes in app.config.json: keep both lists in sync. */
 const SCOPES = [
   { scope: "storage:buckets:read", enables: "Any Grail read" },
   { scope: "storage:events:read", enables: "Read Davis problems, Davis events and custom events" },
@@ -41,7 +42,7 @@ const SCOPES = [
   { scope: "state:app-states:delete", enables: "Delete configuration and the legacy v1 key" },
   { scope: "iam:users:read", enables: "Search tenant users for teams and schedules" },
   { scope: "automation:workflows:read", enables: "Show the engine workflow status" },
-  { scope: "automation:workflows:run", enables: "Run your custom workflow integration once per notification" },
+  { scope: "automation:workflows:run", enables: "Run the workflow of an integration that sends through its own workflow, or your custom workflow, once per notification" },
   { scope: "document:documents:read", enables: "List notebooks to attach to war rooms" },
   { scope: "document:documents:write", enables: "Create post-mortem notebooks from war rooms" },
   { scope: "credential-vault:entries:read", enables: "Read provider secrets when the engine sends notifications" },
@@ -53,9 +54,9 @@ const LEGACY_KEY = "problem-ack-states";
 function appVersion(): string {
   try {
     const v = getAppVersion();
-    return v && !v.startsWith("dt.missing") ? v : "2.3.0";
+    return v && !v.startsWith("dt.missing") ? v : "2.4.0";
   } catch {
-    return "2.3.0";
+    return "2.4.0";
   }
 }
 const BUDGET_BYTES = 50 * 1024 * 1024;

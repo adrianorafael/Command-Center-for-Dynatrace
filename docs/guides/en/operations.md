@@ -1,7 +1,5 @@
 # Operations — architecture, cost, troubleshooting and limits
 
-🌐 **English** · [Português (BR)](../pt-BR/operations.md) · [Español](../es/operations.md)
-
 ## Architecture
 
 ```mermaid
@@ -295,6 +293,7 @@ fetch dt.davis.problems, from: now() - 2h
 | An incident has no team and nobody was paged | No routing rule matched and there is no default team. Problems that Davis detects on its own carry no team (only events you post can name a service in `cc.service`). Open the team and select *Receive all unrouted alerts* in its **Ready to page?** checklist (or set Settings → Routing defaults), or add a routing rule. The checklist also shows what else the team is missing. |
 | *Engine on problem* is installed but does not seem to run | Simple workflows show no execution list: check **Integrations → Workflows → Last engine run** right after a problem opens. A new trigger needs a few minutes before it fires. Its actor needs the same permissions as the engine's, and the trigger must be switched on. |
 | Routing ignores `cc.service` | The name or ID doesn't match a service, or an earlier rule set another service. Use Services → Test a rule. |
+| *Host not allowed: &lt;host&gt;* on a notification or a provider card | Dynatrace refused the call because the host is not on the allowlist. Add the host to Settings → General → Environment management → External requests (Integrations → Configure shows which one), then **Send test**. The app cannot change that list itself. |
 | A notification **failed** | Incident → Notifications shows the provider error. Usual causes: host missing in External requests, a vault entry the actor can't read, wrong credential type, phone not in E.164, Twilio API key without *Account SID*. |
 | A notification shows **No result** | The run ended before the call returned. It is retried up to *Delivery attempts*. |
 | *Run engine now* says *Engine is already running* | A scheduled run holds the lease. Wait a few seconds and try again. |

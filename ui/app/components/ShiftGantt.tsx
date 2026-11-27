@@ -1,3 +1,4 @@
+/** Shift Gantt chart and coverage helpers for schedules (On-call, schedule editor, team detail). */
 import React, { useMemo } from "react";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import type { GanttSegmentData } from "@dynatrace/strato-components/charts";
@@ -9,8 +10,10 @@ import { layerTimeline, scheduleTimeline, type ShiftSegment } from "../hooks/dom
 import { useAppData } from "../hooks/AppDataContext";
 import { formatDayTime, formatDuration, zoneAbbr } from "./format";
 
+/** What a Gantt segment shows: a rotation shift, an override, or nobody on call. */
 export type SegmentKind = "Shift" | "Override" | "Gap";
 
+/** A Gantt segment; `start`/`end` are epoch ms. */
 export interface GanttSeg extends GanttSegmentData {
   name: string;
   kind: SegmentKind;
@@ -26,7 +29,7 @@ interface GanttRow {
   subRows?: GanttRow[];
 }
 
-/** Uncovered intervals of [from, to) given covering segments. */
+/** Uncovered intervals of [from, to) given covering segments; gaps of a minute or less are dropped. */
 export function gapsOf(segs: { from: number; to: number }[], from: number, to: number): { from: number; to: number }[] {
   const sorted = [...segs].sort((a, b) => a.from - b.from);
   const out: { from: number; to: number }[] = [];
@@ -40,6 +43,7 @@ export function gapsOf(segs: { from: number; to: number }[], from: number, to: n
   return out.filter((g) => g.to - g.from > 60_000);
 }
 
+/** Share of [from, to) with someone on call (percent, one decimal) and the gaps (those under 1 min ignored). */
 export function coverage(schedule: Schedule, from: number, to: number): { pct: number; gaps: { from: number; to: number }[] } {
   const segs = scheduleTimeline(schedule, from, to);
   const gaps = gapsOf(segs, from, to);

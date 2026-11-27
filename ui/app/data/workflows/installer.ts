@@ -12,6 +12,9 @@
  * - On-demand runs ("Run engine now", tests) call the app function `engine-run` (same code as the action).
  * - Custom integration: a customer-owned simple workflow, created the same way (intent / JSON), that the engine runs
  *   once per notification (automation:workflows:run, api/lib/senders.ts).
+ * - Per-integration workflow (opt-in): a built-in provider can be sent through its own simple workflow
+ *   ("Command Center · <provider>", task: the send-notification action). Only offered where the person chose it;
+ *   by default the engine sends directly.
  */
 
 import { workflowsClient } from "@dynatrace-sdk/client-automation";
@@ -34,6 +37,7 @@ import {
   buildOnProblemWorkflowCreate,
 } from "./definition";
 
+/** One workflow execution, times as epoch ms. */
 export interface ExecutionSummary {
   id: string;
   state: string;
@@ -42,6 +46,7 @@ export interface ExecutionSummary {
   triggerType?: string;
 }
 
+/** What the Integrations → Workflows tab shows about the engine workflow. */
 export interface EngineWorkflowStatus {
   installed: boolean;
   /** Id of the workflow found (fixed id, or found by title when imported under a new id). */
@@ -69,12 +74,14 @@ export interface EngineWorkflowStatus {
 /** Kept for API compatibility; the app cannot install workflows itself (see header). */
 export type InstallOutcome = "created" | "updated" | "restored";
 
+/** A workflow definition as a downloadable file. */
 export interface WorkflowExport {
   fileName: string;
   /** Pretty-printed WorkflowCreate JSON for Workflows → Upload. */
   json: string;
 }
 
+/** Everything the UI does with the engine workflow; createDemoInstaller is the offline stand-in. */
 export interface EngineInstaller {
   /**
    * Not possible from a custom app (automation:workflows:write is reserved for Dynatrace apps).
@@ -92,6 +99,7 @@ export interface EngineInstaller {
   runEngineNow(settings: Settings, params: EngineTickRequest): Promise<EngineRunSummary | undefined>;
 }
 
+/** The part of the engine-run function result (CycleResult) the UI reads. */
 export interface EngineRunSummary {
   ok: boolean;
   sent: number;
@@ -103,6 +111,7 @@ export interface EngineRunSummary {
   skipped?: string;
 }
 
+/** Thrown by EngineInstaller.install: the app cannot hold automation:workflows:write. */
 export class InstallNotPermittedError extends Error {
   constructor() {
     super(
@@ -156,6 +165,7 @@ const defaultRunner: EngineRunner = async (params) => {
 /** Workflows app (UNVERIFIED path; the app id `dynatrace.automations` matches the action id prefix). */
 export const WORKFLOWS_APP_PATH = "/ui/apps/dynatrace.automations/workflows";
 
+/** True for an SDK error that carries HTTP 404 (or isNotFound). */
 export function isNotFoundError(e: unknown): boolean {
   if (typeof e !== "object" || e === null) return false;
   const r = (e as { response?: { status?: unknown } }).response;
@@ -179,11 +189,13 @@ function summarize(e: ExecutionLike): ExecutionSummary {
   };
 }
 
+/** Reads the `[command-center-engine vN]` marker that the definition writes into the workflow description. */
 export function parseDefinitionVersion(description: string | undefined): number | undefined {
   const m = /\[command-center-engine v(\d+)\]/.exec(description ?? "");
   return m ? Number(m[1]) : undefined;
 }
 
+/** The engine workflow as a file for Workflows → Upload (carries type SIMPLE, unlike the intent payload). */
 export function exportEngineDefinition(appId: string, settings: Settings, intervalMinutes?: number): WorkflowExport {
   return {
     fileName: "command-center-engine.workflow.json",
@@ -193,6 +205,7 @@ export function exportEngineDefinition(appId: string, settings: Settings, interv
 
 // ─── "Engine on problem": the optional second engine workflow (Problem trigger) ───
 
+/** Status of the optional "Engine on problem" workflow, found by title. */
 export interface OnProblemWorkflowStatus {
   installed: boolean;
   workflowId?: string;
@@ -208,11 +221,13 @@ export interface OnProblemWorkflowStatus {
   demo?: boolean;
 }
 
+/** Reads the `[command-center-engine-on-problem vN]` marker from the workflow description. */
 export function parseOnProblemVersion(description: string | undefined): number | undefined {
   const m = /\[command-center-engine-on-problem v(\d+)\]/.exec(description ?? "");
   return m ? Number(m[1]) : undefined;
 }
 
+/** The "Engine on problem" workflow as a file for Workflows → Upload. */
 export function exportOnProblemDefinition(appId: string, settings: Settings): WorkflowExport {
   return {
     fileName: "command-center-engine-on-problem.workflow.json",
@@ -259,7 +274,7 @@ export function openCustomWorkflowIntent(appId: string): void {
   sendIntent(buildCustomWorkflow(appId));
 }
 
-/** Per-integration workflow: JSON file and intent. */
+/** Per-integration workflow (opt-in delivery through the send-notification action): JSON file and intent. */
 export function exportProviderWorkflow(appId: string, provider: { id: string; name: string }): WorkflowExport {
   return { fileName: `command-center-${provider.id}.workflow.json`, json: `${JSON.stringify(buildProviderWorkflow(appId, provider), null, 2)}\n` };
 }
@@ -273,6 +288,7 @@ export async function findProviderWorkflows(providerName: string, client: Automa
   return list.results.filter((w) => w.title === title).map((w) => ({ id: w.id, ...(w.type ? { type: w.type } : {}) }));
 }
 
+/** A workflow found by title: its id, and its type when the list returns it. */
 export interface CustomWorkflowInfo {
   id: string;
   type?: string;
@@ -284,6 +300,7 @@ export async function findCustomWorkflows(client: AutomationClientLike = default
   return list.results.filter((w) => w.title === CUSTOM_WORKFLOW_TITLE).map((w) => ({ id: w.id, ...(w.type ? { type: w.type } : {}) }));
 }
 
+/** The real installer: reads workflows through the Automation API, runs cycles through the engine-run function. */
 export function createWorkflowInstaller(appId: string, client: AutomationClientLike = defaultClient, runner: EngineRunner = defaultRunner): EngineInstaller {
   async function find(settings: Settings): Promise<{ wf: WorkflowLike; byTitle: boolean } | undefined> {
     try {

@@ -2,11 +2,12 @@
  * Inbound how-to snippets, shared by Integrations → Inbound and the Help page.
  * Placeholders only (R1): YOUR-ENVIRONMENT and <TOKEN> are never real values.
  *
- * Default path (verified live on a tenant by the lead): Events API v2 through the platform
+ * Default path (verified on a trial tenant, see EVENTS_ENDPOINT): Events API v2 through the platform
  * endpoint with a platform token creates a Davis event, which opens a Davis problem. The cc.*
- * properties appear as event fields and are copied to the problem, where routing reads them
- * (ui/app/domain/alerts/normalize.ts). cc.dedup_key / cc.action only matter for the optional
- * "Davis events" and "generic events" sources (problems dedupe and close in Davis itself).
+ * properties appear as event fields; the engine copies them onto the problem, where routing reads them
+ * (api/lib/sources.ts enrichProblems, ui/app/domain/alerts/dedup.ts).
+ * cc.dedup_key / cc.action only matter for the optional "Davis events" and "generic events" sources
+ * (problems dedupe and close in Davis itself).
  */
 
 // Documented in docs.dynatrace.com → OpenPipeline → API ingestion reference (Davis events: platform token with
@@ -16,6 +17,7 @@ export const EVENTS_ENDPOINT = "https://YOUR-ENVIRONMENT.live.dynatrace.com/api/
 /** Optional generic-events source: OpenPipeline generic event ingest (scope openpipeline:events:ingest). */
 // eslint-disable-next-line noSecrets/no-secrets -- placeholder URL, not a credential
 export const GENERIC_EVENTS_ENDPOINT = "https://YOUR-ENVIRONMENT.live.dynatrace.com/platform/ingest/v1/events";
+/** Token scope for the generic-events endpoint above. */
 export const GENERIC_TOKEN_SCOPE = "openpipeline:events:ingest";
 /** Platform token permission for Davis event ingest (spec H3). */
 export const TOKEN_SCOPE = "openpipeline:events.davis:ingest";
@@ -32,6 +34,7 @@ const BODY = `{
   }
 }`;
 
+/** Ready-to-copy senders (curl, PowerShell, Python, workflow JavaScript task) for one test event; placeholders only. */
 export const SNIPPETS: { id: string; label: string; language?: "bash" | "python" | "javascript"; code: string }[] = [
   {
     id: "curl",
@@ -84,6 +87,7 @@ export default async function () {
   },
 ];
 
+/** How a sent event is closed again (shown under the snippets). */
 export const RESOLVE_NOTE =
   "The event opens a Davis problem; the incident resolves when Davis closes the problem (after the event timeout, or when you close it). Re-sending the same event refreshes it.";
 
@@ -91,6 +95,7 @@ export const RESOLVE_NOTE =
 export const EVENT_SOURCE_NOTE =
   'If you turn on the Davis events or generic events source instead, add "cc.dedup_key" (same key, same incident) and send "cc.action": "resolve" with that key to resolve. These two properties have no effect on Davis problems.';
 
+/** Event fields Command Center reads, and what each is used for (the table under the snippets). */
 export const EVENT_FIELDS: { field: string; usedFor: string }[] = [
   { field: "title", usedFor: "Incident title, routing conditions (title contains / regex)" },
   { field: "eventType / event.category", usedFor: "Default priority by category, routing" },

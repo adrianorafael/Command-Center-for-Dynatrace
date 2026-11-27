@@ -1,3 +1,4 @@
+/** Incident age cell of the Console table, marked overdue past the threshold the table passes in. */
 import React from "react";
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { Text } from "@dynatrace/strato-components/typography";

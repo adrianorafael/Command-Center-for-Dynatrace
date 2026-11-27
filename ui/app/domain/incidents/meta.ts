@@ -6,6 +6,7 @@
 
 import type { Incident } from "../contracts";
 
+/** The optional engine-only fields (see header). */
 export interface IncidentEngineState {
   /** Consecutive OK source queries that did not return this (resolved) incident's alert. */
   absentTicks?: number;
@@ -15,8 +16,10 @@ export interface IncidentEngineState {
   escalateRequestedAt?: number;
 }
 
+/** An incident as the engine sees it. */
 export type EngineIncident = Incident & IncidentEngineState;
 
+/** Read view of the engine fields (no copy). */
 export function engineState(inc: Incident): IncidentEngineState {
   return inc as EngineIncident;
 }

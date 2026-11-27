@@ -20,11 +20,13 @@ import { isPriority } from "../priority";
 import { RULE_FIELDS, regexSafetyIssue, safeRegex } from "../routing/match";
 import { isValidTimeZone, parseHHmm } from "../time/tz";
 
+/** `path` names the field (e.g. "steps[0].delayMinutes") so forms can show the message next to it. */
 export interface ValidationError {
   path: string;
   message: string;
 }
 
+/** Collections that references are checked against; an omitted collection skips that check. */
 export interface RefContext {
   teams?: Team[];
   schedules?: Schedule[];
@@ -36,6 +38,7 @@ export interface RefContext {
 
 /** Entity ids are embedded in dot-delimited keys: `[a-z0-9_-]`, 1…64 chars. */
 export const ENTITY_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+/** Phone number in E.164 form (+ and 7–15 digits). */
 export const E164_RE = /^\+[1-9]\d{6,14}$/;
 /** Classic (CREDENTIALS_VAULT-…) and platform (CREDENTIAL_VAULT_ENTRY-…) entry ids — the latter verified on a tenant. */
 export const VAULT_ID_RE = /^(CREDENTIALS_VAULT|CREDENTIAL_VAULT_ENTRY)-[0-9A-F]{16}$/;

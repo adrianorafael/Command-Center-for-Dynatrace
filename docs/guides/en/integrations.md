@@ -1,7 +1,5 @@
 # Integrations — how notifications go out
 
-🌐 **English** · [Português (BR)](../pt-BR/integrations.md) · [Español](../es/integrations.md)
-
 Inbound events are covered in the [alerts reference](alerts-reference.md). This page covers the outbound side: the
 eight channels, what each provider receives, the custom workflow integration, and how to test them.
 
@@ -50,7 +48,7 @@ workflow of its own instead; you choose that per integration:
 
 | Step | What happens |
 | --- | --- |
-| Choose it | **Configure → Delivery → Through its own workflow**, then **Create its workflow**. The Workflows app opens with *Command Center · <provider>* filled in: a simple workflow, no trigger (on demand), one task — the app action **Send Command Center notification** with the inputs `providerId` and `notification` = `{{ execution().params.notification }}`. You save it there (the app cannot create workflows itself). **Download JSON** gives the same definition for upload. Then save the integration. |
+| Choose it | **Configure → Delivery → Through its own workflow**, then **Create its workflow**. The Workflows app opens with *Command Center · &lt;provider&gt;* filled in: a simple workflow, no trigger (on demand), one task — the app action **Send Command Center notification** with the inputs `providerId` and `notification` = `{{ execution().params.notification }}`. You save it there (the app cannot create workflows itself). **Download JSON** gives the same definition for upload. Then save the integration. |
 | Back in Command Center | Integrations → Outbound finds the workflow by its title and links it (its ID is stored in the provider); **Find its workflow** does the same by hand. The card then says *Sent by its workflow*. |
 | A notification is due | The engine runs that workflow with the notification as run params. The action reads the provider settings from Command Center and the secret from the Credential Vault, sends, and writes *Sent* or *Failed* into the notification ledger. A failed send fails the workflow execution, so it shows in the Workflows app. |
 | The workflow can't be run | Deleted, or no permission: the engine sends that notification directly, so nobody misses a page. Until a workflow is linked, the engine also sends directly. |

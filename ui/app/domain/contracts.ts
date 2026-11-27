@@ -1,19 +1,22 @@
 /**
  * Command Center for Dynatrace — shared type contracts (v2).
  *
- * FROZEN: owned by the lead. Domain core, app functions, workflow scripts and the UI
- * all depend on these shapes. Change only with a schemaVersion bump and a migration.
+ * FROZEN: the domain core, the app functions, the workflow actions and the UI all depend on these shapes, and they
+ * are what App State holds. Change only with a schemaVersion bump and a migration.
  *
  * Pure types only: no React, no Dynatrace SDK imports.
  */
 
+/** Version stamped on every stored entity (see header). */
 export const SCHEMA_VERSION = 1 as const;
 
 // ─── Enumerations ────────────────────────────────────────────────────────────
 
+/** P1 is the most urgent; "higher" priority means a smaller number (domain/priority.ts). */
 export type Priority = "P1" | "P2" | "P3" | "P4" | "P5";
 export const PRIORITIES: readonly Priority[] = ["P1", "P2", "P3", "P4", "P5"];
 
+/** Inbound source: Q1 problems, Q2 Davis events, Q3 generic events (data/dql.ts). */
 export type AlertSource = "davis-problem" | "davis-event" | "generic-event";
 
 export type Channel =
@@ -58,6 +61,7 @@ export interface EntityRef {
   type?: string;
 }
 
+/** One inbound record after normalisation (domain/alerts/normalize.ts). Times are epoch ms. */
 export interface Alert {
   source: AlertSource;
   /** Id in the source system (problem event.id, Davis event.id, cc.dedup_key). */
@@ -87,6 +91,7 @@ export interface Alert {
 
 // ─── Incidents ───────────────────────────────────────────────────────────────
 
+/** One line of an incident's history; `at` is epoch ms. */
 export interface TimelineEntry {
   at: number;
   /**
@@ -106,6 +111,7 @@ export interface Assignee {
   id: string;
 }
 
+/** Where an incident is in its escalation policy. */
 export interface EscalationProgress {
   /** Incremented by 'escalate now' and by re-trigger; part of the notification key. */
   cycle: number;
@@ -116,6 +122,7 @@ export interface EscalationProgress {
   exhausted: boolean;
 }
 
+/** An incident (`inc.<id>`), written only by the engine; operators change it through IncidentAction records. */
 export interface Incident {
   schemaVersion: typeof SCHEMA_VERSION;
   id: string;
@@ -141,6 +148,7 @@ export interface Incident {
   lastSeenAt: number;
 }
 
+/** Maximum timeline entries kept per incident. */
 export const TIMELINE_CAP = 200;
 
 interface ActionBase {
@@ -153,6 +161,10 @@ interface ActionBase {
   by?: string;
 }
 
+/**
+ * An operator command (`act.*`), appended by the UI and folded into the incident by the next engine tick, so the UI
+ * never rewrites an incident the engine may be writing at the same time.
+ */
 export type IncidentAction = ActionBase &
   (
     | { type: "ack" }
@@ -171,6 +183,7 @@ export type IncidentActionType = IncidentAction["type"];
 
 // ─── Teams, schedules, policies, services, routing ───────────────────────────
 
+/** A weekly team window in which less urgent incidents are held or limited to low-urgency channels. */
 export interface QuietHours {
   timeZone: string;
   /** 0 = Sunday … 6 = Saturday. */
@@ -200,6 +213,7 @@ export interface Team {
   quietHours?: QuietHours[];
 }
 
+/** One rotation of a schedule: participants take turns, shifts start at `handoffTime`. */
 export interface RotationLayer {
   id: string;
   name: string;
@@ -214,6 +228,7 @@ export interface RotationLayer {
   restrictions?: { days: number[]; from: string; to: string }[];
 }
 
+/** `uid` is on call from `from` to `to` (epoch ms), above every layer. */
 export interface ScheduleOverride {
   id: string;
   uid: string;
@@ -274,8 +289,9 @@ export type ConditionOp = "equals" | "contains" | "regex" | "in" | "exists" | "l
 
 export interface RuleCondition {
   /**
-   * Alert field: title, description, category, severity, source, sourceStatus,
-   * entity.name, entity.type, entity.id, tag, rootCause.name, or fields.<name>.
+   * Alert field: title, description, category, severity, source, sourceStatus, displayId,
+   * entity.name, entity.type, entity.id, tag, rootCause.name, rootCause.id, or fields.<name>
+   * (routing/match.ts RULE_FIELDS).
    */
   field: string;
   op: ConditionOp;
@@ -284,6 +300,7 @@ export interface RuleCondition {
   negate?: boolean;
 }
 
+/** If the conditions match, `then` sets the incident's service/team/policy/priority/tags, or suppresses paging. */
 export interface RoutingRule {
   id: string;
   name: string;
@@ -318,6 +335,7 @@ export interface ContactMethod {
   verified?: boolean;
 }
 
+/** "Notify me on `methodId` `delayMinutes` after I am paged", for incidents at least as urgent as `maxPriority`. */
 export interface NotificationRule {
   /** Rule applies to incidents with priority at or more urgent than this. */
   maxPriority: Priority;
@@ -325,6 +343,7 @@ export interface NotificationRule {
   delayMinutes: number;
 }
 
+/** A person's contact methods and notification rules (`contact.<uid>`). */
 export interface UserContact {
   schemaVersion: typeof SCHEMA_VERSION;
   uid: string;
@@ -343,8 +362,9 @@ export interface DirectoryUser {
   email?: string;
 }
 
-// ─── Notifications (engine ⇄ workflow) ───────────────────────────────────────
+// ─── Notifications (engine ⇄ senders) ────────────────────────────────────────
 
+/** One message to one person on one channel, planned by the engine and sent by api/lib/senders.ts. */
 export interface NotificationRequest {
   /** `<incId>.<cycle>.<step>.<uidHash>.<channel>.<attempt>` — also the ledger key suffix. */
   key: string;
@@ -365,8 +385,10 @@ export interface NotificationRequest {
   displayId?: string;
 }
 
+/** Ledger state: `timeout` = planned but no result within engine.reportTimeoutSec (retried while attempts remain). */
 export type NotificationStatus = "planned" | "sent" | "failed" | "timeout";
 
+/** Outcome of one send attempt, applied to the ledger by the delivery report. `at` is epoch ms. */
 export interface DeliveryResult {
   key: string;
   status: "sent" | "failed";
@@ -375,6 +397,7 @@ export interface DeliveryResult {
   at: number;
 }
 
+/** Ledger entry (`ntf.<key>`): the request plus its delivery state. */
 export interface NotificationRecord extends NotificationRequest {
   schemaVersion: typeof SCHEMA_VERSION;
   status: NotificationStatus;
@@ -384,9 +407,10 @@ export interface NotificationRecord extends NotificationRequest {
   error?: string;
 }
 
-/** What the engine-tick app function returns to the workflow. */
+/** Planned notifications per channel, handed from the tick to the senders. */
 export type NotificationBatches = Record<Channel, NotificationRequest[]>;
 
+/** Why a cycle runs. "test" sends one test message and touches no state. */
 export interface EngineTickRequest {
   reason: "schedule" | "manual" | "problem-trigger" | "test";
   /** For reason 'test': send one synthetic message through a provider. */
@@ -402,6 +426,7 @@ export interface EngineTickResponse {
   errors: string[];
 }
 
+/** Per-tick counters shown in the heartbeat. */
 export interface EngineCounts {
   alertsFetched: number;
   incidentsCreated: number;
@@ -411,6 +436,7 @@ export interface EngineCounts {
   notificationsRetried: number;
 }
 
+/** Last tick summary (`hb.engine`): the only engine diagnostics, since simple workflows keep no task results. */
 export interface EngineHeartbeat {
   schemaVersion: typeof SCHEMA_VERSION;
   lastTickAt: number;
@@ -429,7 +455,10 @@ export interface ProviderConfig {
   enabled: boolean;
   /** Credential Vault entry ID (CREDENTIAL_VAULT_ENTRY-… or classic CREDENTIALS_VAULT-…). Never the secret itself. */
   credentialVaultId?: string;
-  /** Non-secret parameters: from-number, IFTTT event name, Telegram parse mode… */
+  /**
+   * Non-secret parameters: from-number, IFTTT event name, workflowId (custom workflow, or the integration's own
+   * workflow) and delivery ("workflow" = the person chose delivery through that workflow)…
+   */
   params: Record<string, string>;
 }
 
@@ -451,14 +480,20 @@ export interface Settings {
   engine: {
     enabled: boolean;
     workflowId: string;
+    /** Cap on notifications sent per tick; the rest wait for the next tick. */
     maxNotificationsPerTick: number;
+    /** A planned notification without a result after this long becomes `timeout`. */
     reportTimeoutSec: number;
+    /** Attempts per notification, the first included. */
     maxAttempts: number;
+    /** Engine lease TTL, clamped by the engine (api/lib/engine.ts effectiveLockTtlSec). */
     lockTtlSec: number;
     /** Run interval of the installed engine workflow in minutes (1, 2 or 5); recorded at install. */
     intervalMinutes?: number;
   };
+  /** Resolved incidents stay live this many hours, then move to `arc.*` kept for archiveDays (≤ 90). */
   retention: { resolvedVisibleHours: number; archiveDays: number };
+  /** autoRefreshSec: UI polling interval, 0 = off. */
   ui: { autoRefreshSec: number; timeZone?: string };
   providers: ProviderConfig[];
   demoMode: boolean;
@@ -466,6 +501,7 @@ export interface Settings {
 
 // ─── Reports ─────────────────────────────────────────────────────────────────
 
+/** Per-day report counters (`rpt.<day>`), kept for 90 days. */
 export interface DailyRollup {
   schemaVersion: typeof SCHEMA_VERSION;
   /** yyyy-mm-dd (UTC). */

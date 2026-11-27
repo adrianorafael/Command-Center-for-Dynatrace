@@ -10,6 +10,7 @@
 import type { DirectoryUser } from "../ui/app/domain/contracts";
 import { createIamDirectory, SEARCH_MIN_CHARS } from "../ui/app/data/directory";
 
+/** Either `uids` (resolve, at most 200 are read) or `query` (search); `uids` wins when both are set. */
 export interface DirectoryRequest {
   query?: string;
   uids?: string[];

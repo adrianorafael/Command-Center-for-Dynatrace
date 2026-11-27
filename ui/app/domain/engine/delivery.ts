@@ -1,5 +1,6 @@
 /**
- * Apply workflow delivery reports (DeliveryResult[]) to ledger records and incident timelines.
+ * Apply delivery results (DeliveryResult[], from the senders or from the send-notification action) to ledger records
+ * and, when incidents are passed in, their timelines (api/lib/delivery.ts passes none and leaves `inc.*` alone).
  * Idempotent: a result identical to what the record already holds changes nothing.
  * A late "sent" after a timeout still marks the record sent (the retry may also go out —
  * at-least-once paging).
@@ -10,6 +11,7 @@ import { cloneIncident, pushTimeline } from "../incidents/actions";
 import { utcDay } from "../keys";
 import { emptyDelta, type RollupDelta } from "../reports/metrics";
 
+/** Longest provider error text kept on a record. */
 export const MAX_ERROR_LENGTH = 500;
 
 export interface DeliveryInput {
@@ -36,6 +38,7 @@ export function sanitizeError(e: string | undefined): string | undefined {
   return s.length > MAX_ERROR_LENGTH ? `${s.slice(0, MAX_ERROR_LENGTH - 1)}…` : s;
 }
 
+/** Results are applied oldest first; a later "failed" never overwrites "sent". */
 export function applyDeliveryResults(input: DeliveryInput): DeliveryOutput {
   const byKey = new Map(input.ledger.map((r) => [r.key, r]));
   const incidents = new Map(input.incidents.map((i) => [i.id, i]));

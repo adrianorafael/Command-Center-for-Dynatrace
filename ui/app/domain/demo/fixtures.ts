@@ -37,6 +37,7 @@ import { applyRollupDelta, emptyRollup } from "../reports/metrics";
 import { addDays, civilDate, DAY_MS, HOUR_MS, MINUTE_MS, zonedToUtc } from "../time/tz";
 import { defaultSettings } from "../validation/defaults";
 
+/** Everything demo mode seeds into MemoryRepository (data/demoPort.ts turns it into keys). */
 export interface DemoData {
   settings: Settings;
   directory: DirectoryUser[];
@@ -54,7 +55,9 @@ export interface DemoData {
   heartbeat: EngineHeartbeat;
 }
 
+/** Relative app path used in demo message links. */
 export const DEMO_APP_BASE_URL = "/ui/apps/my.command.center";
+/** Placeholder engine workflow id for demo settings. */
 export const DEMO_WORKFLOW_ID = "00000000-0000-4000-8000-000000000001";
 
 const NAMES = [
@@ -70,14 +73,17 @@ const NAMES = [
   "Jonas Pikeworth",
 ];
 
+/** Synthetic IAM uid "user-000n". */
 export function demoUid(n: number): string {
   return `user-${String(n).padStart(4, "0")}`;
 }
 
+/** Scanner-safe entity id, e.g. HOST-DEMO000000000001 (see header). */
 export function demoEntityId(type: string, n: number): string {
   return `${type}-DEMO${String(n).padStart(12, "0")}`;
 }
 
+/** Placeholder Credential Vault entry id (matches VAULT_ID_RE, points at nothing). */
 export function demoVaultId(n: number): string {
   return `CREDENTIALS_VAULT-${String(n).padStart(16, "0")}`;
 }
@@ -558,7 +564,7 @@ export function buildDemoData(now: number): DemoData {
     for (const a of timedActions) if (deleted.has(a.stored.key)) a.at = Number.POSITIVE_INFINITY;
     addRollup(out.rollupDelta);
 
-    // The workflow delivers what was planned (except at `now`: those stay in flight).
+    // Simulated senders deliver what was planned (except at `now`: those stay in flight).
     if (t < now) {
       const planned = out.notificationsToWrite.filter((r) => r.status === "planned");
       const results: DeliveryResult[] = [];

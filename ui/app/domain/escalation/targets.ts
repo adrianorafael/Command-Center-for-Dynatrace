@@ -8,6 +8,7 @@
 import type { EscalationTarget, Schedule, Team } from "../contracts";
 import { onCallUids } from "../schedule/resolve";
 
+/** Data needed to resolve schedule and team targets. */
 export interface TargetContext {
   schedules: Schedule[];
   teams: Team[];
@@ -19,6 +20,7 @@ export interface ExpandedTarget {
   via: EscalationTarget;
 }
 
+/** Uids one target reaches at `at` (epoch ms): schedules are resolved at that instant. */
 export function expandTarget(target: EscalationTarget, ctx: TargetContext, at: number): string[] {
   switch (target.type) {
     case "user":

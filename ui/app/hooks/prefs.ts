@@ -5,6 +5,7 @@
  */
 import { useCallback, useState } from "react";
 
+/** The stored per-viewer preferences. */
 export interface UiPrefs {
   /** WCAG 2.1.4: single-key shortcuts can be turned off. */
   keyboardShortcuts: boolean;
@@ -17,6 +18,7 @@ export const DEFAULT_PREFS: UiPrefs = { keyboardShortcuts: true, tableDensity: "
 
 const STORAGE_KEY = "command-center.ui-prefs.v1";
 
+/** Stored preferences over the defaults; the defaults when storage is empty, unreadable or blocked. */
 export function readPrefs(): UiPrefs {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -28,6 +30,7 @@ export function readPrefs(): UiPrefs {
   }
 }
 
+/** Best-effort save to localStorage. */
 export function writePrefs(p: UiPrefs): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
@@ -36,6 +39,7 @@ export function writePrefs(p: UiPrefs): void {
   }
 }
 
+/** React state backed by localStorage: the setter saves and updates in one call. */
 export function usePrefsState(): [UiPrefs, (p: UiPrefs) => void] {
   const [prefs, setPrefs] = useState<UiPrefs>(() => readPrefs());
   const update = useCallback((p: UiPrefs) => {

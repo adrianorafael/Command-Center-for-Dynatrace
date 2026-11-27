@@ -3,7 +3,7 @@
   "environmentUrl": "https://YOUR-ENVIRONMENT.apps.dynatrace.com/",
   "app": {
     "name": "Command Center",
-    "version": "2.3.0",
+    "version": "2.4.0",
     "description": "NOC event console with on-call teams and escalation via Workflows",
     "id": "my.command.center",
     "icon": "ui/assets/icons/command-center-icon.svg",

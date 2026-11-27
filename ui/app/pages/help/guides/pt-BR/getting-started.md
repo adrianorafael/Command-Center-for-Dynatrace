@@ -1,7 +1,5 @@
 # Primeiros passos — instalação, permissões e o motor de acionamento
 
-🌐 [English](../en/getting-started.md) · **Português (BR)** · [Español](../es/getting-started.md)
-
 Este guia leva você de um ambiente vazio até um primeiro acionamento de teste. Reserve cerca de 30 minutos. Cada passo
 diz o que está verificado e o que não está, para que você saiba o que conferir por conta própria.
 
@@ -95,6 +93,12 @@ Configurações da entrada:
 | Telegram | `api.telegram.org` |
 | Webhook genérico | O host do seu endpoint |
 
+**Integrations → Configure** de um provedor integrado mostra o mesmo host numa caixa *External requests* (Teams e
+webhook genérico: o host da URL guardada na entrada do vault). O app não lê nem altera essa lista sozinho (isso
+exigiria permissões extras de configurações). Quando a Dynatrace recusa um host, a notificação registra *Host not
+allowed: &lt;host&gt;. Add it in Settings → General → Environment management → External requests.* e o card do provedor
+mostra *Host not allowed: add it to External requests*.
+
 ## Passo 5 — Instale o workflow do motor
 
 O motor é um **simple workflow** chamado **Command Center · Engine**. Ele tem uma única tarefa, a ação do próprio app
@@ -151,7 +155,7 @@ O próprio motor envia as notificações de um provedor ativado, dentro da execu
 nada para criar no app Workflows e nenhuma chamada de função extra. Use **Send test** com um endereço.
 
 Opcional: **Configure → Delivery → Through its own workflow** envia as notificações de um provedor por um simple
-workflow próprio (*Command Center · <provider>*). Cada entrega passa a ser uma execução de workflow que você vê no
+workflow próprio (*Command Center · &lt;provider&gt;*). Cada entrega passa a ser uma execução de workflow que você vê no
 app Workflows, ao custo de uma chamada de função a mais por notificação. Detalhes:
 [integrações](integrations.md#integration-workflows).
 

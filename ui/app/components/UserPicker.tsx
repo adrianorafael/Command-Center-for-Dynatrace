@@ -1,3 +1,4 @@
+/** IAM user type-ahead used wherever a person is chosen (teams, schedules, overrides, policies). */
 import React, { useEffect, useRef, useState } from "react";
 import { Select } from "@dynatrace/strato-components/forms";
 import { Avatar } from "@dynatrace/strato-components/content";
@@ -8,6 +9,7 @@ import { initials } from "./format";
 import { FieldError } from "./FieldHint";
 
 const MIN_CHARS = 3;
+/** Message shown when IAM refuses the user search (see AGENTS.md: platform tokens and some account setups get 403). */
 export const FORBIDDEN =
   "User search is unavailable (IAM returned 403). Check that your user belongs to the Dynatrace account that owns this environment and may view users; ask your account admin.";
 

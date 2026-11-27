@@ -15,10 +15,12 @@
 import type { EscalationPolicy, EscalationProgress, EscalationStep, Incident } from "../contracts";
 import { MINUTE_MS } from "../time/tz";
 
+/** Gap between passes when the last step's delay is 0 (see header). */
 export const DEFAULT_REPEAT_GAP_MINUTES = 5;
 /** Hard cap on policy repeats evaluated by the engine. */
 export const MAX_REPEAT = 20;
 
+/** One (pass, step) of the current cycle and when it is due (epoch ms). */
 export interface StepFiring {
   ordinal: number;
   pass: number;
@@ -38,21 +40,25 @@ export function stepOffsetsMs(policy: EscalationPolicy): number[] {
   return policy.steps.map((s) => (acc += delayMs(s)));
 }
 
+/** Gap after the last step before the next pass starts (ms). */
 export function repeatGapMs(policy: EscalationPolicy): number {
   const last = policy.steps[policy.steps.length - 1];
   return delayMs(last) || DEFAULT_REPEAT_GAP_MINUTES * MINUTE_MS;
 }
 
+/** Length of one pass: last step offset plus the repeat gap (ms). */
 export function passLengthMs(policy: EscalationPolicy): number {
   const offsets = stepOffsetsMs(policy);
   return (offsets[offsets.length - 1] ?? 0) + repeatGapMs(policy);
 }
 
+/** Number of passes: 1 + repeat, repeat clamped to 0…MAX_REPEAT. */
 export function passCount(policy: EscalationPolicy): number {
   const r = Number.isFinite(policy.repeat) ? Math.floor(policy.repeat) : 0;
   return Math.min(MAX_REPEAT, Math.max(0, r)) + 1;
 }
 
+/** Number of (pass, step) firings in one cycle. */
 export function totalOrdinals(policy: EscalationPolicy): number {
   return policy.steps.length * passCount(policy);
 }
@@ -98,6 +104,7 @@ export function exhaustedAt(policy: EscalationPolicy, startedAt: number): number
   return startedAt + passCount(policy) * passLengthMs(policy);
 }
 
+/** Result of advanceEscalation. */
 export interface EscalationAdvance {
   progress: EscalationProgress;
   /** Firings that became due since the last recorded progress. */

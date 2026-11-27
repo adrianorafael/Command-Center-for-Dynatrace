@@ -30,7 +30,7 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 ## Project specifics
 
 - **App id:** `my.command.center` (keep the `my.` prefix — unsigned app). **Name:** `Command Center`.
-- **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.3.0); every release is
+- **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.4.0); every release is
   recorded in `CHANGELOG.md`. Versions must increase monotonically per environment or `dt-app deploy` is rejected.
 - **Scopes (11):** `storage:buckets:read`, `storage:events:read`, `state:app-states:read|write|delete`,
   `iam:users:read`, `automation:workflows:read`, `automation:workflows:run` (custom workflow provider),
@@ -70,9 +70,12 @@ api/                  app functions engine-run, config, status, incidents, direc
 ui/app/pages|components|hooks/   Strato UI. Consumes contracts.ts, the Repository/store and pure domain functions.
 workflow-templates/   GENERATED engine workflow JSON files: interval and on-problem (node scripts/gen-workflow-templates.mjs)
                       + trial-only simulator.
-scripts/              install-workflow, gen-workflow-templates, preview-server, screenshot.
-docs/                 project page (index.html, icon.svg, screenshots/) and guides/{en,pt-BR,es}/ — English is the
-                      source; update the three languages together, and never document anything not verified.
+scripts/              install-workflow, gen-workflow-templates, gen-help-content, preview-server, screenshot,
+                      doc-screenshots, record-demo + edit-demo (demo video for docs/media).
+docs/                 project page (index.html, icon.svg, screenshots/) and guides/en/ — the English guides, the source.
+                      GitHub is English only. The translations live in the app: ui/app/pages/help/guides/{pt-BR,es}/
+                      (the in-app Help shows all three). Update the three languages together, never document anything
+                      not verified, then run node scripts/gen-help-content.mjs (a unit test fails on drift).
 specs/, design/       specification and screen design. Update the spec when behaviour changes.
 ```
 
@@ -156,8 +159,11 @@ npm run build            # dt-app build (offline)
 npm run check            # all of the above
 
 node scripts/gen-workflow-templates.mjs [--check]      # regenerate / verify the two engine workflow templates
+node scripts/gen-help-content.mjs [--check]            # regenerate / verify the in-app Help guides (en, pt-BR, es)
 npx dt-app build && node scripts/preview-server.mjs    # offline preview at http://127.0.0.1:4173/ui/ (demo mode)
 node scripts/screenshot.mjs ./screenshots-out          # one PNG per route; needs playwright + a Chrome binary
+node scripts/doc-screenshots.mjs                       # docs/screenshots/*.png, dark theme (preview on port 4310)
+node scripts/record-demo.mjs && bash scripts/edit-demo.sh   # demo video → docs/media/ (see the script headers)
 
 npx dt-app auth          # authenticate against the environment in app.config.json
 npx dt-app dev           # open the printed link, NOT localhost:3000

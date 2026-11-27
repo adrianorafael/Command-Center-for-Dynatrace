@@ -1,3 +1,4 @@
+/** Escalation views of an incident: the Console table cell, target labels and the step list in the details. */
 import React from "react";
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { ProgressBar, ProgressCircle, AvatarGroup } from "@dynatrace/strato-components/content";
@@ -29,6 +30,7 @@ export const EscalationCell = ({ incident, policy }: { incident: Incident; polic
   );
 };
 
+/** One escalation target (schedule, user or team) with its display name. */
 export const TargetView = ({ target }: { target: EscalationTarget }) => {
   const { data, userName } = useAppData();
   if (target.type === "user")

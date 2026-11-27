@@ -1,3 +1,4 @@
+/** Channel display names, kept apart from ChannelIcon so non-React modules can import them. */
 import type { Channel } from "../domain/contracts";
 
 /** Display names of the notification channels (pure: usable outside React). */

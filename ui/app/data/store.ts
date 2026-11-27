@@ -28,6 +28,7 @@ import type { WarRoom } from "../domain/warrooms";
 
 /** Rollup delta keys `rpt.<day>.d.<rand>` (writers outside the engine lease); summed on read. */
 export const ROLLUP_DELTA_MARK = ".d.";
+/** Key of one rollup delta; `rand` keeps concurrent writers apart. */
 export function rollupDeltaKey(day: string, rand: string): string {
   return `${KEY.rollup(day)}${ROLLUP_DELTA_MARK}${rand}`;
 }
@@ -47,6 +48,7 @@ export function sumRollups(rows: Stored<DailyRollup>[]): DailyRollup[] {
 /** Operator actions expire if the engine never folds them (spec §4: act.* TTL now+7d). */
 export const ACTION_TTL_MS = 7 * 24 * 3600_000;
 
+/** Routing rules of a tenant that has saved none yet. */
 export function emptyRules(): RoutingRules {
   return { schemaVersion: SCHEMA_VERSION, rev: 0, rules: [] };
 }
@@ -88,6 +90,7 @@ function randomSuffix(): string {
   return s;
 }
 
+/** The Store implementation; stateless, so creating one per call is cheap. */
 export function createStore(repo: Repository): Store {
   return {
     repo,
