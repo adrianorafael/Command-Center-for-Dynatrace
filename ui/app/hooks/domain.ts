@@ -1,4 +1,4 @@
-import { exportCustomWorkflow, findCustomWorkflows, openCustomWorkflowIntent, type CustomWorkflowInfo } from "../data/workflows/installer";
+import { exportCustomWorkflow, exportProviderWorkflow, findCustomWorkflows, findProviderWorkflows, openCustomWorkflowIntent, openProviderWorkflowIntent, type CustomWorkflowInfo } from "../data/workflows/installer";
 /**
  * The one seam between the UI and agents A (pure domain) and B (data/platform).
  * Pages import domain logic and platform calls from here only, so a signature change
@@ -122,4 +122,15 @@ export function exportCustomWorkflowDefinition(): { fileName: string; json: stri
 }
 export function findCustomWorkflowIds(): Promise<CustomWorkflowInfo[]> {
   return isDemo() ? Promise.resolve([]) : findCustomWorkflows();
+}
+
+/** Per-integration workflow of a built-in provider. */
+export function openProviderWorkflowInstall(provider: { id: string; name: string }): void {
+  openProviderWorkflowIntent(currentAppId(), provider);
+}
+export function exportProviderWorkflowDefinition(provider: { id: string; name: string }): { fileName: string; json: string } {
+  return exportProviderWorkflow(currentAppId(), provider);
+}
+export function findProviderWorkflowIds(providerName: string): Promise<CustomWorkflowInfo[]> {
+  return isDemo() ? Promise.resolve([]) : findProviderWorkflows(providerName);
 }

@@ -3,7 +3,7 @@
   "environmentUrl": "https://YOUR-ENVIRONMENT.apps.dynatrace.com/",
   "app": {
     "name": "Command Center",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "description": "NOC event console with on-call teams and escalation via Workflows",
     "id": "my.command.center",
     "icon": "ui/assets/icons/command-center-icon.svg",
@@ -58,6 +58,11 @@
         "name": "run-engine",
         "title": "Run Command Center engine",
         "description": "Runs one Command Center engine cycle: alerts, escalations, notifications."
+      },
+      {
+        "name": "send-notification",
+        "title": "Send Command Center notification",
+        "description": "Sends one Command Center notification through a configured provider and records the result."
       }
     ]
   }

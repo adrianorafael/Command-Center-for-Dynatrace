@@ -1,3 +1,4 @@
+import { getAppVersion } from "@dynatrace-sdk/app-environment";
 import { describeErrors } from "../../components/format";
 import { FieldHint } from "../../components/FieldHint";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -47,6 +48,16 @@ const SCOPES = [
 ];
 
 const LEGACY_KEY = "problem-ack-states";
+
+/** Installed app version (app.config.json → app.version); the runtime answers outside Dynatrace with a placeholder. */
+function appVersion(): string {
+  try {
+    const v = getAppVersion();
+    return v && !v.startsWith("dt.missing") ? v : "2.1.0";
+  } catch {
+    return "2.1.0";
+  }
+}
 const BUDGET_BYTES = 50 * 1024 * 1024;
 
 
@@ -469,7 +480,7 @@ export const SettingsPage = () => {
           </SectionSurface>
 
           <SectionSurface id="about" title="About">
-            <Text>Command Center for Dynatrace 2.0.0 · data schema v{SCHEMA_VERSION}</Text>
+            <Text>Command Center for Dynatrace {appVersion()} · data schema v{SCHEMA_VERSION}</Text>
             <Text>{demo ? "Running in demo mode." : "Connected to this environment's app state."}</Text>
           </SectionSurface>
         </Flex>

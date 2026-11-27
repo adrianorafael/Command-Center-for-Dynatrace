@@ -14,7 +14,7 @@ import { DownloadIcon, KeyIcon, PlayIcon, RefreshIcon, FlowIcon } from "@dynatra
 import type { Timeseries } from "@dynatrace/strato-components/charts";
 import { engineStaleAfterMs, type ProviderConfig, type Settings } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
-import { exportCustomWorkflowDefinition, findCustomWorkflowIds, openCustomWorkflowInstall, exportWorkflowDefinition, getEngineStatus, openEngineInstallIntent, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
+import { exportCustomWorkflowDefinition, exportProviderWorkflowDefinition, findCustomWorkflowIds, findProviderWorkflowIds, openCustomWorkflowInstall, openProviderWorkflowInstall, exportWorkflowDefinition, getEngineStatus, openEngineInstallIntent, runEngineNow, validateProvider, workflowsAppUrl, type EngineWorkflowStatus } from "../../hooks/domain";
 import { Cell, CellText, LIST_TABLE_VARIANT } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { Health } from "../../components/StatusIndicator";
@@ -207,6 +207,84 @@ const download = (fileName: string, json: string) => {
   URL.revokeObjectURL(url);
 };
 
+/** Built-in provider: its own workflow ("Command Center · <name>"), created when the integration is switched on. */
+const OwnWorkflowFields = ({ draft, setDraft, error }: { draft: ProviderConfig; setDraft: (p: ProviderConfig) => void; error?: string }) => {
+  const { demo } = useAppData();
+  const [found, setFound] = useState<{ id: string; type?: string }[]>();
+  const [searching, setSearching] = useState(false);
+  const wfId = draft.params["workflowId"] ?? "";
+  const search = () => {
+    setSearching(true);
+    findProviderWorkflowIds(draft.name)
+      .then(setFound)
+      .catch((e) => notify({ category: "error", type: "critical", title: "Couldn't list workflows", message: errorMessage(e), lifespan: 8000 }))
+      .finally(() => setSearching(false));
+  };
+  const chosen = found?.find((f) => f.id === wfId.trim());
+  return (
+    <Flex flexDirection="column" gap={12}>
+      <Heading level={4}>Integration workflow</Heading>
+      <Paragraph>
+        {wfId.trim()
+          ? `Notifications of ${draft.name} are sent by the workflow “Command Center · ${draft.name}”. If it can't be run, the engine sends them directly.`
+          : `Not linked yet: the engine sends ${draft.name} notifications directly. Create the integration's workflow to see and run it in the Workflows app.`}
+      </Paragraph>
+      <Flex gap={8} flexWrap="wrap">
+        <Tooltip text={demo ? "Not available in demo mode" : "Opens the Workflows app with this integration's workflow filled in"}>
+          <Button disabled={demo} onClick={() => openProviderWorkflowInstall(draft)}>
+            <Button.Prefix>
+              <FlowIcon />
+            </Button.Prefix>
+            Create its workflow
+          </Button>
+        </Tooltip>
+        <Button
+          onClick={() => {
+            const { fileName, json } = exportProviderWorkflowDefinition(draft);
+            download(fileName, json);
+          }}
+        >
+          <Button.Prefix>
+            <DownloadIcon />
+          </Button.Prefix>
+          Download JSON
+        </Button>
+        <Button disabled={demo} loading={searching} onClick={search}>
+          <Button.Prefix>
+            <RefreshIcon />
+          </Button.Prefix>
+          Find its workflow
+        </Button>
+        {wfId.trim() && <Button onClick={() => setDraft({ ...draft, params: { ...draft.params, workflowId: "" } })}>Unlink</Button>}
+      </Flex>
+      {found && found.length === 0 && <Text textStyle="small">No workflow named “Command Center · {draft.name}” was found. Create it first.</Text>}
+      {found?.map((f) => (
+        <Flex key={f.id} gap={8} alignItems="center">
+          <Text textStyle="small">
+            {f.id} · {f.type === "SIMPLE" ? "simple workflow" : f.type === "STANDARD" ? "standard workflow (consumes workflow hours)" : "workflow"}
+          </Text>
+          <Button size="condensed" onClick={() => setDraft({ ...draft, params: { ...draft.params, workflowId: f.id } })}>
+            Use
+          </Button>
+        </Flex>
+      ))}
+      {chosen?.type === "STANDARD" && (
+        <MessageContainer variant="warning">
+          <MessageContainer.Description>
+            This is a standard workflow and consumes workflow hours. Upload the downloaded JSON instead (a simple workflow) and use that one.
+          </MessageContainer.Description>
+        </MessageContainer>
+      )}
+      <FormField>
+        <Label>Workflow ID</Label>
+        <TextInput value={wfId} onChange={(v) => setDraft({ ...draft, params: { ...draft.params, workflowId: v.trim() } })} placeholder="Linked automatically when found" />
+        <FieldHint>Turning the integration off stops using its workflow; delete the workflow in the Workflows app if you no longer need it.</FieldHint>
+        {error && <Text>{error}</Text>}
+      </FormField>
+    </Flex>
+  );
+};
+
 /** Custom workflow provider: create the prefilled example workflow, then pick its id. */
 const CustomWorkflowFields = ({ draft, setDraft, error }: { draft: ProviderConfig; setDraft: (p: ProviderConfig) => void; error?: string }) => {
   const { demo } = useAppData();
@@ -352,6 +430,7 @@ const ProviderSheet = ({ provider, onClose }: { provider?: ProviderConfig; onClo
             {err(`params.${p.key}`) && <Text>{err(`params.${p.key}`)}</Text>}
           </FormField>
         ))}
+        {draft.kind !== "workflow" && <OwnWorkflowFields draft={draft} setDraft={setDraft} error={err("params.workflowId")} />}
         {draft.kind !== "workflow" && (
           <Flex alignItems="center" gap={4}>
             <KeyIcon />
@@ -378,10 +457,13 @@ const TestModal = ({ provider, onClose }: { provider?: ProviderConfig; onClose: 
     setBusy(true);
     runEngineNow(data.settings, "test", { providerId: provider.id, channel: provider.channel, address: address.trim() })
       .then((exec) => {
-        const ok = !!exec && exec.sent > 0;
+        const handed = !!exec && (exec.handedOff ?? 0) > 0;
+        const ok = !!exec && (exec.sent > 0 || handed);
         const text = !exec
           ? "Test requested."
-          : ok
+          : handed
+            ? `Handed to the workflow “Command Center · ${provider.name}”. Check the destination, or the workflow's executions if nothing arrives.`
+            : ok
             ? `Sent through ${provider.name}. Check the destination.`
             : `Not sent: ${exec.errors[0] ?? (exec.failed ? "the provider rejected the message" : "nothing was sent")}`;
         setResult({ ok, text });
@@ -423,7 +505,7 @@ const TestModal = ({ provider, onClose }: { provider?: ProviderConfig; onClose: 
 
 /** On/off switch on each provider card; opens the setup sheet when the provider can't be turned on yet. */
 const ProviderSwitch = ({ provider, onNeedsSetup }: { provider: ProviderConfig; onNeedsSetup: () => void }) => {
-  const { data, mutate } = useAppData();
+  const { data, mutate, demo } = useAppData();
   const [busy, setBusy] = useState(false);
   if (!data) return null;
   const toggle = (on: boolean) => {
@@ -436,6 +518,21 @@ const ProviderSwitch = ({ provider, onNeedsSetup }: { provider: ProviderConfig; 
     setBusy(true);
     const settings = nextRev({ ...data.settings, providers: data.settings.providers.map((p) => (p.id === provider.id ? { ...p, enabled: on } : p)) });
     mutate((s) => s.saveSettings(settings), `${provider.name} turned ${on ? "on" : "off"}`)
+      .then(() => {
+        if (on && !demo && provider.kind !== "workflow" && !provider.params["workflowId"]?.trim()) {
+          notify({
+            category: "action",
+            type: "info",
+            title: `Confirm the ${provider.name} workflow`,
+            message: "The Workflows app opens with this integration's workflow filled in. Save it; Command Center links it when you come back.",
+            lifespan: 10_000,
+          });
+          openProviderWorkflowInstall(provider);
+        }
+        if (!on && provider.kind !== "workflow" && provider.params["workflowId"]?.trim()) {
+          notify({ category: "action", type: "info", title: `${provider.name} is off`, message: "Its workflow is no longer run. Delete it in the Workflows app if you don't need it.", lifespan: 8000 });
+        }
+      })
       .catch(() => undefined)
       .finally(() => setBusy(false));
   };
@@ -447,7 +544,33 @@ const ProviderSwitch = ({ provider, onNeedsSetup }: { provider: ProviderConfig; 
 };
 
 const OutboundTab = () => {
-  const { data, demo } = useAppData();
+  const { data, demo, mutate } = useAppData();
+  // Link each switched-on integration to its workflow as soon as one with its title exists (single simple match).
+  const unlinked = (data?.settings.providers ?? []).filter((p) => p.enabled && p.kind !== "workflow" && !p.params["workflowId"]?.trim()).map((p) => p.id).join(",");
+  useEffect(() => {
+    if (demo || !data || !unlinked) return;
+    let cancelled = false;
+    const todo = data.settings.providers.filter((p) => unlinked.split(",").includes(p.id));
+    void Promise.all(todo.map((p) => findProviderWorkflowIds(p.name).then((f) => [p.id, f] as const).catch(() => [p.id, []] as const))).then((pairs) => {
+      if (cancelled) return;
+      const links = new Map(
+        pairs.flatMap(([id, f]) => {
+          const only = f.length === 1 ? f[0] : undefined;
+          return only && only.type !== "STANDARD" ? [[id, only.id] as const] : [];
+        }),
+      );
+      if (!links.size) return;
+      const settings = nextRev({
+        ...data.settings,
+        providers: data.settings.providers.map((p) => (links.has(p.id) ? { ...p, params: { ...p.params, workflowId: links.get(p.id)! } } : p)),
+      });
+      void mutate((s) => s.saveSettings(settings), `Linked ${links.size} integration workflow${links.size === 1 ? "" : "s"}`).catch(() => undefined);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlinked, demo]);
   const [configure, setConfigure] = useState<ProviderConfig>();
   const [test, setTest] = useState<ProviderConfig>();
   const ledger = data?.notifications ?? [];
@@ -488,6 +611,11 @@ const OutboundTab = () => {
                     : "No notifications sent yet"}
                 </Text>
                 {failed && last?.error && <Text textStyle="small">{last.error}</Text>}
+                {p.kind !== "workflow" && p.enabled && (
+                  <Text textStyle="small">
+                    {p.params["workflowId"]?.trim() ? `Sent by its workflow “Command Center · ${p.name}”` : "Sent by the engine until its workflow is linked"}
+                  </Text>
+                )}
                 <Flex gap={8}>
                   <Button onClick={() => setConfigure(p)}>Configure</Button>
                   <Tooltip text={demo ? "Not available in demo mode" : !p.enabled ? "Enable the provider first" : "Send a test notification"}>

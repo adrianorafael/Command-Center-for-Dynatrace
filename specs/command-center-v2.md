@@ -32,6 +32,14 @@ This amendment supersedes every part of this spec that describes the engine as a
 - The user documentation (`docs/guides/{en,pt-BR,es}`) describes the current behaviour and wins over this spec where
   they differ.
 
+## Amendment A2 (2026-11-27, 2.1.0) — one workflow per integration
+
+At the owner's request, each built-in integration switched on gets its own simple workflow
+(`buildProviderWorkflow`, task = app action `send-notification`), created through the create-workflow intent and
+linked by title. The engine keeps reading alerts and escalating, and hands each notification of a linked integration
+to that workflow (`automation:workflows:run`); the action sends and writes the ledger result. Unlinked or unrunnable
+workflows fall back to a direct send.
+
 ## Goal
 
 Replace dedicated event consoles (Splunk On-Call / VictorOps, Atlassian Opsgenie, Moogsoft) for a NOC team, natively on

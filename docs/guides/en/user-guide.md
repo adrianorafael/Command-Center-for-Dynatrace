@@ -272,7 +272,7 @@ routing order are listed in the [alerts reference](alerts-reference.md#how-an-al
 | Tab | Content |
 | --- | --- |
 | Inbound ![Inbound](../../screenshots/integrations.png) | Each source with its status (*Receiving*, *Quiet > 1 h*, *Turned off*, *Never seen*), last event, incidents in 24 h and **Show events**. Copy-ready snippets (curl, PowerShell, Python, Dynatrace Workflow) and the fields the app reads. |
-| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | The nine providers (eight built-in plus **Custom workflow**), each with an **On/Off** switch: *Not configured*, *Off*, *Configured* or *Last delivery failed*, sent/failed counts, **Configure** (vault entry ID or workflow ID, parameters) and **Send test**. One provider per channel can be on. |
+| Outbound ![Outbound](../../screenshots/integrations-outbound.png) | The nine providers (eight built-in plus **Custom workflow**), each with an **On/Off** switch: *Not configured*, *Off*, *Configured* or *Last delivery failed*, sent/failed counts, *Sent by its workflow* or *Sent by the engine until its workflow is linked*, **Configure** (vault entry ID or workflow ID, parameters, integration workflow) and **Send test**. Switching a built-in provider on opens the Workflows app to create its workflow. One provider per channel can be on. |
 | Workflows ![Workflows](../../screenshots/integrations-workflow.png) | Engine status (*Not installed*, *Installed · simple workflow*, *Update available*, *Installed as a standard workflow…*), the last engine run, **Run every**, **Install in Workflows**, **Download JSON**, **Run engine now**, **Refresh**, the setup steps and the hosts to allow. |
 
 Details: [integrations](integrations.md) and [getting started](getting-started.md).

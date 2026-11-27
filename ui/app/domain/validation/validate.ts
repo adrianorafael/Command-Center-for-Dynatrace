@@ -251,7 +251,11 @@ export function validateProvider(p: ProviderConfig, prefix = ""): ValidationErro
     const wf = (p.params["workflowId"] ?? "").trim();
     if (wf && !UUID_RE.test(wf)) c.add(`${prefix}params.workflowId`, "Use the workflow's ID (a UUID, shown in the Workflows app URL)");
     if (p.enabled && !wf) c.add(`${prefix}params.workflowId`, "Required to enable the provider");
-  } else if (p.enabled && !p.credentialVaultId) c.add(`${prefix}credentialVaultId`, "Required to enable the provider");
+  } else {
+    if (p.enabled && !p.credentialVaultId) c.add(`${prefix}credentialVaultId`, "Required to enable the provider");
+    const own = (p.params["workflowId"] ?? "").trim();
+    if (own && !UUID_RE.test(own)) c.add(`${prefix}params.workflowId`, "Use the workflow's ID (a UUID, shown in the Workflows app URL)");
+  }
   for (const [k, v] of Object.entries(p.params)) {
     if (k === "workflowId" && UUID_RE.test(v.trim())) continue;
     if (looksLikeSecret(v)) c.add(`${prefix}params.${k}`, "Looks like a secret or URL — store it in the Credential Vault");

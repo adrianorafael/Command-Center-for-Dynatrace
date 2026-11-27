@@ -11,6 +11,15 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-27
+
+### Added
+- **Integration workflows**: switching a built-in integration on opens the Workflows app with its own simple workflow
+  (*Command Center · <provider>*, one task: the new app action *Send Command Center notification*). Command Center
+  links it by title; the engine then runs it once per notification of that integration, and the action sends and
+  records the result in the ledger. If the workflow can't be run, the engine sends directly. Switching off stops
+  using it (the app cannot delete workflows). Verified on a trial tenant with the generic webhook.
+
 ## [2.0.0] - 2026-11-27
 
 A full rebuild: from a problem list with acknowledgements to a NOC event console with on-call teams and escalation

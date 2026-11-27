@@ -12,8 +12,9 @@ eight channels, what each provider receives, the custom workflow integration, an
 1. The engine runs on its schedule (simple workflow, one action). It decides who must be notified now: the escalation
    step that is due, the people on call for its targets, and each person's notification rules.
 2. It writes one **ledger entry** (`planned`) per person, step, channel and attempt.
-3. Right after planning, the same run reads the provider's secret from the Credential Vault and calls the provider
-   over HTTPS (or runs your custom workflow).
+3. Right after planning, the same run sends: through the integration's own workflow when one is linked (below),
+   otherwise directly — it reads the provider's secret from the Credential Vault and calls the provider over HTTPS
+   (or runs your custom workflow).
 4. The result is written back: `sent` (with the provider's reference when one is returned) or `failed` (with the
    provider's error; secrets and URLs are masked as `***` and `<url>`).
 5. A notification that failed, or got no result within *Delivery report timeout* (`timeout`), is retried with a new
@@ -39,8 +40,24 @@ twice.
 
 Every provider starts **turned off** and has an **On/Off** switch on its card. A provider is used only while it is on
 and configured (a vault entry ID; for the custom workflow, a workflow ID). One provider per channel can be on: the
-generic webhook and the custom workflow share the *webhook* channel. Providers that are off cost nothing and need no
-workflow: the built-in providers are all sent by the single engine workflow.
+generic webhook and the custom workflow share the *webhook* channel. Providers that are off cost nothing and nothing
+of theirs runs.
+
+## Integration workflows
+
+Each built-in integration can have **its own workflow**, created when you switch it on:
+
+| Step | What happens |
+| --- | --- |
+| Switch **on** | Command Center saves the provider and opens the Workflows app with *Command Center · <provider>* filled in: a simple workflow, no trigger (on demand), one task — the app action **Send Command Center notification** with the inputs `providerId` and `notification` = `{{ execution().params.notification }}`. You save it (one confirmation: the app cannot create workflows itself). |
+| Back in Command Center | Integrations → Outbound finds the workflow by its title and links it (its ID is stored in the provider). **Configure → Integration workflow** also offers *Create its workflow*, *Download JSON*, *Find its workflow* and *Unlink*. |
+| A notification is due | The engine runs that workflow with the notification as run params. The action reads the provider settings from Command Center and the secret from the Credential Vault, sends, and writes *Sent* or *Failed* into the notification ledger. A failed send fails the workflow execution, so it shows in the Workflows app. |
+| The workflow can't be run | Deleted, or no permission: the engine sends that notification directly, so nobody misses a page. Until a workflow is linked, the engine also sends directly. |
+| Switch **off** | The provider and its workflow are no longer used. The app cannot pause or delete workflows: delete it in the Workflows app if you don't need it. |
+
+Each notification of a linked integration is one workflow run, with one action invocation. As simple workflows they
+consume no workflow hours. If a workflow was created as a *standard* workflow (the create-workflow intent has no type
+field), *Find its workflow* says so and the automatic link skips it; upload the downloaded JSON instead.
 
 ## What each provider receives
 
@@ -153,6 +170,7 @@ error) is shown right away. Test every channel you turn on, end to end, before y
 | --- | --- |
 | Generic webhook | ✅ Verified live on a trial environment: escalations and tests delivered, results written to the ledger |
 | Custom workflow | ✅ Verified live on a trial environment: a test and a scheduled escalation ran the workflow, which delivered the full notification JSON to the receiver |
+| Integration workflows | ✅ Verified live on a trial environment with the generic webhook: the engine ran *Command Center · Generic webhook*, its action read the provider and the vault secret and delivered; a provider error (HTTP 429) failed the workflow execution with the provider's message |
 | Twilio SMS, voice, WhatsApp, IFTTT, Slack, Microsoft Teams, Telegram | Implemented from each vendor's API documentation, **not exercised live** (no accounts in the test environment). Unit tests cover the Twilio SMS and voice, Slack and Telegram requests. Test every provider with *Send test*. |
 
 Two-way replies (acknowledging by answering an SMS or a chat message) are not implemented. Acknowledge in the Console.
