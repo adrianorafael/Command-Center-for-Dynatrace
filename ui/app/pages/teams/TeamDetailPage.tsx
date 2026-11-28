@@ -3,7 +3,7 @@ import React, { useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { Flex, Grid, PageLayout } from "@dynatrace/strato-components/layouts";
 import { Button, InlineButton } from "@dynatrace/strato-components/buttons";
-import { Avatar, Chip, InformationOverlay } from "@dynatrace/strato-components/content";
+import { Avatar, Chip, InformationOverlay, MessageContainer } from "@dynatrace/strato-components/content";
 import { Menu, Tabs, Tab } from "@dynatrace/strato-components/navigation";
 import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components/tables";
 import { Heading, Link, Paragraph, Text } from "@dynatrace/strato-components/typography";
@@ -11,13 +11,14 @@ import { DotMenuIcon, PlusIcon, WarningIcon } from "@dynatrace/strato-icons";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import type { TeamMember, TeamRole } from "../../domain/contracts";
 import { useAppData, nextRev } from "../../hooks/AppDataContext";
-import { newId, onCallAt } from "../../hooks/domain";
+import { directoryLookupCause, newId, onCallAt } from "../../hooks/domain";
 import { Cell, CellText, LIST_TABLE_VARIANT, withCreatedMarker } from "../../components/tableKit";
 import { PageTitle } from "../../components/PageTitle";
 import { QueryState, SimpleEmpty } from "../../components/QueryState";
 import { ShiftGantt } from "../../components/ShiftGantt";
 import { ConfirmModal } from "../../components/ConfirmModal";
-import { initials, maskAddress } from "../../components/format";
+import { errorMessage, initials, maskAddress } from "../../components/format";
+import { isForbidden } from "../../components/UserPicker";
 import { CHANNEL_LABEL } from "../../components/ChannelIcon";
 import { OnCallCard } from "../oncall/OnCallPage";
 import { OverrideModal } from "../oncall/OverrideModal";
@@ -26,6 +27,7 @@ import { TeamFormModal, deleteTeamAndDefault, teamReferences } from "./TeamsPage
 import { ContactSheet } from "./ContactSheet";
 import { QuietHoursEditor } from "./QuietHoursEditor";
 import { AddPeopleModal } from "./AddPeopleModal";
+import { namesHint } from "./names";
 import { TeamReadiness, deliveryIssues, teamReadiness, type ReadinessFix } from "./TeamReadiness";
 
 export const ROLE_LABEL: Record<TeamRole, string> = { admin: "Team admin", responder: "Responder", observer: "Observer" };
@@ -41,7 +43,7 @@ interface MemberRow extends TeamMember {
 export const TeamDetailPage = () => {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const { data, isLoading, error, refresh, now, userName, users, mutate, demo } = useAppData();
+  const { data, isLoading, error, refresh, now, userName, users, mutate, demo, directoryError, namesReady } = useAppData();
   const team = data?.teams.find((t) => t.id === id);
   const [tab, setTab] = useState(0);
   const [addPeople, setAddPeople] = useState(false);
@@ -58,15 +60,17 @@ export const TeamDetailPage = () => {
     () =>
       (team?.members ?? []).map((m) => {
         const c = data?.contacts.find((x) => x.uid === m.uid);
+        const name = userName(m.uid);
         return {
           ...m,
-          name: userName(m.uid),
-          email: users.get(m.uid)?.email,
+          name,
+          // No name to show (see ./names.ts): say so under the id instead of leaving it unexplained.
+          email: users.get(m.uid)?.email ?? (namesReady && name === m.uid ? "Name not available" : undefined),
           onCall: onCallNow.has(m.uid),
           methods: (c?.methods ?? []).map((x) => `${CHANNEL_LABEL[x.channel]} ${maskAddress(x.address)}`).join(", "),
         };
       }),
-    [team, data, userName, users, onCallNow],
+    [team, data, userName, users, onCallNow, namesReady],
   );
 
   if (isLoading || error || !data)
@@ -88,6 +92,15 @@ export const TeamDetailPage = () => {
       </PageLayout.Content>
     );
 
+  /** Explains ids shown instead of names (./names.ts); undefined when every member has a name. */
+  const cause = directoryError === undefined ? undefined : directoryLookupCause(directoryError);
+  const unnamedHint = namesHint(
+    // Before the first lookup answers, a missing name only means "not loaded yet".
+    namesReady ? rows.filter((r) => r.name === r.uid).length : 0,
+    directoryError !== undefined,
+    isForbidden(cause),
+    cause === undefined ? undefined : errorMessage(cause),
+  );
   const saveMembers = (members: TeamMember[], msg: string) => mutate((s) => s.saveTeam(nextRev({ ...team, members })), msg).catch(() => undefined);
   const policy = data.policies.find((p) => p.id === team.defaultPolicyId);
   const services = data.services.filter((s) => s.teamId === team.id || data.rules.rules.some((r) => r.then.teamId === team.id && r.then.serviceId === s.id));
@@ -246,6 +259,12 @@ export const TeamDetailPage = () => {
                   {help("Responders and team admins get paged. Observers only watch.")}
                   {addPeopleButton}
                 </Flex>
+              )}
+              {unnamedHint && (
+                <MessageContainer variant="warning">
+                  <MessageContainer.Title>{unnamedHint.title}</MessageContainer.Title>
+                  <MessageContainer.Description>{unnamedHint.detail}</MessageContainer.Description>
+                </MessageContainer>
               )}
               {team.members.length === 0 ? (
                 <SimpleEmpty title="Add the people who respond for this team" details="Search your Dynatrace users and choose who gets paged." />

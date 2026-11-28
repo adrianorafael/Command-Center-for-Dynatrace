@@ -344,6 +344,7 @@ fetch dt.davis.problems, from: now() - 2h
 | Una notificación muestra **No result** | La ejecución terminó antes de que la llamada respondiera. Se reintenta hasta *Delivery attempts*. |
 | *Run engine now* dice *Engine is already running* | Una ejecución programada tiene el lease. Espera unos segundos y vuelve a intentarlo. |
 | El selector de usuarios no encuentra a nadie | Escribe al menos 3 caracteres. Solo se devuelven usuarios **activos**; las personas invitadas deben iniciar sesión una vez. *User search is unavailable (IAM returned 403)*: tu usuario debe pertenecer a la cuenta propietaria del entorno y tener permiso para ver usuarios. |
+| Un miembro del equipo aparece como id, no como nombre | Nadie se perdió: la pertenencia al equipo, los medios de contacto y los avisos nunca dependen del nombre. La pestaña **Members** dice el motivo. *Names can't be shown (403)*: tu usuario no puede ver los usuarios de la cuenta. *Not an active user of this account*: la persona fue desactivada o el id nunca fue de un usuario de la cuenta (por ejemplo, escrito por una importación de configuración); quítala del equipo. Los nombres también se guardan en la app: cada guardado de equipo, calendario, política o contacto guarda los nombres conocidos en ese momento, y siguen apareciendo cuando el directorio de usuarios no se puede consultar. |
 | Despliegue rechazado por la versión | `app.version` debe ser mayor que la versión instalada. |
 | Configuración perdida | Se borró App State o se desinstaló la app. Importa tu última exportación. |
 

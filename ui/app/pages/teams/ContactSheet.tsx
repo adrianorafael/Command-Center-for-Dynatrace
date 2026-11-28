@@ -92,7 +92,7 @@ export const ContactSheet = ({
   useEffect(() => {
     if (!show || !uid) return;
     const existing = data?.contacts.find((c) => c.uid === uid);
-    const base: UserContact = existing ?? { schemaVersion: SCHEMA_VERSION, uid, rev: 0, displayName: userName(uid), methods: [], rules: [] };
+    const base: UserContact = existing ?? { schemaVersion: SCHEMA_VERSION, uid, rev: 0, methods: [], rules: [] };
     setDraft(base.methods.length ? base : { ...base, methods: [blankMethod()] });
     setTried(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,7 +138,9 @@ export const ContactSheet = ({
     // Nothing entered for someone without contact methods: nothing to save.
     if (!existing && toSave.methods.length === 0) return done();
     setBusy(true);
-    mutate((s) => s.saveContact({ ...toSave, rev: toSave.rev + 1, displayName: name }), "Contact methods saved")
+    // Keep the person's name with the contact (data/people.ts); when it is not known right now, keep the stored one.
+    const displayName = name !== draft.uid ? name : toSave.displayName;
+    mutate((s) => s.saveContact({ ...toSave, rev: toSave.rev + 1, ...(displayName ? { displayName } : {}) }), "Contact methods saved")
       .then(done)
       .catch(() => undefined)
       .finally(() => setBusy(false));

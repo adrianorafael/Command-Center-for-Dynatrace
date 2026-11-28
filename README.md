@@ -39,7 +39,7 @@ and using **Strato**, the Dynatrace design system.
 | **Storage** | Dynatrace App State. No external database. Provider secrets stay in the Credential Vault. |
 | **Demo mode** | Per browser: sample data everywhere, nothing read or written, nothing sent. Off: only real data. |
 
-Current version: **2.6.0** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **2.6.1** — see [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentation
 

@@ -8,6 +8,7 @@ import { exportCustomWorkflow, exportProviderWorkflow, findCustomWorkflows, find
 import type { Channel, DirectoryUser, EngineTickRequest, Settings } from "../domain/contracts";
 import type { Store } from "../data/repository";
 import { currentAppId, DEMO_ACTOR, getDirectory, getInstaller, getStore, isDemo, isRuntimeMissing, setDemoPreference } from "../data/demoMode";
+import { DirectoryLookupError } from "../data/directory";
 import { getCurrentUserDetails, getEnvironmentUrl } from "@dynatrace-sdk/app-environment";
 
 // ─── Pure domain ──────────────────────────────────────────────────────────────
@@ -57,10 +58,25 @@ export function getCurrentUser(): DirectoryUser {
   }
 }
 
-/** Resolve uids to directory users (IAM, or the synthetic demo directory). */
+/**
+ * Resolve uids to directory users (IAM, or the synthetic demo directory). Rejects with a DirectoryLookupError
+ * when the directory refused a lookup (see directoryLookupUsers / directoryLookupCause).
+ */
 export function loadDirectoryUsers(uids: string[]): Promise<DirectoryUser[]> {
   return uids.length ? getDirectory().resolve(uids) : Promise.resolve([]);
 }
+
+/** The users a failed lookup still found (other batches answered); [] for any other error. */
+export function directoryLookupUsers(e: unknown): DirectoryUser[] {
+  return e instanceof DirectoryLookupError ? e.users : [];
+}
+
+/** The reason behind a failed directory lookup, as IAM reported it. */
+export function directoryLookupCause(e: unknown): unknown {
+  return e instanceof DirectoryLookupError ? e.cause : e;
+}
+
+export { missingSnapshots, referencedUids, saveNameSnapshots } from "../data/people";
 
 /** Search active users by name or email (at least SEARCH_MIN_CHARS characters, else []). */
 export function searchDirectory(query: string): Promise<DirectoryUser[]> {
