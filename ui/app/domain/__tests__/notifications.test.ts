@@ -67,6 +67,12 @@ describe("contact choices", () => {
     expect(contactChoices(contacts[0], step, "P1", ["slack"])).toEqual([]);
     expect(contactChoices(undefined, step, "P1")).toEqual([]);
   });
+  it("a contact record that only keeps the person's name pages exactly like no contact record", () => {
+    // data/people.ts creates such records so names survive without the user directory.
+    const nameOnly = { schemaVersion: 1 as const, uid: "user-0009", rev: 1, displayName: "Ana Example", methods: [], rules: [] };
+    expect(contactChoices(nameOnly, step, "P1")).toEqual(contactChoices(undefined, step, "P1"));
+    expect(contactChoices(nameOnly, { ...step, channels: ["sms", "voice"] }, "P1")).toEqual([]);
+  });
   it("first enabled provider per channel", () => {
     const s = settings();
     s.providers = [{ id: "a", name: "A", channel: "sms", kind: "twilio", enabled: false, params: {} }, { id: "b", name: "B", channel: "sms", kind: "webhook", enabled: true, params: {} }];
