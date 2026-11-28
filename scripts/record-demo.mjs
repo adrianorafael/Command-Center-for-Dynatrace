@@ -239,7 +239,7 @@ const CHAPTERS = [
   {
     id: "console",
     title: "Console",
-    subtitle: "Davis problems and ingested events become incidents, triaged in one table",
+    subtitle: "Davis problems and ingested events become incidents, triaged in one table with the row actions you pick",
     route: "/",
     async run() {
       await step("KPI tiles", async () => {
@@ -259,6 +259,18 @@ const CHAPTERS = [
         const rows = page.getByRole("row");
         await hover(rows.nth(1), 500);
         await hover(rows.nth(3), 600);
+      });
+      await step("row actions", async () => {
+        // The gear above the table's top-right: pick which actions show as buttons on every row (up to 4).
+        await click(btn("Row actions"), 1000);
+        const dialog = page.getByRole("dialog").filter({ hasText: "Row actions" });
+        await dialog.waitFor({ timeout: 5000 });
+        await hover(dialog.getByText("On each row", { exact: false }), 700);
+        await click(dialog.getByText("Escalate now", { exact: true }), 900);
+        await hover(dialog.getByText("Snooze", { exact: true }), 500);
+        await click(dialog.getByRole("button", { name: "Save", exact: true }), 1100);
+        // The rows now carry the extra button.
+        await hover(page.getByRole("row").nth(3).getByRole("button", { name: "Escalate now" }), 1200);
       });
       await step("open a triggered incident", () => click(text("Packet loss between GRU and IAD"), 1600));
     },
@@ -280,7 +292,13 @@ const CHAPTERS = [
       await step("notifications tab", () => click(tab(/^Notifications/), 2400));
       await step("acknowledge", async () => {
         // The detail panel's button has a visible label; the table's row actions are icon-only.
-        await click(btn("Acknowledge").filter({ hasText: "Acknowledge" }), 2400);
+        await click(btn("Acknowledge").filter({ hasText: "Acknowledge" }), 1400);
+      });
+      await step("toast", async () => {
+        // Pop-ups open top-right, below the header bar: read it, then dismiss it so it covers nothing later.
+        const toast = page.locator(".Toastify__toast").filter({ hasText: "Incident acknowledged" });
+        await hover(toast.getByText("Incident acknowledged"), 1600);
+        await click(toast.getByRole("button", { name: "Close notification" }), 700);
       });
       await step("close panel", () => click(btn("Close details"), 900));
     },
@@ -374,8 +392,10 @@ const CHAPTERS = [
     async run() {
       await step("nav", () => go(nav("/war-rooms"), 1600, "/war-rooms"));
       await step("rows", async () => {
-        await hover(page.getByRole("row").nth(1), 1000);
-        await hover(page.getByRole("row").nth(2), 1200);
+        // "Today" lists the open room; "All" adds the closed one with its post-mortem notebook.
+        await hover(page.getByRole("row").nth(1), 1200);
+        await click(page.getByRole("radiogroup").getByText("All", { exact: true }).first(), 1000);
+        await hover(page.getByRole("row").nth(2), 1600);
       });
     },
   },
@@ -442,7 +462,7 @@ const CHAPTERS = [
   {
     id: "help",
     title: "Help",
-    subtitle: "The guide, inbound snippets and troubleshooting, inside the app",
+    subtitle: "Guides with the app’s own icons, inbound snippets and troubleshooting, inside the app",
     route: "/help",
     async run() {
       await step("open", async () => {
@@ -458,9 +478,18 @@ const CHAPTERS = [
       await step("read", async () => {
         await moveTo(760, 520);
         await wheel(500);
-        await pause(1200);
-        await wheel(500);
-        await pause(1500);
+        await pause(1400);
+      });
+      await step("user guide", async () => {
+        // A guide with the app's own icons inline, in aligned tables (English is the default language).
+        await moveTo(200, 520);
+        await wheel(-1200);
+        await click(page.getByRole("link", { name: "User guide", exact: true }), 1500);
+        await click(page.getByRole("link", { name: "Icons and colours", exact: true }), 1700);
+        await hover(text("Acknowledged", true).first(), 900);
+        await moveTo(760, 560);
+        await wheel(380);
+        await pause(1800);
       });
     },
   },

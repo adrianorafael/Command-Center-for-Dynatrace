@@ -72,6 +72,19 @@ function postmortemUrl() {
  */
 const SHOTS = [
   ["console", "/"],
+  [
+    "console-row-actions",
+    "/",
+    async (page) => {
+      // The "Row actions" gear above the table: pick one more inline action, but never Save (the browser context is
+      // shared by every shot, and a saved choice would change the console of later captures).
+      await page.getByRole("button", { name: "Row actions", exact: true }).click();
+      const dialog = page.getByRole("dialog").filter({ hasText: "Row actions" });
+      await dialog.waitFor({ timeout: 5_000 });
+      await dialog.getByText("Escalate now", { exact: true }).click();
+      await dialog.getByText("On each row (3 of 4)").waitFor({ timeout: 5_000 });
+    },
+  ],
   ["incident", "/incidents/dp-p-00008"],
   ["oncall", "/on-call"],
   ["schedule-editor", "/on-call/schedules/sched-noc"],
@@ -101,6 +114,19 @@ const SHOTS = [
   ["reports", "/reports"],
   ["settings", "/settings"],
   ["help", "/help"],
+  [
+    "help-guide",
+    "/help?doc=user-guide",
+    async (page) => {
+      // The user guide's "Icons and colours" section: the app's real icons inline in aligned tables.
+      await page.getByRole("heading", { name: "Icons and colours" }).first().scrollIntoViewIfNeeded();
+      await page.evaluate(() => {
+        const h = [...document.querySelectorAll("h2")].find((e) => e.textContent?.trim() === "Icons and colours");
+        h?.scrollIntoView({ block: "start" });
+        window.scrollBy(0, -16);
+      });
+    },
+  ],
 ].filter(([name]) => !ONLY.length || ONLY.includes(name));
 
 mkdirSync(OUT, { recursive: true });
