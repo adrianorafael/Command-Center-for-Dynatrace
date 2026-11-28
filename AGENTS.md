@@ -33,7 +33,8 @@ Its twelve non-negotiable rules apply to every change in this repository, includ
 - **Version:** `app.config.json` → `app.version` is the single source of truth (currently 2.6.1); every release is
   recorded in `CHANGELOG.md`. Versions must increase monotonically per environment or `dt-app deploy` is rejected.
 - **Scopes (11):** `storage:buckets:read`, `storage:events:read`, `state:app-states:read|write|delete`,
-  `iam:users:read`, `automation:workflows:read`, `automation:workflows:run` (custom workflow provider),
+  `iam:users:read`, `automation:workflows:read`, `automation:workflows:run` (custom workflow provider and integrations
+  with their own workflow),
   `document:documents:read|write`, `credential-vault:entries:read`.
   Each carries a comment in `app.config.json`, and the documentation source of each is in
   `docs/guides/en/getting-started.md`. Adding one forces every user to re-consent (MAJOR).
@@ -191,6 +192,9 @@ Before every commit: `bash <skill>/assets/scripts/scan-secrets.sh` on the workin
   and routing happens only once). The sources layer also holds a young problem whose events are not readable yet.
 - A new event trigger needs a few minutes to become active (a problem created 52 s after the workflow did not fire it).
 - IAM user search returns only **active** users; with a platform token it answers "User not authorized".
+- IAM name lookups by id (`uuid`, at most 25 per call) must send only UUIDs: one non-UUID id (an imported id, a marker
+  such as `system`) fails the whole batch. `ui/app/data/directory.ts` filters them and isolates failing batches;
+  display names are also kept on contact records (`UserContact.displayName`, `ui/app/data/people.ts`), never emails.
 - Problem records do **not** carry the Events API `properties`; they are on the linked `dt.davis.events` records
   (`dt.davis.event_ids`). The engine copies `cc.*` from the events onto the problem (Q4 + `api/lib/sources.ts`).
   `cc.action` and `cc.dedup_key` are deliberately not copied.

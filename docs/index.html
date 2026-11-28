@@ -356,7 +356,7 @@
     <div class="grid">
       <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h8M8 16h5"/></svg></div>
         <h3>Console</h3>
-        <p>Live incident table with KPI strip, URL-based filters, search, bulk actions and keyboard shortcuts. Acknowledge with undo, reassign, snooze, escalate now, change priority, add notes, resolve.</p>
+        <p>Live incident table with KPI strip, <i>Show</i> tabs with counts, URL-based filters (including <i>Acknowledged by</i>), search, bulk actions and keyboard shortcuts. Acknowledge with undo, reassign, snooze, escalate now, change priority, add notes, resolve; each viewer picks up to four of these as buttons on every row.</p>
         <div class="meta">Engine-health banner when the engine is late (two intervals plus one minute)</div></div>
       <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg></div>
         <h3>Incident detail</h3>
@@ -364,12 +364,12 @@
         <div class="meta">Timeline capped at 200 entries per incident</div></div>
       <div class="card"><div class="ico g"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
         <h3>On-call schedules</h3>
-        <p>Layers with daily, weekly or every-N-hours rotations, handoff time, time zones and restrictions; overrides; "on call now", a coverage preview, and leave/take on-call from the header.</p>
+        <p>Layers with daily, weekly or every-N-hours rotations, handoff time, time zones and restrictions; overrides; "on call now", a week view of the shifts per team and person, a coverage preview, and leave/take on-call from the header.</p>
         <div class="meta">Later layers win; overrides win over everything</div></div>
       <div class="card"><div class="ico g"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg></div>
         <h3>Teams of real users</h3>
         <p>Members are users of your Dynatrace environment, picked from IAM. Roles, contact methods, personal notification rules, team quiet hours and a <b>Ready to page?</b> checklist per team.</p>
-        <div class="meta">Only user IDs are stored; names and emails are read live</div></div>
+        <div class="meta">User IDs and display names are stored, never emails; emails are read live from IAM</div></div>
       <div class="card"><div class="ico p"><svg viewBox="0 0 24 24"><path d="M4 20h4v-5h4v-5h4V5h4"/></svg></div>
         <h3>Escalation policies</h3>
         <p>Delayed steps targeting a schedule's on-call, a user or a whole team; forced channels; repeats; a simulation of who is paged when.</p>
@@ -409,6 +409,8 @@
     <div class="shots">
       <figure class="shot"><a href="screenshots/console.png"><img src="screenshots/console.png" alt="Console: incident table with KPI strip and filters" loading="lazy" width="1440" height="900" /></a>
         <figcaption><b>Console</b>Triage table, KPIs and bulk actions</figcaption></figure>
+      <figure class="shot"><a href="screenshots/console-row-actions.png"><img src="screenshots/console-row-actions.png" alt="Row actions dialog over the Console: up to four actions chosen as buttons on every row, in order, the others in the row menu" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>Row actions</b>Pick up to four actions as buttons on every row</figcaption></figure>
       <figure class="shot"><a href="screenshots/incident.png"><img src="screenshots/incident.png" alt="Incident detail with timeline and escalation" loading="lazy" width="1440" height="900" /></a>
         <figcaption><b>Incident</b>Timeline, escalation, notification ledger</figcaption></figure>
       <figure class="shot"><a href="screenshots/oncall.png"><img src="screenshots/oncall.png" alt="On-call now and schedule coverage" loading="lazy" width="1440" height="900" /></a>
@@ -431,6 +433,8 @@
         <figcaption><b>War room</b>Incidents, meeting link and notebooks, with a one-click post-mortem notebook</figcaption></figure>
       <figure class="shot"><a href="screenshots/postmortem-notebook.png"><img src="screenshots/postmortem-notebook.png" alt="Example post-mortem notebook for the demo war room, filled in: summary, the DQL query listing its two problems with an example result, timeline, root cause, impact and action items" loading="lazy" width="1040" height="1994" /></a>
         <figcaption><b>Post-mortem notebook</b>Example post-mortem: the notebook Command Center generates, filled in by hand with demo content</figcaption></figure>
+      <figure class="shot"><a href="screenshots/help-guide.png"><img src="screenshots/help-guide.png" alt="In-app Help, user guide in English: the Icons and colours section with the app's own status and channel icons in aligned tables" loading="lazy" width="1440" height="900" /></a>
+        <figcaption><b>Help</b>In-app guides with the app's own icons, in English, Português or Español</figcaption></figure>
     </div>
   </div>
 </section>
@@ -598,7 +602,7 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
           <tr><td><code>state:app-states:read</code> / <code>:write</code> / <code>:delete</code></td><td>Configuration, incidents, operator actions, notification ledger</td></tr>
           <tr><td><code>iam:users:read</code></td><td>Team member search and names</td></tr>
           <tr><td><code>automation:workflows:read</code></td><td>Engine workflow install status; finding your custom workflow</td></tr>
-          <tr><td><code>automation:workflows:run</code></td><td>Custom workflow integration: run your workflow once per notification</td></tr>
+          <tr><td><code>automation:workflows:run</code></td><td>Custom workflow integration, and an integration you gave a workflow of its own: run that workflow once per notification</td></tr>
           <tr><td><code>document:documents:read</code> / <code>:write</code></td><td>War rooms: attach notebooks, create the post-mortem notebook</td></tr>
           <tr><td><code>credential-vault:entries:read</code></td><td>The engine reads provider secrets when it sends</td></tr>
         </tbody>
@@ -649,6 +653,8 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
               <td>The incident's <b>Notifications</b> tab shows the provider error. Usual causes: host missing in External requests, a vault entry the actor can't read, wrong credential type, phone not in E.164.</td></tr>
           <tr><td>The user picker finds nobody</td>
               <td>Type at least 3 characters. Only <b>active</b> users are returned: invited people must sign in once.</td></tr>
+<tr><td>A team member shows as an ID, not a name</td>
+<td>Nobody was lost: membership, contact methods and paging never depend on the name. The team's <b>Members</b> tab says why (no permission to view the account's users, a failed lookup, or a person who is not an active account user).</td></tr>
           <tr><td>Deploy rejected because of the version</td>
               <td><code>app.version</code> must be higher than the version installed in that environment.</td></tr>
           <tr><td>Configuration lost</td>
@@ -686,8 +692,9 @@ npx dt-app build &amp;&amp; node scripts/preview-server.mjs   <span class="c"># 
       <span class="chip"><b>IAM</b> users</span><span class="chip"><b>dt-app</b> CLI</span><span class="chip"><b>vitest</b></span>
       <span class="chip"><b>app id</b> <code>my.command.center</code></span>
     </div>
-<pre style="margin-top:22px">app.config.json                 <span class="c"># app id, version, scopes, the run-engine action</span>
+<pre style="margin-top:22px">app.config.json                 <span class="c"># app id, version, scopes, the run-engine and send-notification actions</span>
 actions/run-engine.action.ts    <span class="c"># the workflow action: one engine cycle (interval, or started by a problem)</span>
+actions/send-notification.action.ts <span class="c"># the action of an integration's own workflow: one notification</span>
 api/                            <span class="c"># app functions engine-run, config, status, incidents, directory</span>
 └── lib/                        <span class="c"># engine cycle, problem-triggered run, sources, lease, senders, config as code</span>
 ui/app/

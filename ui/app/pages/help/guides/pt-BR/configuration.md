@@ -22,6 +22,10 @@ Por que o modo demo é por navegador? Uma configuração compartilhada substitui
 por dados de exemplo, enquanto os acionamentos reais continuariam em segundo plano. Com uma chave por navegador, um
 apresentador pode fazer a demonstração na própria tela sem afetar ninguém de plantão.
 
+Outras escolhas também ficam guardadas neste navegador, onde você as faz: as colunas da Console e **Row actions**
+(quais ações aparecem como botões em cada linha), *Workdays only* em On-call, as preferências de pop-up do sino e o
+idioma da Help.
+
 ## Event sources (origens de eventos)
 
 | Configuração | Padrão | Faixa | Efeito |
@@ -136,7 +140,7 @@ no máximo 200 caracteres, e os valores são JSON com um `schemaVersion`.
 | `cfg.settings` | UI | Configurações, incluindo provedores (somente **IDs** de entradas do vault) | nenhuma |
 | `rules.main` | UI | Regras de roteamento ordenadas | nenhuma |
 | `team.<id>`, `sched.<id>`, `pol.<id>`, `svc.<id>` | UI | Equipes, escalas, políticas, serviços | nenhuma |
-| `contact.<uid>` | UI | Métodos de contato e regras de notificação de uma pessoa | nenhuma |
+| `contact.<uid>` | UI | Métodos de contato, regras de notificação e nome de exibição de uma pessoa (sem email) | nenhuma |
 | `war.<id>` | UI | War room | nenhuma |
 | `inc.<id>` | motor | Incidente (linha do tempo limitada a 200 entradas) | arquivado após o período visível |
 | `act.<incId>.<time>.<rand>` | UI | Uma ação de operador (reconhecimento, nota…) | 7 dias, excluída depois de aplicada |

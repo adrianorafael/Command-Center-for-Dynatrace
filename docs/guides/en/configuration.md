@@ -22,6 +22,9 @@ Why is demo mode per browser? A shared setting would replace the real console of
 while real paging continues in the background. With a per-browser switch, a presenter can demo on their own screen
 without affecting anyone on call.
 
+Other choices are also kept in this browser, where you make them: the Console's columns and **Row actions** (which
+actions show as buttons on each row), *Workdays only* on On-call, the bell's pop-up preferences and the Help language.
+
 ## Event sources
 
 | Setting | Default | Range | Effect |
@@ -135,7 +138,7 @@ at most 200 characters, and values are JSON with a `schemaVersion`.
 | `cfg.settings` | UI | Settings, including providers (vault entry **IDs** only) | none |
 | `rules.main` | UI | Ordered routing rules | none |
 | `team.<id>`, `sched.<id>`, `pol.<id>`, `svc.<id>` | UI | Teams, schedules, policies, services | none |
-| `contact.<uid>` | UI | One person's contact methods and notification rules | none |
+| `contact.<uid>` | UI | One person's contact methods, notification rules and display name (no email) | none |
 | `war.<id>` | UI | War room | none |
 | `inc.<id>` | engine | Incident (timeline capped at 200 entries) | archived after the visible period |
 | `act.<incId>.<time>.<rand>` | UI | One operator action (acknowledge, note…) | 7 days, deleted once applied |

@@ -11,6 +11,13 @@ The version here must match `app.config.json` → `app.version`, which is the si
 
 ## [Unreleased]
 
+### Documentation
+- README, project page, guides (English, Portuguese, Spanish) and the Help overview brought in line with 2.6.1:
+  row actions, top-right pop-ups, Show tabs, Acknowledged by, on-call week view, names kept with the app,
+  seven guides. Screenshots and the demo video re-captured on the current version.
+- Examples use the reserved placeholders (`+15550100000`, sample names).
+- `package.json` version follows `app.config.json`.
+
 ## [2.6.1] - 2026-11-27
 
 ### Fixed

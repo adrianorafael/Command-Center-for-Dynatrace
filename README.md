@@ -32,8 +32,8 @@ and using **Strato**, the Dynatrace design system.
 | | |
 | --- | --- |
 | **Inbound** | Only through Dynatrace: Davis problems, optionally Davis events and generic events, read from Grail with DQL. Your tools post events to the Dynatrace ingest APIs. |
-| **Console** | Live incident table with KPI tiles, filters, bulk actions and keyboard shortcuts; incident details with timeline, escalation progress, notification ledger, entities and notes. |
-| **On-call** | Teams of **Dynatrace users** (picked from IAM), layered rotating schedules with overrides, escalation policies with steps and repeats, personal contact methods, notification rules and team quiet hours. |
+| **Console** | Live incident table with KPI tiles, *Show* tabs with counts, filters (including *Acknowledged by*), bulk actions, row actions you choose per browser and keyboard shortcuts; incident details with timeline, escalation progress, notification ledger, entities and notes. |
+| **On-call** | Teams of **Dynatrace users** (picked from IAM), layered rotating schedules with overrides and a week view of the shifts, escalation policies with steps and repeats, personal contact methods, notification rules and team quiet hours. |
 | **War rooms** | A meeting link plus the incidents it handles and its Dynatrace Notebooks, including a generated post-mortem notebook. |
 | **Outbound** | One **simple workflow** (*Command Center · Engine*) runs the app's own action every 1, 2 or 5 minutes, consumes no workflow hours and sends the notifications itself. An optional second simple workflow with a **Problem trigger** runs the same action as soon as Davis opens or closes a problem. Each integration has an On/Off switch; optionally it gets a workflow of its own (*Command Center · Slack*, …). A **Custom workflow** integration hands notifications to a prefilled workflow you own and edit. |
 | **Storage** | Dynatrace App State. No external database. Provider secrets stay in the Credential Vault. |
@@ -195,7 +195,7 @@ Tokens, scopes, MCP configuration for each assistant, troubleshooting and what i
 | `state:app-states:read` / `:write` / `:delete` | Configuration, incidents, actions, notification ledger |
 | `iam:users:read` | Team member search and names |
 | `automation:workflows:read` | Engine workflow install status; finding your custom workflow |
-| `automation:workflows:run` | Custom workflow integration: run your workflow once per notification |
+| `automation:workflows:run` | Custom workflow integration, and an integration you gave a workflow of its own: run that workflow once per notification |
 | `document:documents:read` / `:write` | War rooms: attach notebooks, create the post-mortem notebook |
 | `credential-vault:entries:read` | The engine reads provider secrets when it sends |
 
@@ -254,15 +254,16 @@ engine install, vault entries and allowlist. App State does not migrate: use **S
 ## Relevant file structure
 
 ```
-app.config.json                  app id, version, scopes, the run-engine action
+app.config.json                  app id, version, scopes, the run-engine and send-notification actions
 actions/run-engine.action.ts     the workflow action: one engine cycle (interval, or started by a problem)
+actions/send-notification.action.ts  the action of an integration's own workflow: one notification
 api/                             app functions engine-run, config, status, incidents, directory
 api/lib/                         engine cycle, problem-triggered run, sources (Q1–Q5), lease, senders, config as code
 ui/app/domain/                   pure TypeScript core: routing, schedules, escalation, planning, reports
 ui/app/data/                     App State, DQL builders, IAM directory, notebooks, workflow definition
 ui/app/pages/                    console, war rooms, on-call, teams, escalations, services, integrations, reports, settings, help
 workflow-templates/              generated engine workflows (interval, on problem)
-docs/                            project page, guides (English), screenshots
+docs/                            project page, guides (English), screenshots, demo video (media/)
 scripts/gen-help-content.mjs     builds the in-app Help from the guides (en; pt-BR and es live in ui/app/pages/help/guides)
 specs/, design/                  specification and screen design
 ```

@@ -14,11 +14,12 @@ Screenshots were taken in **demo mode** with sample data.
 | :icon[NotificationIcon]: **Bell** | The last notifications of this session, with an unread count (up to `99+`). Icon states: :icon[NotificationIcon]: nothing new, :icon[NotificationActiveIcon]: unread items, :icon[NotificationOffIcon]: pop-ups silenced. Selecting an item opens what it refers to. Closing the menu marks everything as read. |
 | :icon[CallIcon]: **On-call indicator** | `You're on call` in a green circle when you are on call; otherwise `On call: <name>` (+N for more people), `On call` when nobody covers right now, or `No one on call` when there is no schedule yet. The menu lists who is on call per team until when, and offers **Leave on-call now…** or **Take on-call now…** (below). |
 | :icon[SettingIcon]: **Settings** | Opens [Settings](configuration.md). |
-| **?** Help menu | Get started, in-app guide, sending events, keyboard shortcuts, about. |
+| **?** Help menu | What's new, Get started, In-app guide, Sending events (API), keyboard shortcuts, about. |
 
 ### Notifications (bell and pop-ups)
 
-Pop-ups appear at the **bottom right** for four categories:
+Pop-ups appear in the **top-right corner**, just below the header bar with the bell, and slide in from the right. They
+cover four categories:
 
 | Category | Examples |
 | --- | --- |
@@ -124,7 +125,9 @@ limit. The other tabs are not limited.
 **Filters**: search (title, ID, entity, tag), Priority, Team, Assignee (*Me*, *Unassigned*, members), Acknowledged by
 (*Me* and everyone who acknowledged an incident in the loaded data, sorted by name), Service, Source, Escalation level
 (*Not started*, *Step N*, *Exhausted*) and Created (time frame). All filters except the time frame are part of the URL
-(Acknowledged by is `ackby=…`), and so is the **Show** tab (`status=…`), so a NOC view can be bookmarked.
+(Acknowledged by is `ackby=…`), and so is the **Show** tab (`status=…`), so a NOC view can be bookmarked. A link can
+also open the Console with **Created** set to the last N hours (`?created=24h`, 1–720 hours): it is read when the page
+opens, then the Created selector takes over.
 
 **Columns**: Priority, Status (and *until …* when snoozed), Incident (title, `#display ID · first entity`), Age (red
 with a clock icon when a **triggered** incident is older than the acknowledge target), Service, Team, Assignee,
@@ -133,9 +136,15 @@ incident is resolved), Escalation (*Step N of M*, *Not started*, *Exhausted*, *N
 default. Use the column menu to show, hide or reorder columns. The choice is remembered in this browser. Rows can be
 expanded to show the description, the latest activity and the escalation.
 
-**Row actions**: **Acknowledge** (only when triggered), **Resolve**, and **:icon[DotMenuIcon]:**: *Reassign…*, *Escalate now*,
+**Row actions**: each row shows up to four actions as icon buttons (hover for the name), then **:icon[DotMenuIcon]:** with
+all the others: *Acknowledge* (disabled unless the incident is triggered), *Resolve*, *Reassign…*, *Escalate now*,
 *Snooze* (15 min, 30 min, 1 h, 4 h, Custom…), *Change priority…*, *Add note*, *Open war room…* / *Join war room*, *Open
-Davis problem*, *Copy link*.
+Davis problem* (only for Davis problems), *Copy link*. By default the buttons are Acknowledge and Resolve. The
+:icon[SettingIcon]: **Row actions** button above the top-right corner of the table chooses which actions show as
+buttons and in which order (up to four, or none); **Reset to default** brings back Acknowledge and Resolve. The choice
+is saved for you in this browser.
+
+![Row actions: pick up to four actions as buttons on every row](../../screenshots/console-row-actions.png)
 
 **Bulk actions** (select rows): Acknowledge, Resolve (asks for confirmation above 10 incidents), Reassign, Snooze,
 Escalate now, Set priority.
@@ -239,7 +248,12 @@ says exactly what will happen.
 - **New team**: a name and an optional description. **Default team** is ticked while no default team exists: the
   default team receives every alert that no routing rule sends elsewhere. Problems that Davis detects on its own carry no team, so without a
   default team or routing rules they page nobody. **Edit team** also sets the team's default escalation policy.
-- **Team detail tabs**: *Members*, *On-call*, *Escalation*, *Quiet hours*, *Services*.
+- **Team detail tabs**: *Members*, *On-call*, *Escalation*, *Quiet hours*, *Services*. When a member shows as an ID
+  instead of a name, the *Members* tab says why: your user may not view the account's users (IAM answered 403), the
+  name lookup failed (with its reason), or the person is not an active user of the account. Membership, contact
+  methods and paging never depend on the name. Each save of a team, schedule, policy or contact keeps the names known
+  at that moment on the people's contact records (no email), so names still show when the user directory cannot be
+  asked.
 - **Ready to page?** A checklist of 5 steps, in order: people who get paged, contact methods, an on-call schedule, an
   escalation policy, and alerts routed to the team. The next step has the highlighted button; steps that need people
   first show none. Step 5 is done when the team is the default team or an enabled routing rule sends alerts to it. A
@@ -356,12 +370,17 @@ zone.
 
 ## Help
 
+![Help](../../screenshots/help.png)
+
+![User guide with the app's own icons](../../screenshots/help-guide.png)
+
 **Get started** has five steps and ticks itself from your data: create a team, finish the team's *Ready to page?*
 checklist (ticked when one team has all five steps done), switch on a provider, install the engine workflow (a
 heartbeat exists), and send a test event (an incident exists). Then come concepts,
 Console workflow, sending events, notifications, keyboard shortcuts, troubleshooting and privacy.
 
-The menu on the left also lists the six guides (getting started, user guide, alerts reference, integrations,
-configuration, operations). The language selector shows them in English, Português (BR) or Español; the choice is
-remembered in this browser, and a guide's address carries the guide and the language, so it can be shared. Get started
-and the sections after it are in English.
+The menu on the left also lists the seven guides (getting started, install with vibe coding, user guide, alerts
+reference, integrations, configuration, operations). Guides show the app's own icons. The language selector shows the
+whole Help page, the overview included, in English, Português (BR) or Español. English is the default; your choice is
+remembered in this browser, and a guide's address carries the guide and the language (`?lang=…`), so it can be shared
+and opens in the language it was shared in.
