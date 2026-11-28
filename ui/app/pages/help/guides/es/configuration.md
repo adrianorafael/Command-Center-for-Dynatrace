@@ -22,6 +22,10 @@ validación se ejecuta antes de guardar e indica el nombre del campo que hay que
 ejemplo mientras los avisos reales siguen en segundo plano. Con un cambio por navegador, un presentador puede hacer una
 demo en su propia pantalla sin afectar a nadie de guardia.
 
+Otras elecciones también se guardan en este navegador, donde las haces: las columnas de la Console y **Row actions**
+(qué acciones se muestran como botones en cada fila), *Workdays only* en On-call, las preferencias de pop-ups de la
+campana y el idioma de Help.
+
 ## Event sources
 
 | Ajuste | Predeterminado | Rango | Efecto |
@@ -137,7 +141,7 @@ tienen como máximo 200 caracteres, y los valores son JSON con un `schemaVersion
 | `cfg.settings` | UI | Ajustes, incluidos los proveedores (solo los **IDs** de las entradas del vault) | ninguno |
 | `rules.main` | UI | Reglas de enrutamiento ordenadas | ninguno |
 | `team.<id>`, `sched.<id>`, `pol.<id>`, `svc.<id>` | UI | Equipos, calendarios, políticas, servicios | ninguno |
-| `contact.<uid>` | UI | Los métodos de contacto y las reglas de notificación de una persona | ninguno |
+| `contact.<uid>` | UI | Los métodos de contacto, las reglas de notificación y el nombre visible de una persona (sin email) | ninguno |
 | `war.<id>` | UI | War room | ninguno |
 | `inc.<id>` | motor | Incidente (línea de tiempo limitada a 200 entradas) | archivado después del período visible |
 | `act.<incId>.<time>.<rand>` | UI | Una acción de un operador (reconocer, nota…) | 7 días, se elimina una vez aplicada |

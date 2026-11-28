@@ -26,7 +26,7 @@ twice.
 
 | Channel | Provider (default ID) | Contact address of a person | Vault entry |
 | --- | --- | --- | --- |
-| SMS | Twilio SMS (`twilio-sms`) | Phone in E.164, for example `+5511999990000` | Username/password: Account SID (or API key SID) / auth token (or API key secret) |
+| SMS | Twilio SMS (`twilio-sms`) | Phone in E.164, for example `+15550100000` | Username/password: Account SID (or API key SID) / auth token (or API key secret) |
 | Voice call | Twilio Voice (`twilio-voice`) | Phone in E.164 | same |
 | WhatsApp | Twilio WhatsApp (`twilio-whatsapp`) | Phone in E.164 (the `whatsapp:` prefix is added) | same |
 | IFTTT | IFTTT Webhooks (`ifttt`) | Any label: the applet decides where it goes | Token: your Webhooks key |
@@ -90,7 +90,7 @@ webhooks.
     "channel": "webhook",
     "providerId": "webhook",
     "priority": "P2",
-    "to": { "uid": "<IAM user id>", "address": "<routing key>", "name": "Ana Lima" },
+    "to": { "uid": "<IAM user id>", "address": "<routing key>", "name": "Ana Example" },
     "subject": "[P2] P-26112716 Checkout latency above 2 s · Command Center",
     "text": "P2 P-26112716: Checkout latency above 2 s …",
     "incidentUrl": "https://YOUR-ENVIRONMENT.apps.dynatrace.com/ui/apps/my.command.center/incidents/dp-p-26112716"

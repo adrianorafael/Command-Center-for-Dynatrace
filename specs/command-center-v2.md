@@ -5,7 +5,7 @@
 | Status | **Approved** — the owner asked for the full rebuild to be carried to the end without stopping at gates ("work until the end and make the best decisions"). This approval covers the spec gate and the publish gate. No deploy is performed (no tenant connected). |
 | Version | 2.0.0 (major: data model, scopes and UI replaced) |
 | Binding contracts | `ui/app/domain/contracts.ts`, `ui/app/data/repository.ts` (these files win over the abridged types below) |
-| DQL | Q1–Q4 executed on a trial tenant (Q3 with data since the generic-events test) |
+| DQL | Q1–Q5 executed on a trial tenant (Q3 with data since the generic-events test; Q5 since 2.3.0) |
 
 ## Amendment A1 (2026-11-27) — engine as a simple workflow
 
@@ -108,6 +108,30 @@ default and what this spec says about how notifications are handed to workflows.
   `scripts/install-workflow.mjs --on-problem`). **Not verified:** installing this workflow through the intent or the
   JSON upload; the Delivery choice in a signed-in session; a notification sent by a problem-triggered run (no provider
   was switched on in those tests).
+
+## Amendment A5 (2026-11-27, 2.4.0–2.6.1) — console, on-call week, cost guard, Help, names
+
+Changes released after A4, recorded here so this spec does not contradict the code. `CHANGELOG.md` has the
+details; the user documentation wins where they differ (A1).
+
+- **Console:** *Show* tabs (Open, Triggered, Acknowledged, Snoozed, Resolved, All, with counts) replace the Status
+  filter (`status=…` links keep working); *Resolved* and *All* are limited to incidents created today unless a
+  *Created* timeframe is picked; `?created=<hours>h` opens with that timeframe. *Acknowledged by* column and filter
+  (`ackby=…`). Auto-refresh default 1 minute. **Row actions** (gear above the table, `ui/app/pages/console/rowActions.ts`):
+  up to four inline actions per viewer, default Acknowledge and Resolve, saved in browser preferences.
+- **Pop-ups** open top right, below the header bar (`ui/app/components/ToastPlacement.tsx`).
+- **On-call → Shifts:** a Sunday-to-Saturday week view in the display time zone (`?week=YYYY-MM-DD`, *Workdays only*
+  per browser) replaces the 24 h / 7 / 14 days range.
+- **Grail cost guard:** `settings.engine.scanLimitGBytes` (default 1, 1–100 whole GB) on every engine query; a query
+  that reaches it, or is truncated or sampled, makes its source incomplete for the run (nothing of it is archived).
+- **Help:** seven guides in English, Portuguese (BR) and Spanish, generated from markdown
+  (`scripts/gen-help-content.mjs`); English is the default (`?lang=` > stored choice > English); the overview is
+  translated; guides show the app's icons through `:icon[Name]:` tokens from `ui/app/pages/help/guides/icons.ts`.
+- **Names:** IAM lookups by id send only UUIDs and isolate failing batches (`ui/app/data/directory.ts`); display
+  names known at save time are kept on contact records (`UserContact.displayName`, optional field, schemaVersion
+  unchanged; no email); the Members tab explains missing names (`ui/app/pages/teams/names.ts`).
+- **Removed:** the trial-only alert simulator workflow template (a test tool, not part of the app).
+- No new scope, no new query.
 
 ## Goal
 

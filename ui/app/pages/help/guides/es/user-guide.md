@@ -14,11 +14,12 @@ Las capturas de pantalla se tomaron en **modo demo** con datos de ejemplo.
 | :icon[NotificationIcon]: **Campana** | Las últimas notificaciones de esta sesión, con un contador de no leídas (hasta `99+`). Estados del ícono: :icon[NotificationIcon]: nada nuevo, :icon[NotificationActiveIcon]: elementos no leídos, :icon[NotificationOffIcon]: pop-ups silenciados. Seleccionar un elemento abre aquello a lo que se refiere. Cerrar el menú marca todo como leído. |
 | :icon[CallIcon]: **Indicador de guardia** | `You're on call` en un círculo verde cuando estás de guardia; si no, `On call: <name>` (+N si hay más personas), `On call` cuando nadie cubre en este momento, o `No one on call` cuando todavía no hay ningún calendario. El menú lista quién está de guardia en cada equipo y hasta cuándo, y ofrece **Leave on-call now…** o **Take on-call now…** (más abajo). |
 | :icon[SettingIcon]: **Settings** | Abre [Settings](configuration.md). |
-| Menú de ayuda **?** | Get started (primeros pasos), guía dentro de la app, envío de eventos, atajos de teclado, acerca de. |
+| Menú de ayuda **?** | What's new (novedades), Get started (primeros pasos), In-app guide (guía dentro de la app), Sending events (API) (envío de eventos), atajos de teclado, acerca de. |
 
 ### Notificaciones (campana y pop-ups)
 
-Los pop-ups aparecen **abajo a la derecha** para cuatro categorías:
+Los pop-ups aparecen en la **esquina superior derecha**, justo debajo de la barra de encabezado con la campana, y
+entran deslizándose desde la derecha. Cubren cuatro categorías:
 
 | Categoría | Ejemplos |
 | --- | --- |
@@ -127,7 +128,8 @@ elegido en **Created** reemplaza ese límite. Las demás pestañas no tienen lí
 by (*Me* y cada persona que reconoció un incidente en los datos cargados, ordenadas por nombre), Service, Source,
 Escalation level (*Not started*, *Step N*, *Exhausted*) y Created (rango de tiempo). Todos los filtros excepto el rango
 de tiempo forman parte de la URL (Acknowledged by es `ackby=…`), igual que la pestaña **Show** (`status=…`), así que una vista de NOC se
-puede guardar como marcador.
+puede guardar como marcador. Un enlace también puede abrir la Console con **Created** en las últimas N horas
+(`?created=24h`, de 1 a 720 horas): se lee cuando se abre la página, y después manda el selector Created.
 
 **Columnas**: Priority, Status (y *until …* cuando está pospuesto), Incident (título, `#display ID · first entity`),
 Age (en rojo con un ícono de reloj cuando un incidente **triggered** es más antiguo que el objetivo de reconocimiento),
@@ -137,9 +139,13 @@ Created están ocultas de forma predeterminada. Usa el menú de columnas para mo
 elección se recuerda en este navegador. Las filas se pueden expandir para mostrar la descripción, la actividad más
 reciente y el escalamiento.
 
-**Acciones de fila**: **Acknowledge** (solo cuando está triggered), **Resolve**, y **:icon[DotMenuIcon]:**: *Reassign…*, *Escalate now*,
-*Snooze* (15 min, 30 min, 1 h, 4 h, Custom…), *Change priority…*, *Add note*, *Open war room…* / *Join war room*,
-*Open Davis problem*, *Copy link*.
+**Acciones de fila**: cada fila muestra hasta cuatro acciones como botones de ícono (pasa el puntero para ver el
+nombre) y luego **:icon[DotMenuIcon]:** con todas las demás: *Acknowledge* (deshabilitada salvo que el incidente esté
+triggered), *Resolve*, *Reassign…*, *Escalate now*, *Snooze* (15 min, 30 min, 1 h, 4 h, Custom…), *Change priority…*,
+*Add note*, *Open war room…* / *Join war room*, *Open Davis problem* (solo para problemas de Davis), *Copy link*. De
+forma predeterminada los botones son Acknowledge y Resolve. El botón :icon[SettingIcon]: **Row actions**, encima de la
+esquina superior derecha de la tabla, elige qué acciones se muestran como botones y en qué orden (hasta cuatro, o
+ninguna); **Reset to default** vuelve a Acknowledge y Resolve. La elección se guarda para ti en este navegador.
 
 **Acciones masivas** (selecciona filas): Acknowledge, Resolve (pide confirmación con más de 10 incidentes), Reassign,
 Snooze, Escalate now, Set priority.
@@ -250,7 +256,13 @@ motivo. Una frase de vista previa dice exactamente qué va a ocurrir.
   enrutamiento envía a otro lugar. Los problemas que Davis detecta por sí solo no traen equipo; por eso, sin un equipo predeterminado o
   reglas de enrutamiento, no avisan a nadie. **Edit team** también define la política de escalamiento predeterminada
   del equipo.
-- **Pestañas del detalle del equipo**: *Members*, *On-call*, *Escalation*, *Quiet hours*, *Services*.
+- **Pestañas del detalle del equipo**: *Members*, *On-call*, *Escalation*, *Quiet hours*, *Services*. Cuando un
+  miembro aparece como un ID en lugar de un nombre, la pestaña *Members* dice por qué: tu usuario no puede ver los
+  usuarios de la cuenta (IAM respondió 403), la búsqueda de nombres falló (con su motivo) o la persona no es un
+  usuario activo de la cuenta. La membresía, los métodos de contacto y los avisos nunca dependen del nombre. Cada vez
+  que se guarda un equipo, calendario, política o contacto, se guardan los nombres conocidos en ese momento en los
+  registros de contacto de las personas (sin email), para que los nombres se sigan mostrando cuando no se puede
+  consultar el directorio de usuarios.
 - **Ready to page?** Una lista de verificación de 5 pasos, en orden: personas a las que se avisa, métodos de contacto,
   un calendario de guardia, una política de escalamiento y alertas enrutadas al equipo. El siguiente paso tiene el
   botón resaltado; los pasos que dependen de que haya personas no muestran botón. El paso 5 queda hecho cuando el
@@ -377,13 +389,16 @@ significa antes de las 06:00. Ambos usan la zona horaria de tu navegador.
 
 ## Help
 
+![Help](../../screenshots/help.png)
+
 **Get started** tiene cinco pasos y se marca solo a partir de tus datos: crear un equipo, completar la lista de
 verificación *Ready to page?* del equipo (se marca cuando un equipo tiene los cinco pasos hechos), encender un
 proveedor, instalar el workflow del motor (existe un heartbeat), y enviar un evento de prueba (existe un
 incidente). Luego vienen conceptos, flujo de trabajo de la Console, envío de eventos, notificaciones, atajos de
 teclado, resolución de problemas y privacidad.
 
-El menú de la izquierda también lista las seis guías (primeros pasos, guía del usuario, referencia de alertas,
-integraciones, configuración, operaciones). El selector de idioma las muestra en English, Português (BR) o Español; la
-elección se recuerda en este navegador, y la dirección de una guía lleva la guía y el idioma, para que se pueda
-compartir. Get started y las secciones que le siguen están en inglés.
+El menú de la izquierda también lista las siete guías (primeros pasos, instalar con vibe coding, guía del usuario,
+referencia de alertas, integraciones, configuración, operaciones). Las guías muestran los íconos de la propia app. El
+selector de idioma muestra toda la página Help, incluida la vista general, en English, Português (BR) o Español. El
+inglés es el predeterminado; tu elección se recuerda en este navegador, y la dirección de una guía lleva la guía y el
+idioma (`?lang=…`), para que se pueda compartir y se abra en el idioma en que se compartió.

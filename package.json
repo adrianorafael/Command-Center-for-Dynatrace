@@ -1,6 +1,6 @@
 {
   "name": "command-center",
-  "version": "2.0.0",
+  "version": "2.6.1",
   "description": "NOC event console with on-call teams and escalation for Dynatrace",
   "scripts": {
     "build": "dt-app build",

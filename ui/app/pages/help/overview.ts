@@ -91,6 +91,8 @@ const en: OverviewText = {
 6. **Notes** are append-only and part of the audit timeline.
 
 Select several rows to act on them together. Filters are part of the URL, so you can bookmark a NOC view.
+
+The **Show** tabs above the table (Open, Triggered, Acknowledged, Snoozed, Resolved, All) filter by status; *Resolved* and *All* show only incidents created today unless you pick a time frame in **Created**. The **Row actions** gear above the top-right corner of the table chooses up to four actions shown as buttons on every row (default: Acknowledge and Resolve); the others stay in the row menu. The choice is saved in this browser.
 `,
   inbound: [
     "Davis problems arrive automatically. Any other tool posts events to the Dynatrace Events API v2 with a platform token that has the",
@@ -141,6 +143,7 @@ The app never sees secrets: it only stores vault IDs. Delivery results come back
 - **The workflow isn't installed or is outdated**: in Integrations → Workflows select **Reinstall in Workflows** (or upload the downloaded JSON), then delete the old workflow.
 - **Permission errors**: the app needs the scopes listed in Settings → Permissions, and your user needs IAM access to the app.
 - **People can't be found in the user picker**: type at least 3 characters of the email or the first name. Only active users of the account that owns this environment are listed: people who were invited but never signed in are not found yet. If the picker says user search is unavailable, IAM returned 403: check that your user belongs to the Dynatrace account that owns this environment and may view users; ask your account admin.
+- **A team member shows as an ID instead of a name**: the team's **Members** tab says why (your user may not view the account's users, the name lookup failed, or the person is not an active user of the account). Membership, contact methods and paging never depend on the name.
 `,
   privacy: `
 The app stores IAM user IDs and display names, phone numbers and chat IDs that people enter as contact methods, and the audit trail of actions. All of it lives in this app's app state in your environment and is readable by every user of the app. Emails are read live from IAM and shown only in the user picker and team member list. The engine workflow's execution results contain only counts, never message texts or phone numbers.
@@ -187,6 +190,8 @@ const ptBR: OverviewText = {
 6. As **notas** só podem ser acrescentadas e fazem parte da linha do tempo de auditoria.
 
 Selecione várias linhas para agir sobre elas de uma vez. Os filtros fazem parte da URL, então você pode salvar uma visão de NOC nos favoritos.
+
+As abas **Show** acima da tabela (Open, Triggered, Acknowledged, Snoozed, Resolved, All) filtram por status; *Resolved* e *All* mostram só incidentes criados hoje, a menos que você escolha um intervalo em **Created**. A engrenagem **Row actions**, acima do canto superior direito da tabela, escolhe até quatro ações mostradas como botões em cada linha (padrão: Acknowledge e Resolve); as outras ficam no menu da linha. A escolha fica salva neste navegador.
 `,
   inbound: [
     "Os problemas do Davis chegam automaticamente. Qualquer outra ferramenta envia eventos para a Events API v2 do Dynatrace com um token de plataforma que tenha a permissão",
@@ -238,6 +243,7 @@ O app nunca vê segredos: ele só guarda IDs do vault. Os resultados de entrega 
 - **O workflow não está instalado ou está desatualizado**: em Integrations → Workflows selecione **Reinstall in Workflows** (ou faça o upload do JSON baixado) e depois exclua o workflow antigo.
 - **Erros de permissão**: o app precisa dos escopos listados em Settings → Permissions, e o seu usuário precisa de acesso IAM ao app.
 - **Pessoas não aparecem no seletor de usuários**: digite pelo menos 3 caracteres do e-mail ou do primeiro nome. Só são listados usuários ativos da conta dona deste ambiente: pessoas convidadas que nunca entraram ainda não são encontradas. Se o seletor disser que a busca de usuários não está disponível, o IAM respondeu 403: verifique se o seu usuário pertence à conta Dynatrace dona deste ambiente e pode ver usuários; fale com o admin da conta.
+- **Um membro da equipe aparece como ID em vez de nome**: a aba **Members** da equipe diz por quê (o seu usuário não pode ver os usuários da conta, a busca de nomes falhou ou a pessoa não é um usuário ativo da conta). Associação, métodos de contato e acionamentos nunca dependem do nome.
 `,
   privacy: `
 O app guarda IDs de usuário do IAM e nomes de exibição, números de telefone e IDs de chat que as pessoas informam como métodos de contato, e a trilha de auditoria das ações. Tudo isso fica no app state deste app no seu ambiente e pode ser lido por todos os usuários do app. Os e-mails são lidos na hora a partir do IAM e mostrados só no seletor de usuários e na lista de membros da equipe. Os resultados de execução do workflow do motor contêm apenas contagens, nunca textos de mensagens ou números de telefone.
@@ -284,6 +290,8 @@ const es: OverviewText = {
 6. Las **notas** solo se pueden añadir y forman parte de la línea de tiempo de auditoría.
 
 Selecciona varias filas para actuar sobre ellas a la vez. Los filtros forman parte de la URL, así que puedes guardar una vista de NOC en marcadores.
+
+Las pestañas **Show** encima de la tabla (Open, Triggered, Acknowledged, Snoozed, Resolved, All) filtran por estado; *Resolved* y *All* muestran solo los incidentes creados hoy, salvo que elijas un rango en **Created**. El engranaje **Row actions**, encima de la esquina superior derecha de la tabla, elige hasta cuatro acciones que se muestran como botones en cada fila (predeterminado: Acknowledge y Resolve); las demás quedan en el menú de la fila. La elección se guarda en este navegador.
 `,
   inbound: [
     "Los problemas de Davis llegan automáticamente. Cualquier otra herramienta envía eventos a la Events API v2 de Dynatrace con un token de plataforma que tenga el permiso",
@@ -335,6 +343,7 @@ La app nunca ve secretos: solo guarda IDs del vault. Los resultados de entrega v
 - **El workflow no está instalado o está desactualizado**: en Integrations → Workflows selecciona **Reinstall in Workflows** (o carga el JSON descargado) y luego elimina el workflow antiguo.
 - **Errores de permisos**: la app necesita los ámbitos que aparecen en Settings → Permissions, y tu usuario necesita acceso IAM a la app.
 - **No se encuentran personas en el selector de usuarios**: escribe al menos 3 caracteres del correo o del nombre. Solo aparecen los usuarios activos de la cuenta propietaria de este entorno: las personas invitadas que nunca iniciaron sesión todavía no se encuentran. Si el selector dice que la búsqueda de usuarios no está disponible, IAM respondió 403: comprueba que tu usuario pertenece a la cuenta de Dynatrace propietaria de este entorno y puede ver usuarios; consulta al admin de tu cuenta.
+- **Un miembro del equipo aparece como ID en lugar de nombre**: la pestaña **Members** del equipo dice por qué (tu usuario no puede ver los usuarios de la cuenta, la búsqueda de nombres falló o la persona no es un usuario activo de la cuenta). La membresía, los métodos de contacto y los avisos nunca dependen del nombre.
 `,
   privacy: `
 La app guarda IDs de usuario de IAM y nombres visibles, números de teléfono e IDs de chat que las personas introducen como métodos de contacto, y el registro de auditoría de las acciones. Todo ello vive en el app state de esta app en tu entorno y lo pueden leer todos los usuarios de la app. Los correos se leen en el momento desde IAM y solo se muestran en el selector de usuarios y en la lista de miembros del equipo. Los resultados de ejecución del workflow del motor solo contienen recuentos, nunca textos de mensajes ni números de teléfono.
