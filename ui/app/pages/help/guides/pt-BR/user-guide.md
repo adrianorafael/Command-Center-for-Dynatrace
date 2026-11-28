@@ -147,6 +147,8 @@ Acknowledge e Resolve. O botão :icon[SettingIcon]: **Row actions**, acima do ca
 ações aparecem como botões e em que ordem (até quatro, ou nenhuma); **Reset to default** volta para Acknowledge e
 Resolve. A escolha fica salva para você neste navegador.
 
+![Row actions: escolha até quatro ações como botões em todas as linhas](../../screenshots/console-row-actions.png)
+
 **Ações em massa** (selecione linhas): Acknowledge, Resolve (pede confirmação acima de 10 incidentes), Reassign,
 Snooze, Escalate now, Set priority.
 
@@ -386,6 +388,8 @@ significa antes das 06:00. Ambos usam o fuso horário do seu navegador.
 ## Help (ajuda)
 
 ![Help](../../screenshots/help.png)
+
+![Guia do usuário com os ícones do próprio app](../../screenshots/help-guide.png)
 
 **Get started** tem cinco passos e se marca sozinho a partir dos seus dados: criar uma equipe, concluir a checklist
 *Ready to page?* da equipe (marcado quando uma equipe tem os cinco passos concluídos), ligar um provedor, instalar o

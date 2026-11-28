@@ -147,6 +147,8 @@ forma predeterminada los botones son Acknowledge y Resolve. El botón :icon[Sett
 esquina superior derecha de la tabla, elige qué acciones se muestran como botones y en qué orden (hasta cuatro, o
 ninguna); **Reset to default** vuelve a Acknowledge y Resolve. La elección se guarda para ti en este navegador.
 
+![Row actions: elige hasta cuatro acciones como botones en todas las filas](../../screenshots/console-row-actions.png)
+
 **Acciones masivas** (selecciona filas): Acknowledge, Resolve (pide confirmación con más de 10 incidentes), Reassign,
 Snooze, Escalate now, Set priority.
 
@@ -390,6 +392,8 @@ significa antes de las 06:00. Ambos usan la zona horaria de tu navegador.
 ## Help
 
 ![Help](../../screenshots/help.png)
+
+![Guía de usuario con los iconos de la propia app](../../screenshots/help-guide.png)
 
 **Get started** tiene cinco pasos y se marca solo a partir de tus datos: crear un equipo, completar la lista de
 verificación *Ready to page?* del equipo (se marca cuando un equipo tiene los cinco pasos hechos), encender un

@@ -144,6 +144,8 @@ Davis problem* (only for Davis problems), *Copy link*. By default the buttons ar
 buttons and in which order (up to four, or none); **Reset to default** brings back Acknowledge and Resolve. The choice
 is saved for you in this browser.
 
+![Row actions: pick up to four actions as buttons on every row](../../screenshots/console-row-actions.png)
+
 **Bulk actions** (select rows): Acknowledge, Resolve (asks for confirmation above 10 incidents), Reassign, Snooze,
 Escalate now, Set priority.
 
@@ -369,6 +371,8 @@ zone.
 ## Help
 
 ![Help](../../screenshots/help.png)
+
+![User guide with the app's own icons](../../screenshots/help-guide.png)
 
 **Get started** has five steps and ticks itself from your data: create a team, finish the team's *Ready to page?*
 checklist (ticked when one team has all five steps done), switch on a provider, install the engine workflow (a
